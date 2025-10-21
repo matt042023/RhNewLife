@@ -1,3 +1,5 @@
-body {
-    background-color: skyblue;
-}
+@import "tailwindcss";
+@source not "../../public";
+@import "flowbite/src/themes/default";
+@plugin "flowbite/plugin";
+@source "../../node_modules/flowbite";
