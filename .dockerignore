@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+.docker
+docker-compose*.yml
+compose*.yaml
+Dockerfile
+.dockerignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Logs
+var/log/*
+var/cache/*
+
+# Tests
+tests
+.phpunit.result.cache
+
+# Documentation
+README.md
+docs/
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Node
+node_modules
+npm-debug.log
+
+# Misc
+.env.local
+.env.*.local

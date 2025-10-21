@@ -1,25 +1,83 @@
-
 services:
-###> doctrine/doctrine-bundle ###
-  database:
-    image: postgres:${POSTGRES_VERSION:-16}-alpine
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-app}
-      # You should definitely change the password in production
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
-      POSTGRES_USER: ${POSTGRES_USER:-app}
-    healthcheck:
-      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
-      timeout: 5s
-      retries: 5
-      start_period: 60s
+  ### PHP-FPM ###
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rhnewlife_php
+    restart: unless-stopped
     volumes:
-      - database_data:/var/lib/postgresql/data:rw
-      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
-      # - ./docker/db/data:/var/lib/postgresql/data:rw
-###< doctrine/doctrine-bundle ###
+      - .:/var/www/html
+    depends_on:
+      - mariadb
+    environment:
+      APP_ENV: dev
+      APP_DEBUG: 1
+      DATABASE_URL: mysql://root:root@mariadb:3306/rhnewlife?serverVersion=10.11.2-MariaDB&charset=utf8mb4
+      MAILER_DSN: smtp://mailhog:1025
+    networks:
+      - rhnewlife
+
+  ### Nginx ###
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: rhnewlife_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+    networks:
+      - rhnewlife
+
+  ### MariaDB ###
+  mariadb:
+    image: mariadb:10.11
+    container_name: rhnewlife_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: rhnewlife
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    networks:
+      - rhnewlife
+
+  ### PHPMyAdmin ###
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: rhnewlife_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 128M
+    depends_on:
+      - mariadb
+    networks:
+      - rhnewlife
+
+  ### MailHog ###
+  mailhog:
+    image: mailhog/mailhog
+    container_name: rhnewlife_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - rhnewlife
+
+networks:
+  rhnewlife:
+    driver: bridge
 
 volumes:
-###> doctrine/doctrine-bundle ###
-  database_data:
-###< doctrine/doctrine-bundle ###
+  db_data:
