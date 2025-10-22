@@ -1,20 +1,205 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello HomeController!{% endblock %}
+{% block title %}RhNewLife - Application SIRH
+{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+	<!-- Hero Section -->
+	<section class="bg-linear-to-r from-blue-600 to-blue-800 text-white">
+		<div class="max-w-7xl mx-auto px-4 py-20 text-center">
+			<div class="mb-8">
+				<h1 class="text-5xl font-bold mb-4">🏢 RhNewLife</h1>
+				<p class="text-2xl font-light mb-6">Système d'Information Ressources Humaines</p>
+				<p class="text-lg text-blue-100 max-w-3xl mx-auto">
+					Application de gestion complète pour l'Association NewLife -
+					                Gestion du personnel, planning, congés, paie et bien plus encore.
+				</p>
+			</div>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+			<div class="flex justify-center gap-4 mt-10">
+				<a href="#" class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg">
+					Se connecter
+				</a>
+				<a href="#features" class="bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors border-2 border-white">
+					Découvrir
+				</a>
+			</div>
+		</div>
+	</section>
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>C:/Users/mattl/Projects/GestionRHNewLife/symfonyRhNewLife/rhnewlife/src/Controller/HomeController.php</code></li>
-        <li>Your template at <code>C:/Users/mattl/Projects/GestionRHNewLife/symfonyRhNewLife/rhnewlife/templates/home/index.html.twig</code></li>
-    </ul>
-</div>
+	<!-- Status Banner -->
+	<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+		<div class="max-w-7xl mx-auto flex items-center">
+			<div class="shrink-0">
+				<svg class="h-5 w-5 text-yellow-400" viewbox="0 0 20 20" fill="currentColor">
+					<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+				</svg>
+			</div>
+			<div class="ml-3">
+				<p class="text-sm text-yellow-700">
+					<strong>Version de développement</strong>
+					- Application en cours de construction. Date cible V1 : Janvier 2026
+				</p>
+			</div>
+		</div>
+	</div>
+
+	<!-- Features Section -->
+	<section id="features" class="py-16 bg-gray-50">
+		<div class="max-w-7xl mx-auto px-4">
+			<h2 class="text-3xl font-bold text-center mb-12 text-gray-900">Modules Principaux V1</h2>
+
+			<div
+				class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+				<!-- Module Onboarding -->
+				<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+					<div class="text-3xl mb-4">🆕</div>
+					<h3 class="text-xl font-semibold mb-2 text-gray-900">Onboarding</h3>
+					<p class="text-gray-600">Email automatique avec lien sécurisé pour complétion du profil salarié</p>
+				</div>
+
+				<!-- Module Fiches Salariés -->
+				<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+					<div class="text-3xl mb-4">👤</div>
+					<h3 class="text-xl font-semibold mb-2 text-gray-900">Fiches Salariés</h3>
+					<p class="text-gray-600">Gestion complète des informations personnelles et professionnelles</p>
+				</div>
+
+				<!-- Module Contrats -->
+				<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+					<div class="text-3xl mb-4">📝</div>
+					<h3 class="text-xl font-semibold mb-2 text-gray-900">Contrats</h3>
+					<p class="text-gray-600">CDI, CDD, Bénévolat - Gestion des salaires et avantages</p>
+				</div>
+
+				<!-- Module Planning -->
+				<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+					<div class="text-3xl mb-4">📅</div>
+					<h3 class="text-xl font-semibold mb-2 text-gray-900">Planning</h3>
+					<p class="text-gray-600">Roulements 35h par villa avec visualisation intuitive</p>
+				</div>
+
+				<!-- Module Congés -->
+				<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+					<div class="text-3xl mb-4">🏖️</div>
+					<h3 class="text-xl font-semibold mb-2 text-gray-900">Congés & Absences</h3>
+					<p class="text-gray-600">9 types d'absences avec workflow de validation automatisé</p>
+				</div>
+
+				<!-- Module Paie -->
+				<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+					<div class="text-3xl mb-4">💰</div>
+					<h3 class="text-xl font-semibold mb-2 text-gray-900">Éléments Variables</h3>
+					<p class="text-gray-600">Primes, frais, acomptes avec export paie mensuel</p>
+				</div>
+
+				<!-- Module Formations -->
+				<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+					<div class="text-3xl mb-4">🎓</div>
+					<h3 class="text-xl font-semibold mb-2 text-gray-900">Formations</h3>
+					<p class="text-gray-600">Suivi PSC1, protection de l'enfance avec alertes</p>
+				</div>
+
+				<!-- Module Entretiens -->
+				<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+					<div class="text-3xl mb-4">🎤</div>
+					<h3 class="text-xl font-semibold mb-2 text-gray-900">Entretiens</h3>
+					<p class="text-gray-600">Annuels, professionnels, période d'essai</p>
+				</div>
+
+				<!-- Module RGPD -->
+				<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+					<div class="text-3xl mb-4">🔐</div>
+					<h3 class="text-xl font-semibold mb-2 text-gray-900">RGPD & Sécurité</h3>
+					<p class="text-gray-600">Audit logs, export données, chiffrement des données sensibles</p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- Stats Section -->
+	<section class="py-16 bg-white">
+		<div class="max-w-7xl mx-auto px-4">
+			<div class="grid md:grid-cols-4 gap-8 text-center">
+				<div>
+					<div class="text-4xl font-bold text-blue-600 mb-2">18</div>
+					<div class="text-gray-600">Modules V1</div>
+				</div>
+				<div>
+					<div class="text-4xl font-bold text-blue-600 mb-2">12</div>
+					<div class="text-gray-600">Entités BDD</div>
+				</div>
+				<div>
+					<div class="text-4xl font-bold text-blue-600 mb-2">20</div>
+					<div class="text-gray-600">Semaines</div>
+				</div>
+				<div>
+					<div class="text-4xl font-bold text-blue-600 mb-2">~10</div>
+					<div class="text-gray-600">Utilisateurs</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- Tech Stack -->
+	<section class="py-16 bg-gray-50">
+		<div class="max-w-7xl mx-auto px-4">
+			<h2 class="text-3xl font-bold text-center mb-12 text-gray-900">Stack Technique</h2>
+
+			<div class="grid md:grid-cols-3 gap-8">
+				<div class="text-center">
+					<div class="bg-white rounded-lg p-6 shadow-md">
+						<h3 class="text-xl font-semibold mb-4 text-gray-900">Backend</h3>
+						<ul class="space-y-2 text-gray-600">
+							<li>✓ Symfony 7.3</li>
+							<li>✓ PHP 8.3</li>
+							<li>✓ Doctrine ORM</li>
+							<li>✓ MariaDB 10.11</li>
+						</ul>
+					</div>
+				</div>
+
+				<div class="text-center">
+					<div class="bg-white rounded-lg p-6 shadow-md">
+						<h3 class="text-xl font-semibold mb-4 text-gray-900">Frontend</h3>
+						<ul class="space-y-2 text-gray-600">
+							<li>✓ Tailwind CSS 4</li>
+							<li>✓ Flowbite</li>
+							<li>✓ Stimulus/Turbo</li>
+							<li>✓ Webpack Encore</li>
+						</ul>
+					</div>
+				</div>
+
+				<div class="text-center">
+					<div class="bg-white rounded-lg p-6 shadow-md">
+						<h3 class="text-xl font-semibold mb-4 text-gray-900">DevOps</h3>
+						<ul class="space-y-2 text-gray-600">
+							<li>✓ Docker</li>
+							<li>✓ Nginx + PHP-FPM</li>
+							<li>✓ MailHog (dev)</li>
+							<li>✓ PHPUnit</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- Footer -->
+	<footer class="bg-gray-900 text-white py-8">
+		<div class="max-w-7xl mx-auto px-4 text-center">
+			<p class="text-gray-400">
+				© 2025 Association NewLife - RhNewLife SIRH
+			</p>
+			<p class="text-sm text-gray-500 mt-2">
+				Développé par Matthieu • Version 1.0.0-dev
+			</p>
+			<div class="mt-4 space-x-4">
+				<a href="/test-mail" class="text-blue-400 hover:text-blue-300 transition-colors">Test Email</a>
+				<span class="text-gray-600">•</span>
+				<a href="{{ path('app_home') }}" class="text-blue-400 hover:text-blue-300 transition-colors">Accueil</a>
+			</div>
+		</div>
+	</footer>
 {% endblock %}

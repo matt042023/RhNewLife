@@ -1,0 +1,261 @@
+{% extends 'layouts/auth.html.twig' %}
+
+{% block title %}Téléverser mes justificatifs - RH NewLife{% endblock %}
+
+{% block page_title %}Étape 2/2 : Justificatifs{% endblock %}
+
+{% block page_subtitle %}
+    <p class="mt-2 text-sm text-gray-600">Téléversez les documents requis pour finaliser votre dossier</p>
+{% endblock %}
+
+{% block content %}
+    {# Barre de progression #}
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-semibold text-blue-600">Étape 2 sur 2</span>
+            <span class="text-sm text-gray-600" id="completion-percentage">{{ completionStatus.percentage }}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+            <div id="progress-bar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all" style="width: {{ completionStatus.percentage }}%"></div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">{{ completionStatus.uploaded }} / {{ completionStatus.required }} documents requis</p>
+    </div>
+
+    {# Flash messages #}
+    {% for label, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-4">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    {# Liste des documents requis #}
+    <div class="space-y-4">
+
+        {# CNI #}
+        <div class="card" id="doc-cni">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h3 class="font-semibold text-gray-900">📄 Carte Nationale d'Identité (CNI)</h3>
+                    <p class="text-sm text-gray-600 mt-1">Recto-verso, en cours de validité</p>
+                    {% if documents.cni %}
+                        <div class="mt-2 text-sm">
+                            <span class="badge badge-success">✓ Téléversé</span>
+                            <span class="text-gray-600">{{ documents.cni.originalName }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if documents.cni %}
+                        <button type="button" class="text-red-600 hover:text-red-800 text-sm font-semibold" onclick="deleteDocument({{ documents.cni.id }}, 'cni')">
+                            Supprimer
+                        </button>
+                    {% else %}
+                        <label for="upload-cni" class="btn btn-secondary cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Téléverser
+                        </label>
+                        <input type="file" id="upload-cni" class="hidden" accept=".pdf,.jpg,.jpeg,.png" onchange="uploadDocument(this, 'cni')">
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# RIB #}
+        <div class="card" id="doc-rib">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h3 class="font-semibold text-gray-900">💳 Relevé d'Identité Bancaire (RIB)</h3>
+                    <p class="text-sm text-gray-600 mt-1">Document officiel de votre banque</p>
+                    {% if documents.rib %}
+                        <div class="mt-2 text-sm">
+                            <span class="badge badge-success">✓ Téléversé</span>
+                            <span class="text-gray-600">{{ documents.rib.originalName }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if documents.rib %}
+                        <button type="button" class="text-red-600 hover:text-red-800 text-sm font-semibold" onclick="deleteDocument({{ documents.rib.id }}, 'rib')">
+                            Supprimer
+                        </button>
+                    {% else %}
+                        <label for="upload-rib" class="btn btn-secondary cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Téléverser
+                        </label>
+                        <input type="file" id="upload-rib" class="hidden" accept=".pdf,.jpg,.jpeg,.png" onchange="uploadDocument(this, 'rib')">
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Justificatif de domicile #}
+        <div class="card" id="doc-domicile">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h3 class="font-semibold text-gray-900">🏠 Justificatif de domicile</h3>
+                    <p class="text-sm text-gray-600 mt-1">Facture EDF, eau, téléphone... datée de moins de 3 mois</p>
+                    {% if documents.domicile %}
+                        <div class="mt-2 text-sm">
+                            <span class="badge badge-success">✓ Téléversé</span>
+                            <span class="text-gray-600">{{ documents.domicile.originalName }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if documents.domicile %}
+                        <button type="button" class="text-red-600 hover:text-red-800 text-sm font-semibold" onclick="deleteDocument({{ documents.domicile.id }}, 'domicile')">
+                            Supprimer
+                        </button>
+                    {% else %}
+                        <label for="upload-domicile" class="btn btn-secondary cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Téléverser
+                        </label>
+                        <input type="file" id="upload-domicile" class="hidden" accept=".pdf,.jpg,.jpeg,.png" onchange="uploadDocument(this, 'domicile')">
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Attestation d'honorabilité #}
+        <div class="card" id="doc-honorabilite">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h3 class="font-semibold text-gray-900">✅ Attestation d'honorabilité</h3>
+                    <p class="text-sm text-gray-600 mt-1">Bulletin n°3 du casier judiciaire ou attestation sur l'honneur</p>
+                    {% if documents.honorabilite %}
+                        <div class="mt-2 text-sm">
+                            <span class="badge badge-success">✓ Téléversé</span>
+                            <span class="text-gray-600">{{ documents.honorabilite.originalName }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if documents.honorabilite %}
+                        <button type="button" class="text-red-600 hover:text-red-800 text-sm font-semibold" onclick="deleteDocument({{ documents.honorabilite.id }}, 'honorabilite')">
+                            Supprimer
+                        </button>
+                    {% else %}
+                        <label for="upload-honorabilite" class="btn btn-secondary cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Téléverser
+                        </label>
+                        <input type="file" id="upload-honorabilite" class="hidden" accept=".pdf,.jpg,.jpeg,.png" onchange="uploadDocument(this, 'honorabilite')">
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 text-yellow-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <div class="ml-3">
+                <p class="text-sm text-yellow-800">
+                    <strong>Formats acceptés :</strong> PDF, JPG, PNG • <strong>Taille max :</strong> 5 Mo par fichier
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex gap-3 mt-6">
+        <a href="{{ path('app_onboarding_step1') }}" class="btn btn-ghost">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Retour
+        </a>
+        <form method="post" action="{{ path('app_onboarding_complete') }}" class="flex-1" id="complete-form">
+            <button type="submit" class="btn btn-success w-full" id="complete-btn" {% if completionStatus.percentage < 100 %}disabled{% endif %}>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Terminer l'onboarding
+            </button>
+        </form>
+    </div>
+
+    <script>
+        function uploadDocument(input, type) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Validation taille (5 Mo)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Le fichier est trop volumineux (max 5 Mo)');
+                input.value = '';
+                return;
+            }
+
+            // Validation type
+            const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Format non supporté. Utilisez PDF, JPG ou PNG.');
+                input.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('type', type);
+
+            // Upload via AJAX
+            fetch('{{ path('app_documents_upload') }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Recharger la page pour afficher le document
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Erreur lors du téléversement');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors du téléversement');
+            });
+        }
+
+        function deleteDocument(documentId, type) {
+            if (!confirm('Supprimer ce document ?')) return;
+
+            fetch('{{ path('app_documents_delete', {id: '__ID__'}) }}'.replace('__ID__', documentId), {
+                method: 'DELETE',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Erreur lors de la suppression');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la suppression');
+            });
+        }
+    </script>
+{% endblock %}

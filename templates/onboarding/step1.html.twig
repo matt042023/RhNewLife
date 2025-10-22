@@ -1,0 +1,179 @@
+{% extends 'layouts/auth.html.twig' %}
+
+{% block title %}Informations personnelles - RH NewLife{% endblock %}
+
+{% block page_title %}Étape 1/2 : Informations personnelles{% endblock %}
+
+{% block page_subtitle %}
+    <p class="mt-2 text-sm text-gray-600">Complétez vos informations pour finaliser votre dossier</p>
+{% endblock %}
+
+{% block content %}
+    {# Barre de progression #}
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-semibold text-blue-600">Étape 1 sur 2</span>
+            <span class="text-sm text-gray-600">50%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all" style="width: 50%"></div>
+        </div>
+    </div>
+
+    {% if errors is not empty %}
+        <div class="alert alert-error mb-4">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <ul class="list-disc list-inside">
+                {% for error in errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" class="space-y-6">
+
+        {# Informations de contact #}
+        <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-gray-900">📞 Contact</h3>
+
+            <div>
+                <label for="phone" class="form-label">
+                    Téléphone <span class="text-red-500">*</span>
+                </label>
+                <input
+                    type="tel"
+                    name="phone"
+                    id="phone"
+                    value="{{ formData.phone ?? user.phone ?? '' }}"
+                    class="form-input"
+                    required
+                    placeholder="06 12 34 56 78"
+                    pattern="^0[1-9]([-. ]?[0-9]{2}){4}$"
+                >
+                <p class="form-help">Format attendu : 06 12 34 56 78</p>
+            </div>
+
+            <div>
+                <label for="address" class="form-label">
+                    Adresse complète <span class="text-red-500">*</span>
+                </label>
+                <textarea
+                    name="address"
+                    id="address"
+                    rows="3"
+                    class="form-textarea"
+                    required
+                    placeholder="Numéro, rue, code postal, ville"
+                >{{ formData.address ?? user.address ?? '' }}</textarea>
+            </div>
+        </div>
+
+        {# Situation familiale #}
+        <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-gray-900">👨‍👩‍👧‍👦 Situation familiale</h3>
+
+            <div>
+                <label for="family_status" class="form-label">
+                    Situation familiale <span class="text-red-500">*</span>
+                </label>
+                <select name="family_status" id="family_status" class="form-select" required>
+                    <option value="">-- Sélectionner --</option>
+                    <option value="Célibataire" {{ (formData.family_status ?? user.familyStatus ?? '') == 'Célibataire' ? 'selected' : '' }}>Célibataire</option>
+                    <option value="Marié" {{ (formData.family_status ?? user.familyStatus ?? '') == 'Marié' ? 'selected' : '' }}>Marié(e)</option>
+                    <option value="Pacsé" {{ (formData.family_status ?? user.familyStatus ?? '') == 'Pacsé' ? 'selected' : '' }}>Pacsé(e)</option>
+                    <option value="Divorcé" {{ (formData.family_status ?? user.familyStatus ?? '') == 'Divorcé' ? 'selected' : '' }}>Divorcé(e)</option>
+                    <option value="Veuf" {{ (formData.family_status ?? user.familyStatus ?? '') == 'Veuf' ? 'selected' : '' }}>Veuf(ve)</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="children" class="form-label">
+                    Nombre d'enfants à charge <span class="text-red-500">*</span>
+                </label>
+                <input
+                    type="number"
+                    name="children"
+                    id="children"
+                    value="{{ formData.children ?? user.children ?? '0' }}"
+                    class="form-input"
+                    required
+                    min="0"
+                    max="20"
+                >
+            </div>
+        </div>
+
+        {# Informations bancaires #}
+        <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-gray-900">💳 Coordonnées bancaires</h3>
+            <p class="text-sm text-gray-600">Pour le versement de votre salaire</p>
+
+            <div>
+                <label for="iban" class="form-label">
+                    IBAN <span class="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    name="iban"
+                    id="iban"
+                    value="{{ formData.iban ?? user.iban ?? '' }}"
+                    class="form-input font-mono"
+                    required
+                    placeholder="FR76 3000 6000 0112 3456 7890 189"
+                    maxlength="34"
+                >
+                <p class="form-help">27 à 34 caractères selon le pays</p>
+            </div>
+
+            <div>
+                <label for="bic" class="form-label">
+                    BIC / SWIFT <span class="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    name="bic"
+                    id="bic"
+                    value="{{ formData.bic ?? user.bic ?? '' }}"
+                    class="form-input font-mono uppercase"
+                    required
+                    placeholder="AGRIFRPP"
+                    maxlength="11"
+                    pattern="^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$"
+                >
+                <p class="form-help">8 ou 11 caractères (ex: AGRIFRPP)</p>
+            </div>
+        </div>
+
+        <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-800">
+                        <strong>Étape suivante :</strong><br>
+                        Après validation de ces informations, vous devrez téléverser vos justificatifs (CNI, RIB, justificatif de domicile, attestation d'honorabilité).
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <a href="{{ path('app_dashboard') }}" class="btn btn-ghost">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Retour
+            </a>
+            <button type="submit" class="btn btn-primary flex-1">
+                Suivant : Téléverser mes documents
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </button>
+        </div>
+    </form>
+{% endblock %}

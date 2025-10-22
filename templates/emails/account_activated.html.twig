@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compte activé - RH NewLife</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .success-icon {
+            text-align: center;
+            font-size: 60px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+        .footer {
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Compte activé avec succès !</h1>
+        </div>
+
+        <div class="content">
+            <div class="success-icon">🎉</div>
+
+            <h2 style="text-align: center; color: #1f2937;">Bienvenue {{ user.firstName }} !</h2>
+
+            <p>
+                Votre compte RH NewLife a été activé avec succès. Vous pouvez maintenant accéder à votre espace personnel.
+            </p>
+
+            <p>
+                <strong>Prochaines étapes :</strong>
+            </p>
+            <ol>
+                <li>Complétez vos informations personnelles</li>
+                <li>Téléversez vos justificatifs (CNI, RIB, justificatif de domicile, attestation d'honorabilité)</li>
+                <li>Attendez la validation de votre dossier par notre équipe RH</li>
+            </ol>
+
+            <p>
+                Une fois votre dossier validé, vous aurez accès à l'ensemble des fonctionnalités de votre espace RH.
+            </p>
+
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+                Si vous avez des questions, n'hésitez pas à contacter votre administrateur RH.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>
+                © {{ "now"|date("Y") }} RH NewLife. Tous droits réservés.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
