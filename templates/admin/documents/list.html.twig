@@ -1,63 +1,368 @@
 {% extends 'admin.html.twig' %}
 
-{% block title %}Gestion des documents{% endblock %}
+{% block title %}Gestion des documents RH - RH NewLife{% endblock %}
 
-{% block body %}
-<section class="container py-4">
-    <h1 class="h3 mb-3">
-        {% if isArchiveView %}
-            Archives documents RH
-        {% else %}
-            Documents RH
-        {% endif %}
-    </h1>
+{% block admin_title %}
+    {% if isArchiveView|default(false) %}
+        Archives documents RH
+    {% else %}
+        Documents RH
+    {% endif %}
+{% endblock %}
 
-    <p class="text-muted">Vue d’administration provisoire. Les filtres et l’interface seront affinés en phase 6.</p>
+{% block admin_subtitle %}
+    {% if isArchiveView|default(false) %}
+        Consultation et gestion des documents archivés
+    {% else %}
+        Gestion centralisée des documents du personnel
+    {% endif %}
+{% endblock %}
 
-    <div class="mb-3">
-        <strong>Total :</strong> {{ stats.total }} |
-        <strong>En attente :</strong> {{ stats.pending }} |
-        <strong>Validés :</strong> {{ stats.validated }} |
-        <strong>Rejetés :</strong> {{ stats.rejected }}
+{% block admin_actions %}
+    {% if not isArchiveView|default(false) %}
+        <a href="{{ path('app_admin_documents_upload') }}" class="inline-flex items-center px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg shadow-md hover:bg-blue-50 transition">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            Uploader un document
+        </a>
+    {% endif %}
+{% endblock %}
+
+{% block admin_stats %}
+    {# Stats cards #}
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
+            <div class="text-sm opacity-90">Total</div>
+            <div class="text-2xl font-bold">{{ stats.total|default(0) }}</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
+            <div class="text-sm opacity-90">En attente</div>
+            <div class="text-2xl font-bold">{{ stats.pending|default(0) }}</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
+            <div class="text-sm opacity-90">Validés</div>
+            <div class="text-2xl font-bold">{{ stats.validated|default(0) }}</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
+            <div class="text-sm opacity-90">Rejetés</div>
+            <div class="text-2xl font-bold">{{ stats.rejected|default(0) }}</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
+            <div class="text-sm opacity-90">Archivés</div>
+            <div class="text-2xl font-bold">{{ stats.archived|default(0) }}</div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    {# Filtres avancés #}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <form method="get" action="{{ path('app_admin_documents_list') }}" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {# Recherche textuelle #}
+                <div class="md:col-span-2">
+                    <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Recherche
+                    </label>
+                    <input
+                        type="text"
+                        id="search"
+                        name="search"
+                        value="{{ filters.search|default('') }}"
+                        placeholder="Nom de fichier, commentaire..."
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    >
+                </div>
+
+                {# Filtre par salarié #}
+                <div>
+                    <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Salarié
+                    </label>
+                    <select
+                        id="user_id"
+                        name="user_id"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    >
+                        <option value="">Tous</option>
+                        {% for user in users|default([]) %}
+                            <option value="{{ user.id }}" {{ filters.user_id|default('') == user.id ? 'selected' : '' }}>
+                                {{ user.fullName }} {% if user.matricule %}({{ user.matricule }}){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# Filtre par type #}
+                <div>
+                    <label for="type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Type de document
+                    </label>
+                    <select
+                        id="type"
+                        name="type"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    >
+                        <option value="">Tous</option>
+                        {% for key, label in types|default({}) %}
+                            <option value="{{ key }}" {{ filters.type|default('') == key ? 'selected' : '' }}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {# Filtre par statut #}
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Statut
+                    </label>
+                    <select
+                        id="status"
+                        name="status"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    >
+                        <option value="">Tous</option>
+                        {% for key, label in statuses|default({}) %}
+                            <option value="{{ key }}" {{ filters.status|default('') == key ? 'selected' : '' }}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# Filtre archivé #}
+                {% if not isArchiveView|default(false) %}
+                <div>
+                    <label for="archived" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        État
+                    </label>
+                    <select
+                        id="archived"
+                        name="archived"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    >
+                        <option value="">Tous</option>
+                        <option value="0" {{ filters.archived|default('') == '0' ? 'selected' : '' }}>Actifs</option>
+                        <option value="1" {{ filters.archived|default('') == '1' ? 'selected' : '' }}>Archivés</option>
+                    </select>
+                </div>
+                {% endif %}
+
+                {# Boutons d'action #}
+                <div class="md:col-span-2 flex items-end gap-2">
+                    <button
+                        type="submit"
+                        class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition"
+                    >
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        Filtrer
+                    </button>
+                    <a
+                        href="{{ path('app_admin_documents_list') }}"
+                        class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                    >
+                        Réinitialiser
+                    </a>
+                </div>
+            </div>
+        </form>
     </div>
 
-    <table class="table table-striped align-middle">
-        <thead>
-        <tr>
-            <th>Type</th>
-            <th>Salarié</th>
-            <th>Statut</th>
-            <th>Archivé</th>
-            <th>Téléversé le</th>
-            <th class="text-end">Actions</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for document in documents %}
-            <tr>
-                <td>{{ document.typeLabel ?? (types[document.type] ?? document.type) }}</td>
-                <td>{{ document.user ? document.user.fullName : '—' }}</td>
-                <td>{{ statuses[document.status] ?? document.status }}</td>
-                <td>
-                    {% if document.isArchived %}
-                        <span class="badge text-bg-warning">Archivé</span>
+    {# Actions groupées #}
+    <div id="bulk-actions" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <span id="selection-count" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    0 document(s) sélectionné(s)
+                </span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button
+                    type="button"
+                    class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                    disabled
+                >
+                    ✓ Valider sélection
+                </button>
+                <button
+                    type="button"
+                    class="inline-flex items-center px-3 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg hover:bg-yellow-700 transition disabled:opacity-50"
+                    disabled
+                >
+                    📦 Archiver sélection
+                </button>
+                <button
+                    type="button"
+                    class="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                    disabled
+                >
+                    💾 Télécharger ZIP
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# Tableau des documents #}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+        {% if documents is empty %}
+            {# État vide #}
+            <div class="p-12 text-center">
+                <svg class="w-20 h-20 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Aucun document trouvé</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">
+                    {% if filters|default({})|length > 0 %}
+                        Aucun document ne correspond à vos filtres.
                     {% else %}
-                        <span class="badge text-bg-success">Actif</span>
+                        Commencez par uploader un document.
                     {% endif %}
-                </td>
-                <td>{{ document.uploadedAt ? document.uploadedAt|date('d/m/Y H:i') : '—' }}</td>
-                <td class="text-end">
-                    <a class="btn btn-sm btn-outline-primary" href="{{ path('app_admin_documents_view', {id: document.id}) }}">
-                        Détails
+                </p>
+                {% if not isArchiveView|default(false) %}
+                    <a href="{{ path('app_admin_documents_upload') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        Uploader un document
                     </a>
-                </td>
-            </tr>
+                {% endif %}
+            </div>
         {% else %}
-            <tr>
-                <td colspan="6" class="text-center text-muted py-4">Aucun document trouvé avec ces filtres.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-</section>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">
+                                <input type="checkbox" id="select-all" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                            </th>
+                            <th scope="col" class="px-6 py-3">Type</th>
+                            <th scope="col" class="px-6 py-3">Salarié</th>
+                            <th scope="col" class="px-6 py-3">Taille</th>
+                            <th scope="col" class="px-6 py-3">Statut</th>
+                            {% if isArchiveView|default(false) %}
+                                <th scope="col" class="px-6 py-3">Archivé le</th>
+                            {% else %}
+                                <th scope="col" class="px-6 py-3">Uploadé le</th>
+                            {% endif %}
+                            <th scope="col" class="px-6 py-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for document in documents %}
+                            <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                <td class="px-6 py-4">
+                                    <input type="checkbox" value="{{ document.id }}" class="document-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                </td>
+                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                    <div class="flex items-center gap-2">
+                                        {% include 'components/documents/_document_type_icon.html.twig' with {type: document.type} %}
+                                        <span>{{ document.typeLabel ?? (types[document.type]|default(document.type)) }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if document.user %}
+                                        <a href="{{ path('app_admin_users_view', {id: document.user.id}) }}" class="text-blue-600 dark:text-blue-400 hover:underline">
+                                            {{ document.user.fullName }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-gray-400">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4">{{ document.fileSizeFormatted|default('—') }}</td>
+                                <td class="px-6 py-4">
+                                    {% include 'components/documents/_document_status_badge.html.twig' with {status: document.status, isArchived: document.isArchived|default(false)} %}
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if isArchiveView|default(false) and document.archivedAt %}
+                                        {{ document.archivedAt|date('d/m/Y H:i') }}
+                                    {% elseif document.uploadedAt %}
+                                        {{ document.uploadedAt|date('d/m/Y H:i') }}
+                                    {% else %}
+                                        <span class="text-gray-400">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <a href="{{ path('app_admin_documents_view', {id: document.id}) }}" class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                        Détails
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# Pagination #}
+            {% if pagination|default(false) %}
+                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-700 dark:text-gray-400">
+                            Affichage de <span class="font-semibold">{{ pagination.from }}</span> à <span class="font-semibold">{{ pagination.to }}</span> sur <span class="font-semibold">{{ pagination.total }}</span> documents
+                        </div>
+                        <nav class="inline-flex rounded-md shadow-sm">
+                            {# Pagination buttons (à implémenter avec données réelles) #}
+                            <a href="#" class="px-3 py-2 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">
+                                Précédent
+                            </a>
+                            <a href="#" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">
+                                1
+                            </a>
+                            <a href="#" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">
+                                Suivant
+                            </a>
+                        </nav>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    {# Lien vers archives (si pas déjà dans la vue archives) #}
+    {% if not isArchiveView|default(false) %}
+        <div class="text-center">
+            <a href="{{ path('app_admin_documents_archives') }}" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                </svg>
+                Consulter les archives
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+{# Script pour gestion sélection multiple (sera migré vers Stimulus en Phase 9) #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.document-checkbox');
+    const bulkActions = document.getElementById('bulk-actions');
+    const selectionCount = document.getElementById('selection-count');
+
+    function updateBulkActions() {
+        const checkedCount = document.querySelectorAll('.document-checkbox:checked').length;
+        selectionCount.textContent = `${checkedCount} document(s) sélectionné(s)`;
+        bulkActions.classList.toggle('hidden', checkedCount === 0);
+    }
+
+    selectAll?.addEventListener('change', function() {
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        updateBulkActions();
+    });
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulkActions);
+    });
+});
+</script>
 {% endblock %}

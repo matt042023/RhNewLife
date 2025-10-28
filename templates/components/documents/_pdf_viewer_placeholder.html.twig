@@ -1,0 +1,165 @@
+{# PDF Viewer Component with PDF.js integration
+
+   Usage:
+   {% include 'components/documents/_pdf_viewer_placeholder.html.twig' with {
+       'document': documentObject,
+       'documentUrl': path('...', {id: document.id}),
+       'downloadRoute': path('...', {id: document.id}),
+       'height': '600px' (optional, default: 600px)
+   } %}
+#}
+
+{% set height = height|default('600px') %}
+{% set documentUrl = documentUrl|default(downloadRoute) %}
+
+<div data-controller="pdf-viewer"
+     data-pdf-viewer-url-value="{{ documentUrl }}"
+     data-pdf-viewer-worker-src-value="{{ asset('build/pdfjs/pdf.worker.mjs') }}"
+     class="bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden"
+     style="min-height: {{ height }};">
+
+    {# Viewer toolbar with Stimulus actions #}
+    <div class="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center gap-3">
+            {# Page navigation #}
+            <div class="flex items-center gap-2">
+                <button type="button"
+                        data-pdf-viewer-target="prevButton"
+                        data-action="click->pdf-viewer#prevPage"
+                        class="p-2 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Page précédente">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <span class="text-sm text-gray-600 dark:text-gray-400 min-w-[60px] text-center">
+                    <span class="font-medium" data-pdf-viewer-target="pageNum">1</span>
+                    /
+                    <span data-pdf-viewer-target="pageCount">1</span>
+                </span>
+                <button type="button"
+                        data-pdf-viewer-target="nextButton"
+                        data-action="click->pdf-viewer#nextPage"
+                        class="p-2 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Page suivante">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+            </div>
+
+            {# Divider #}
+            <div class="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+            {# Zoom controls #}
+            <div class="flex items-center gap-2">
+                <button type="button"
+                        data-pdf-viewer-target="zoomOutButton"
+                        data-action="click->pdf-viewer#zoomOut"
+                        class="p-2 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Zoom arrière">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path>
+                    </svg>
+                </button>
+                <span class="text-sm text-gray-600 dark:text-gray-400 min-w-[60px] text-center font-medium"
+                      data-pdf-viewer-target="scaleDisplay">150%</span>
+                <button type="button"
+                        data-pdf-viewer-target="zoomInButton"
+                        data-action="click->pdf-viewer#zoomIn"
+                        class="p-2 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Zoom avant">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path>
+                    </svg>
+                </button>
+            </div>
+
+            {# Divider #}
+            <div class="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+            {# Fit to width button #}
+            <button type="button"
+                    data-action="click->pdf-viewer#fitToWidth"
+                    class="p-2 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    title="Ajuster à la largeur">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                </svg>
+            </button>
+
+            {# Reset zoom button #}
+            <button type="button"
+                    data-action="click->pdf-viewer#resetZoom"
+                    class="hidden sm:inline-flex items-center px-2 py-1 text-xs text-gray-600 dark:text-gray-400 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    title="100%">
+                100%
+            </button>
+        </div>
+
+        {# Action buttons #}
+        <div class="flex items-center gap-2">
+            <a href="{{ downloadRoute }}"
+               data-action="click->pdf-viewer#download"
+               class="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+               title="Télécharger">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                <span class="hidden sm:inline">Télécharger</span>
+            </a>
+        </div>
+    </div>
+
+    {# Canvas container #}
+    <div class="relative bg-gray-100 dark:bg-gray-900" style="min-height: calc({{ height }} - 60px);">
+        {# Loading spinner #}
+        <div data-pdf-viewer-target="loading" class="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div class="text-center">
+                <div class="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p class="text-gray-600 dark:text-gray-400">Chargement du PDF...</p>
+            </div>
+        </div>
+
+        {# PDF Canvas #}
+        <div class="flex items-center justify-center p-4 overflow-auto">
+            <canvas data-pdf-viewer-target="canvas"
+                    class="shadow-lg bg-white max-w-full h-auto"></canvas>
+        </div>
+
+        {# Error message #}
+        <div data-pdf-viewer-target="errorMessage" class="hidden absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+            <div class="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg shadow-lg max-w-md">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="font-medium">Erreur de chargement</span>
+                </div>
+            </div>
+        </div>
+
+        {# Fallback section (shown on error) #}
+        <div data-pdf-viewer-target="fallback" class="hidden absolute inset-0 flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-900">
+            <div class="text-center max-w-md">
+                <svg class="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    Impossible d'afficher le PDF
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">
+                    Le document ne peut pas être visualisé dans votre navigateur.<br>
+                    Veuillez le télécharger pour le consulter.
+                </p>
+                <a href="{{ downloadRoute }}"
+                   class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Télécharger le fichier
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
