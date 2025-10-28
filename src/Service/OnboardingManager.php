@@ -76,6 +76,61 @@ class OnboardingManager
     }
 
     /**
+     * Active un compte utilisateur en mode simple (sans onboarding complet)
+     * Utilisé pour les créations manuelles de salariés par l'admin
+     * Le compte est directement actif, sans passer par le processus d'onboarding
+     */
+    public function activateSimpleAccount(
+        Invitation $invitation,
+        string $plainPassword,
+        bool $acceptCGU
+    ): User {
+        if (!$acceptCGU) {
+            throw new \InvalidArgumentException('Vous devez accepter les CGU pour continuer.');
+        }
+
+        if (!$invitation->isSkipOnboarding()) {
+            throw new \LogicException('Cette invitation nécessite un onboarding complet.');
+        }
+
+        // Validation du mot de passe
+        $this->validatePassword($plainPassword);
+
+        // Création de l'utilisateur directement actif
+        $user = new User();
+        $user
+            ->setEmail($invitation->getEmail())
+            ->setFirstName($invitation->getFirstName())
+            ->setLastName($invitation->getLastName())
+            ->setPosition($invitation->getPosition())
+            ->setStructure($invitation->getStructure())
+            ->setStatus(User::STATUS_ACTIVE) // Directement actif
+            ->setRoles(['ROLE_USER'])
+            ->setCguAcceptedAt(new \DateTime());
+
+        // Hash du mot de passe
+        $hashedPassword = $this->passwordHasher->hashPassword($user, $plainPassword);
+        $user->setPassword($hashedPassword);
+
+        // Sauvegarde
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+
+        // Marque l'invitation comme utilisée
+        $this->invitationManager->markAsUsed($invitation, $user);
+
+        // Envoie l'email de bienvenue
+        $this->sendWelcomeEmail($user);
+
+        $this->logger->info('User account activated (simple mode)', [
+            'user_id' => $user->getId(),
+            'invitation_id' => $invitation->getId(),
+        ]);
+
+        return $user;
+    }
+
+    /**
      * Met à jour le profil utilisateur (informations personnelles)
      */
     public function updateProfile(

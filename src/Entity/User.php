@@ -85,15 +85,29 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $submittedAt = null;
 
+    #[ORM\Column(length: 20, unique: true, nullable: true)]
+    #[\App\Validator\MatriculeFormat]
+    private ?string $matricule = null;
+
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $hiringDate = null;
+
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'user', orphanRemoval: true)]
     private Collection $documents;
 
+    /**
+     * @var Collection<int, Contract>
+     */
+    #[ORM\OneToMany(targetEntity: Contract::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $contracts;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
+        $this->contracts = new ArrayCollection();
         $this->createdAt = new \DateTime();
         $this->updatedAt = new \DateTime();
     }
@@ -371,6 +385,110 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isSubmitted(): bool
     {
         return $this->submittedAt !== null;
+    }
+
+    public function getMatricule(): ?string
+    {
+        return $this->matricule;
+    }
+
+    public function setMatricule(?string $matricule): static
+    {
+        $this->matricule = $matricule;
+        return $this;
+    }
+
+    public function getHiringDate(): ?\DateTimeInterface
+    {
+        return $this->hiringDate;
+    }
+
+    public function setHiringDate(?\DateTimeInterface $hiringDate): static
+    {
+        $this->hiringDate = $hiringDate;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Contract>
+     */
+    public function getContracts(): Collection
+    {
+        return $this->contracts;
+    }
+
+    public function addContract(Contract $contract): static
+    {
+        if (!$this->contracts->contains($contract)) {
+            $this->contracts->add($contract);
+            $contract->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeContract(Contract $contract): static
+    {
+        if ($this->contracts->removeElement($contract)) {
+            if ($contract->getUser() === $this) {
+                $contract->setUser(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Retourne le contrat actif de l'utilisateur (s'il existe)
+     */
+    public function getActiveContract(): ?Contract
+    {
+        foreach ($this->contracts as $contract) {
+            if ($contract->isActive() || $contract->isSigned()) {
+                return $contract;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Vérifie si l'utilisateur a tous les documents obligatoires
+     */
+    public function hasCompleteDocuments(): bool
+    {
+        $uploadedTypes = [];
+        foreach ($this->documents as $document) {
+            $uploadedTypes[] = $document->getType();
+        }
+
+        foreach (Document::REQUIRED_DOCUMENTS as $requiredType) {
+            if (!in_array($requiredType, $uploadedTypes, true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Retourne la liste des documents manquants
+     */
+    public function getMissingDocuments(): array
+    {
+        $uploadedTypes = [];
+        foreach ($this->documents as $document) {
+            $uploadedTypes[] = $document->getType();
+        }
+
+        $missing = [];
+        foreach (Document::REQUIRED_DOCUMENTS as $requiredType) {
+            if (!in_array($requiredType, $uploadedTypes, true)) {
+                $missing[] = $requiredType;
+            }
+        }
+
+        return $missing;
     }
 
     /**

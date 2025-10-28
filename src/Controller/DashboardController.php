@@ -25,7 +25,41 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute('app_onboarding_step2');
         }
 
-        return $this->render('dashboard/index.html.twig', [
+        // Rediriger vers le dashboard approprié selon le rôle
+        if ($this->isGranted('ROLE_ADMIN')) {
+            return $this->redirectToRoute('app_dashboard_admin');
+        }
+
+        if ($this->isGranted('ROLE_DIRECTOR')) {
+            return $this->redirectToRoute('app_dashboard_director');
+        }
+
+        return $this->redirectToRoute('app_dashboard_employee');
+    }
+
+    #[Route('/dashboard/employee', name: 'app_dashboard_employee')]
+    #[IsGranted('ROLE_USER')]
+    public function employee(#[CurrentUser] User $user): Response
+    {
+        return $this->render('dashboard/employee.html.twig', [
+            'user' => $user,
+        ]);
+    }
+
+    #[Route('/dashboard/director', name: 'app_dashboard_director')]
+    #[IsGranted('ROLE_DIRECTOR')]
+    public function director(#[CurrentUser] User $user): Response
+    {
+        return $this->render('dashboard/director.html.twig', [
+            'user' => $user,
+        ]);
+    }
+
+    #[Route('/dashboard/admin', name: 'app_dashboard_admin')]
+    #[IsGranted('ROLE_ADMIN')]
+    public function admin(#[CurrentUser] User $user): Response
+    {
+        return $this->render('dashboard/admin.html.twig', [
             'user' => $user,
         ]);
     }

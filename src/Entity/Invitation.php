@@ -60,6 +60,9 @@ class Invitation
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $errorMessage = null;
 
+    #[ORM\Column(options: ['default' => false])]
+    private bool $skipOnboarding = false;
+
     public function __construct()
     {
         $this->createdAt = new \DateTime();
@@ -255,6 +258,17 @@ class Invitation
     {
         $this->status = self::STATUS_ERROR;
         $this->errorMessage = $message;
+        return $this;
+    }
+
+    public function isSkipOnboarding(): bool
+    {
+        return $this->skipOnboarding;
+    }
+
+    public function setSkipOnboarding(bool $skipOnboarding): static
+    {
+        $this->skipOnboarding = $skipOnboarding;
         return $this;
     }
 }

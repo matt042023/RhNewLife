@@ -33,7 +33,8 @@ class InvitationManager
         string $firstName,
         string $lastName,
         ?string $position = null,
-        ?string $structure = null
+        ?string $structure = null,
+        bool $skipOnboarding = false
     ): Invitation {
         $invitation = new Invitation();
         $invitation
@@ -41,7 +42,8 @@ class InvitationManager
             ->setFirstName($firstName)
             ->setLastName($lastName)
             ->setPosition($position)
-            ->setStructure($structure);
+            ->setStructure($structure)
+            ->setSkipOnboarding($skipOnboarding);
 
         $this->entityManager->persist($invitation);
         $this->entityManager->flush();
@@ -61,6 +63,27 @@ class InvitationManager
         }
 
         return $invitation;
+    }
+
+    /**
+     * Crée une invitation pour activation simple (sans onboarding complet)
+     * Utilisé pour les créations manuelles de salariés par l'admin
+     */
+    public function createSimpleActivation(
+        string $email,
+        string $firstName,
+        string $lastName,
+        ?string $position = null,
+        ?string $structure = null
+    ): Invitation {
+        return $this->createInvitation(
+            $email,
+            $firstName,
+            $lastName,
+            $position,
+            $structure,
+            true // skipOnboarding = true
+        );
     }
 
     /**

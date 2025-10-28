@@ -25,18 +25,12 @@ class DocumentController extends AbstractController
     ) {}
 
     /**
-     * Liste des documents de l'utilisateur
+     * Redirection vers la page documents du profil
      */
     #[Route('/', name: 'app_documents_list', methods: ['GET'])]
-    public function list(#[CurrentUser] User $user): Response
+    public function list(): Response
     {
-        $documents = $this->documentRepository->findByUser($user);
-        $completionStatus = $this->documentManager->getCompletionStatus($user);
-
-        return $this->render('documents/list.html.twig', [
-            'documents' => $documents,
-            'completionStatus' => $completionStatus,
-        ]);
+        return $this->redirectToRoute('app_profile_documents');
     }
 
     /**

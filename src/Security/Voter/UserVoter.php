@@ -13,11 +13,24 @@ class UserVoter extends Voter
     public const EDIT_PROFILE = 'USER_EDIT_PROFILE';
     public const VALIDATE = 'USER_VALIDATE';
     public const ARCHIVE = 'USER_ARCHIVE';
+    public const CREATE = 'USER_CREATE'; // EP-02: création manuelle
+    public const REACTIVATE = 'USER_REACTIVATE'; // EP-02: réactivation
 
     protected function supports(string $attribute, mixed $subject): bool
     {
-        return in_array($attribute, [self::VIEW, self::EDIT, self::EDIT_PROFILE, self::VALIDATE, self::ARCHIVE])
-            && $subject instanceof User;
+        // CREATE n'a pas de subject
+        if ($attribute === self::CREATE) {
+            return true;
+        }
+
+        return in_array($attribute, [
+            self::VIEW,
+            self::EDIT,
+            self::EDIT_PROFILE,
+            self::VALIDATE,
+            self::ARCHIVE,
+            self::REACTIVATE,
+        ]) && $subject instanceof User;
     }
 
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token): bool
@@ -37,6 +50,8 @@ class UserVoter extends Voter
             self::EDIT_PROFILE => $this->canEditProfile($currentUser, $targetUser),
             self::VALIDATE => $this->canValidate($currentUser, $targetUser),
             self::ARCHIVE => $this->canArchive($currentUser),
+            self::CREATE => $this->canCreate($currentUser),
+            self::REACTIVATE => $this->canReactivate($currentUser, $targetUser),
             default => false,
         };
     }
@@ -85,6 +100,23 @@ class UserVoter extends Voter
     {
         // Seuls les admins peuvent archiver
         return $this->hasRole($currentUser, ['ROLE_ADMIN']);
+    }
+
+    private function canCreate(User $currentUser): bool
+    {
+        // Seuls les admins peuvent créer manuellement des utilisateurs
+        return $this->hasRole($currentUser, ['ROLE_ADMIN']);
+    }
+
+    private function canReactivate(User $currentUser, User $targetUser): bool
+    {
+        // Seuls les admins peuvent réactiver
+        if (!$this->hasRole($currentUser, ['ROLE_ADMIN'])) {
+            return false;
+        }
+
+        // L'utilisateur doit être archivé pour pouvoir être réactivé
+        return $targetUser->getStatus() === User::STATUS_ARCHIVED;
     }
 
     private function hasRole(User $user, array|string $roles): bool

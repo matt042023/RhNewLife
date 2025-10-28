@@ -16,6 +16,9 @@ class Document
     public const TYPE_HONORABILITE = 'honorabilite';
     public const TYPE_DIPLOME = 'diplome';
     public const TYPE_CONTRAT = 'contrat';
+    public const TYPE_CONTRACT_SIGNED = 'contract_signed';
+    public const TYPE_CONTRACT_AMENDMENT = 'contract_amendment';
+    public const TYPE_PAYSLIP = 'payslip';
     public const TYPE_OTHER = 'other';
 
     public const STATUS_PENDING = 'pending';
@@ -29,6 +32,9 @@ class Document
         self::TYPE_HONORABILITE => 'Attestation d\'honorabilité',
         self::TYPE_DIPLOME => 'Diplôme',
         self::TYPE_CONTRAT => 'Contrat',
+        self::TYPE_CONTRACT_SIGNED => 'Contrat signé',
+        self::TYPE_CONTRACT_AMENDMENT => 'Avenant',
+        self::TYPE_PAYSLIP => 'Bulletin de paie',
         self::TYPE_OTHER => 'Autre',
     ];
 
@@ -65,6 +71,10 @@ class Document
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'documents')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?User $user = null;
+
+    #[ORM\ManyToOne(targetEntity: Contract::class, inversedBy: 'documents')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Contract $contract = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $comment = null;
@@ -171,6 +181,17 @@ class Document
     public function setUser(?User $user): static
     {
         $this->user = $user;
+        return $this;
+    }
+
+    public function getContract(): ?Contract
+    {
+        return $this->contract;
+    }
+
+    public function setContract(?Contract $contract): static
+    {
+        $this->contract = $contract;
         return $this;
     }
 
