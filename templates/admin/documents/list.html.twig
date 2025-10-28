@@ -56,7 +56,7 @@
 {% endblock %}
 
 {% block admin_content %}
-<div class="space-y-6">
+<div class="space-y-6" data-controller="document-list">
     {# Filtres avancés #}
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <form method="get" action="{{ path('app_admin_documents_list') }}" class="space-y-4">
@@ -176,16 +176,18 @@
     </div>
 
     {# Actions groupées #}
-    <div id="bulk-actions" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+    <div data-document-list-target="bulkActions" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <span id="selection-count" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span data-document-list-target="selectionCount" class="text-sm font-medium text-gray-700 dark:text-gray-300">
                     0 document(s) sélectionné(s)
                 </span>
             </div>
             <div class="flex items-center gap-2">
                 <button
                     type="button"
+                    data-document-list-target="validateButton"
+                    data-action="click->document-list#validateSelection"
                     class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition disabled:opacity-50"
                     disabled
                 >
@@ -193,6 +195,8 @@
                 </button>
                 <button
                     type="button"
+                    data-document-list-target="archiveButton"
+                    data-action="click->document-list#archiveSelection"
                     class="inline-flex items-center px-3 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg hover:bg-yellow-700 transition disabled:opacity-50"
                     disabled
                 >
@@ -200,6 +204,8 @@
                 </button>
                 <button
                     type="button"
+                    data-document-list-target="downloadButton"
+                    data-action="click->document-list#downloadSelection"
                     class="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
                     disabled
                 >
@@ -240,7 +246,7 @@
                     <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                         <tr>
                             <th scope="col" class="px-6 py-3">
-                                <input type="checkbox" id="select-all" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                <input type="checkbox" data-document-list-target="selectAll" data-action="change->document-list#toggleAll" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                             </th>
                             <th scope="col" class="px-6 py-3">Type</th>
                             <th scope="col" class="px-6 py-3">Salarié</th>
@@ -258,7 +264,7 @@
                         {% for document in documents %}
                             <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                                 <td class="px-6 py-4">
-                                    <input type="checkbox" value="{{ document.id }}" class="document-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <input type="checkbox" value="{{ document.id }}" data-document-list-target="checkbox" data-action="change->document-list#updateSelection" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                                 </td>
                                 <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
                                     <div class="flex items-center gap-2">
@@ -341,28 +347,4 @@
     {% endif %}
 </div>
 
-{# Script pour gestion sélection multiple (sera migré vers Stimulus en Phase 9) #}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const selectAll = document.getElementById('select-all');
-    const checkboxes = document.querySelectorAll('.document-checkbox');
-    const bulkActions = document.getElementById('bulk-actions');
-    const selectionCount = document.getElementById('selection-count');
-
-    function updateBulkActions() {
-        const checkedCount = document.querySelectorAll('.document-checkbox:checked').length;
-        selectionCount.textContent = `${checkedCount} document(s) sélectionné(s)`;
-        bulkActions.classList.toggle('hidden', checkedCount === 0);
-    }
-
-    selectAll?.addEventListener('change', function() {
-        checkboxes.forEach(cb => cb.checked = this.checked);
-        updateBulkActions();
-    });
-
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', updateBulkActions);
-    });
-});
-</script>
 {% endblock %}

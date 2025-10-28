@@ -14,7 +14,9 @@
                 </p>
             </div>
             <div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0">
-                <button type="button" onclick="openUploadModal()"
+                <button type="button"
+                        data-action="click->document-modal#open"
+                        data-document-modal-modal-id-param="uploadModal"
                         class="inline-flex items-center px-4 py-2 bg-white text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition-colors">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -27,7 +29,7 @@
 {% endblock %}
 
 {% block page_content %}
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="max-w-7xl mx-auto space-y-6" data-controller="document-modal document-upload document-actions">
     {% set completionPercent = completion.percentage ?? 0 %}
     {# Global Completion Card #}
     <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
@@ -150,7 +152,9 @@
 
                                 <div class="flex flex-wrap gap-2">
                                     {% if item.uploaded and firstDoc %}
-                                        <button type="button" onclick="viewDocument({{ firstDoc.id }})"
+                                        <button type="button"
+                                                data-action="click->document-actions#viewDocument"
+                                                data-document-actions-id-param="{{ firstDoc.id }}"
                                                 class="flex-1 inline-flex items-center justify-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors">
                                             <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -166,7 +170,10 @@
                                             DL
                                         </a>
                                         {% if is_granted('DOCUMENT_REPLACE', firstDoc) %}
-                                            <button type="button" onclick="replaceDocument({{ firstDoc.id }}, '{{ item.label|e('js') }}')"
+                                            <button type="button"
+                                                    data-action="click->document-actions#replaceDocument"
+                                                    data-document-actions-id-param="{{ firstDoc.id }}"
+                                                    data-document-actions-label-param="{{ item.label }}"
                                                     class="w-full inline-flex items-center justify-center px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400 text-xs rounded-lg transition-colors">
                                                 <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
@@ -175,7 +182,9 @@
                                             </button>
                                         {% endif %}
                                         {% if is_granted('DOCUMENT_DELETE', firstDoc) %}
-                                            <button type="button" onclick="deleteDocument({{ firstDoc.id }}, '{{ item.label|e('js') }}')"
+                                            <button type="button"
+                                                    data-action="click->document-actions#delete"
+                                                    data-document-actions-id-param="{{ firstDoc.id }}"
                                                     class="w-full inline-flex items-center justify-center px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 text-xs rounded-lg transition-colors">
                                                 <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -184,7 +193,11 @@
                                             </button>
                                         {% endif %}
                                     {% else %}
-                                        <button type="button" onclick="openUploadModal('{{ item.type }}', '{{ item.label|e('js') }}')"
+                                        <button type="button"
+                                                data-action="click->document-modal#open"
+                                                data-document-modal-modal-id-param="uploadModal"
+                                                data-form-type="{{ item.type }}"
+                                                data-form-label="{{ item.label }}"
                                                 class="w-full inline-flex items-center justify-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-medium transition-colors">
                                             <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -236,7 +249,9 @@
 
                                 <div class="flex flex-wrap gap-2">
                                     {% if item.uploaded and firstDoc %}
-                                        <button type="button" onclick="viewDocument({{ firstDoc.id }})"
+                                        <button type="button"
+                                                data-action="click->document-actions#viewDocument"
+                                                data-document-actions-id-param="{{ firstDoc.id }}"
                                                 class="flex-1 inline-flex items-center justify-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors">
                                             <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -290,18 +305,22 @@
 </div>
 
 {# Upload Modal #}
-<div id="uploadModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+<div id="uploadModal" data-document-modal-target="modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4"
+     data-action="click->document-modal#closeOnBackdropClick">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Ajouter un document</h3>
-            <button type="button" onclick="closeUploadModal()"
+            <button type="button"
+                    data-action="click->document-modal#close"
                     class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         </div>
-        <form method="post" action="{{ path('app_profile_documents_upload') }}" enctype="multipart/form-data" id="uploadForm">
+        <form method="post" action="{{ path('app_profile_documents_upload') }}" enctype="multipart/form-data"
+              data-document-upload-target="form"
+              data-action="submit->document-upload#submit">
             <div class="px-6 py-4 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -318,11 +337,12 @@
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Fichier <span class="text-red-500">*</span>
                     </label>
-                    <div id="uploadDropZone"
+                    <div data-document-upload-target="dropZone"
                          class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">
-                        <input type="file" name="file" id="uploadFileInput" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        <input type="file" name="file" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                               data-document-upload-target="fileInput"
                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div id="uploadDropContent">
+                        <div data-document-upload-target="dropZoneContent">
                             <svg class="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                             </svg>
@@ -331,16 +351,18 @@
                             </p>
                             <p class="text-xs text-gray-400 mt-1">PDF, JPG, PNG, DOC, DOCX (max. 10 MB)</p>
                         </div>
-                        <div id="uploadFilePreview" class="hidden">
+                        <div data-document-upload-target="filePreview" class="hidden">
                             <div class="flex items-center justify-center gap-3">
                                 <svg class="w-10 h-10 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
                                 </svg>
                                 <div class="text-left">
-                                    <p id="uploadFileName" class="text-sm font-medium text-gray-900 dark:text-white"></p>
-                                    <p id="uploadFileSize" class="text-xs text-gray-500"></p>
+                                    <p data-document-upload-target="fileName" class="text-sm font-medium text-gray-900 dark:text-white"></p>
+                                    <p data-document-upload-target="fileSize" class="text-xs text-gray-500"></p>
                                 </div>
-                                <button type="button" onclick="clearUploadFile()" class="text-red-600 hover:text-red-700">
+                                <button type="button"
+                                        data-action="click->document-upload#removeFile"
+                                        class="text-red-600 hover:text-red-700">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                     </svg>
@@ -348,6 +370,7 @@
                             </div>
                         </div>
                     </div>
+                    <div data-document-upload-target="errorMessage" class="hidden mt-2 text-sm text-red-600 dark:text-red-400"></div>
                 </div>
 
                 <div>
@@ -359,11 +382,13 @@
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-                <button type="button" onclick="closeUploadModal()"
+                <button type="button"
+                        data-action="click->document-modal#close"
                         class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     Annuler
                 </button>
                 <button type="submit"
+                        data-document-upload-target="submitButton"
                         class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
                     Téléverser
                 </button>
@@ -465,153 +490,4 @@
     </div>
 </div>
 
-{# JavaScript for modals and file handling - Will be migrated to Stimulus in Phase 9 #}
-<script>
-    // Upload Modal
-    function openUploadModal(type = '', label = '') {
-        const modal = document.getElementById('uploadModal');
-        const typeSelect = document.getElementById('uploadType');
-
-        if (type && typeSelect) {
-            typeSelect.value = type;
-        }
-
-        modal.classList.remove('hidden');
-    }
-
-    function closeUploadModal() {
-        document.getElementById('uploadModal').classList.add('hidden');
-        document.getElementById('uploadForm').reset();
-        clearUploadFile();
-    }
-
-    // File upload handling
-    const uploadFileInput = document.getElementById('uploadFileInput');
-    const uploadDropZone = document.getElementById('uploadDropZone');
-    const uploadDropContent = document.getElementById('uploadDropContent');
-    const uploadFilePreview = document.getElementById('uploadFilePreview');
-
-    uploadFileInput?.addEventListener('change', handleUploadFile);
-
-    function handleUploadFile() {
-        const file = uploadFileInput.files[0];
-        if (!file) return;
-
-        // Validate size (10MB)
-        if (file.size > 10 * 1024 * 1024) {
-            alert('Le fichier est trop volumineux. Taille maximale : 10 MB');
-            clearUploadFile();
-            return;
-        }
-
-        // Show preview
-        uploadDropContent.classList.add('hidden');
-        uploadFilePreview.classList.remove('hidden');
-        document.getElementById('uploadFileName').textContent = file.name;
-        document.getElementById('uploadFileSize').textContent = formatFileSize(file.size);
-    }
-
-    function clearUploadFile() {
-        uploadFileInput.value = '';
-        uploadDropContent.classList.remove('hidden');
-        uploadFilePreview.classList.add('hidden');
-    }
-
-    // Replace Modal
-    function replaceDocument(documentId, documentName) {
-        const modal = document.getElementById('replaceModal');
-        const form = document.getElementById('replaceForm');
-        form.action = `/profile/documents/${documentId}/replace`;
-        modal.classList.remove('hidden');
-    }
-
-    function closeReplaceModal() {
-        document.getElementById('replaceModal').classList.add('hidden');
-        document.getElementById('replaceForm').reset();
-    }
-
-    // Delete Modal
-    function deleteDocument(documentId, documentName) {
-        const modal = document.getElementById('deleteModal');
-        const form = document.getElementById('deleteForm');
-        const nameSpan = document.getElementById('deleteDocumentName');
-
-        form.action = `/profile/documents/${documentId}`;
-        form.method = 'POST';
-
-        // Add method override for DELETE
-        let methodInput = form.querySelector('input[name="_method"]');
-        if (!methodInput) {
-            methodInput = document.createElement('input');
-            methodInput.type = 'hidden';
-            methodInput.name = '_method';
-            form.appendChild(methodInput);
-        }
-        methodInput.value = 'DELETE';
-
-        nameSpan.textContent = documentName;
-        modal.classList.remove('hidden');
-    }
-
-    function closeDeleteModal() {
-        document.getElementById('deleteModal').classList.add('hidden');
-    }
-
-    // View Modal
-    function viewDocument(documentId) {
-        const modal = document.getElementById('viewModal');
-        const content = document.getElementById('viewModalContent');
-
-        modal.classList.remove('hidden');
-
-        // Load document content via AJAX (to be implemented in Phase 9)
-        fetch(`/profile/documents/${documentId}`)
-            .then(response => response.text())
-            .then(html => {
-                content.innerHTML = html;
-            })
-            .catch(error => {
-                content.innerHTML = `
-                    <div class="text-center text-red-600">
-                        <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <p>Erreur lors du chargement du document</p>
-                    </div>
-                `;
-            });
-    }
-
-    function closeViewModal() {
-        document.getElementById('viewModal').classList.add('hidden');
-    }
-
-    // Utility function
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-    }
-
-    // Close modals on ESC key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeUploadModal();
-            closeReplaceModal();
-            closeDeleteModal();
-            closeViewModal();
-        }
-    });
-
-    // Close modals on backdrop click
-    document.querySelectorAll('[id$="Modal"]').forEach(modal => {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                this.classList.add('hidden');
-            }
-        });
-    });
-</script>
 {% endblock %}

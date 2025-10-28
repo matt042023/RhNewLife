@@ -16,7 +16,7 @@
 {% endblock %}
 
 {% block admin_content %}
-<div class="max-w-4xl mx-auto">
+<div class="max-w-4xl mx-auto" data-controller="document-upload">
     {# Upload form card #}
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -25,7 +25,9 @@
             </h2>
         </div>
 
-        <form method="post" action="{{ path('admin_documents_upload_process') }}" enctype="multipart/form-data" id="uploadForm">
+        <form method="post" action="{{ path('admin_documents_upload_process') }}" enctype="multipart/form-data"
+              data-document-upload-target="form"
+              data-action="submit->document-upload#submit">
             <div class="px-6 py-6 space-y-6">
                 {# User selection #}
                 <div>
@@ -87,12 +89,13 @@
                     </label>
 
                     {# Drop zone #}
-                    <div id="dropZone"
+                    <div data-document-upload-target="dropZone"
                          class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors cursor-pointer">
-                        <input type="file" name="file" id="fileInput" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        <input type="file" name="file" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                               data-document-upload-target="fileInput"
                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
 
-                        <div id="dropZoneContent">
+                        <div data-document-upload-target="dropZoneContent">
                             <svg class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                             </svg>
@@ -108,16 +111,16 @@
                         </div>
 
                         {# File preview (hidden by default) #}
-                        <div id="filePreview" class="hidden">
+                        <div data-document-upload-target="filePreview" class="hidden">
                             <div class="flex items-center justify-center gap-4">
                                 <svg class="w-12 h-12 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
                                 </svg>
                                 <div class="text-left flex-1">
-                                    <p id="fileName" class="text-sm font-medium text-gray-900 dark:text-white"></p>
-                                    <p id="fileSize" class="text-xs text-gray-500 dark:text-gray-400"></p>
+                                    <p data-document-upload-target="fileName" class="text-sm font-medium text-gray-900 dark:text-white"></p>
+                                    <p data-document-upload-target="fileSize" class="text-xs text-gray-500 dark:text-gray-400"></p>
                                 </div>
-                                <button type="button" onclick="removeFile()"
+                                <button type="button" data-action="click->document-upload#removeFile"
                                         class="text-red-600 hover:text-red-700 dark:text-red-400">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -126,6 +129,9 @@
                             </div>
                         </div>
                     </div>
+
+                    {# Error message placeholder #}
+                    <div data-document-upload-target="errorMessage" class="hidden mt-2 text-sm text-red-600 dark:text-red-400"></div>
                 </div>
 
                 {# Optional comment #}
@@ -161,7 +167,7 @@
                    class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     Annuler
                 </a>
-                <button type="submit" id="submitBtn"
+                <button type="submit" data-document-upload-target="submitButton"
                         class="inline-flex items-center px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
@@ -193,122 +199,4 @@
         </div>
     </div>
 </div>
-
-{# Temporary JavaScript for drag-and-drop - Will be migrated to Stimulus in Phase 9 #}
-<script>
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const dropZoneContent = document.getElementById('dropZoneContent');
-    const filePreview = document.getElementById('filePreview');
-    const submitBtn = document.getElementById('submitBtn');
-
-    // Prevent default drag behaviors
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    // Highlight drop zone when item is dragged over it
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, highlight, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, unhighlight, false);
-    });
-
-    function highlight(e) {
-        dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
-    }
-
-    function unhighlight(e) {
-        dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
-    }
-
-    // Handle dropped files
-    dropZone.addEventListener('drop', handleDrop, false);
-
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-
-        if (files.length > 0) {
-            fileInput.files = files;
-            handleFiles(files);
-        }
-    }
-
-    // Handle file selection via input
-    fileInput.addEventListener('change', function(e) {
-        if (this.files.length > 0) {
-            handleFiles(this.files);
-        }
-    });
-
-    function handleFiles(files) {
-        const file = files[0];
-
-        // Validate file size (10 MB max)
-        const maxSize = 10 * 1024 * 1024; // 10 MB in bytes
-        if (file.size > maxSize) {
-            alert('Le fichier est trop volumineux. Taille maximale : 10 MB');
-            removeFile();
-            return;
-        }
-
-        // Validate file type
-        const allowedTypes = [
-            'application/pdf',
-            'image/jpeg',
-            'image/jpg',
-            'image/png',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        ];
-
-        if (!allowedTypes.includes(file.type)) {
-            alert('Type de fichier non autorisé. Formats acceptés : PDF, JPG, PNG, DOC, DOCX');
-            removeFile();
-            return;
-        }
-
-        // Display file preview
-        dropZoneContent.classList.add('hidden');
-        filePreview.classList.remove('hidden');
-
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileSize').textContent = formatFileSize(file.size);
-    }
-
-    function removeFile() {
-        fileInput.value = '';
-        dropZoneContent.classList.remove('hidden');
-        filePreview.classList.add('hidden');
-    }
-
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-    }
-
-    // Form submission handling with loading state
-    document.getElementById('uploadForm').addEventListener('submit', function(e) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = `
-            <svg class="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Téléversement en cours...
-        `;
-    });
-</script>
 {% endblock %}
