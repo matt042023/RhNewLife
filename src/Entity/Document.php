@@ -19,6 +19,11 @@ class Document
     public const TYPE_CONTRACT_SIGNED = 'contract_signed';
     public const TYPE_CONTRACT_AMENDMENT = 'contract_amendment';
     public const TYPE_PAYSLIP = 'payslip';
+    public const TYPE_MEDICAL_CERTIFICATE = 'medical_certificate';
+    public const TYPE_TRAINING_CERTIFICATE = 'training_certificate';
+    public const TYPE_WORK_CERTIFICATE = 'work_certificate';
+    public const TYPE_ABSENCE_JUSTIFICATION = 'absence_justification';
+    public const TYPE_EXPENSE_REPORT = 'expense_report';
     public const TYPE_OTHER = 'other';
 
     public const STATUS_PENDING = 'pending';
@@ -35,6 +40,11 @@ class Document
         self::TYPE_CONTRACT_SIGNED => 'Contrat signé',
         self::TYPE_CONTRACT_AMENDMENT => 'Avenant',
         self::TYPE_PAYSLIP => 'Bulletin de paie',
+        self::TYPE_MEDICAL_CERTIFICATE => 'Certificat mǸdical',
+        self::TYPE_TRAINING_CERTIFICATE => 'Attestation de formation',
+        self::TYPE_WORK_CERTIFICATE => 'Attestation de travail',
+        self::TYPE_ABSENCE_JUSTIFICATION => 'Justificatif d\'absence',
+        self::TYPE_EXPENSE_REPORT => 'Note de frais',
         self::TYPE_OTHER => 'Autre',
     ];
 
@@ -84,6 +94,33 @@ class Document
 
     #[ORM\Column(nullable: true)]
     private ?int $fileSize = null;
+
+    #[ORM\Column(options: ['default' => 1])]
+    private int $version = 1;
+
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $archived = false;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $archivedAt = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $archiveReason = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $retentionYears = null;
+
+    #[ORM\ManyToOne(targetEntity: Absence::class)]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?Absence $absence = null;
+
+    #[ORM\ManyToOne(targetEntity: Formation::class)]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?Formation $formation = null;
+
+    #[ORM\ManyToOne(targetEntity: ElementVariable::class)]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?ElementVariable $elementVariable = null;
 
     public function __construct()
     {
@@ -228,6 +265,23 @@ class Document
         return $this;
     }
 
+    public function getVersion(): int
+    {
+        return $this->version;
+    }
+
+    public function setVersion(int $version): static
+    {
+        $this->version = max(1, $version);
+        return $this;
+    }
+
+    public function incrementVersion(): static
+    {
+        $this->version++;
+        return $this;
+    }
+
     public function getFileSizeFormatted(): string
     {
         if (!$this->fileSize) {
@@ -275,5 +329,118 @@ class Document
     public function isRejected(): bool
     {
         return $this->status === self::STATUS_REJECTED;
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived;
+    }
+
+    public function markAsArchived(string $reason, int $retentionYears): static
+    {
+        $this->archived = true;
+        $this->archiveReason = $reason;
+        $this->retentionYears = max(0, $retentionYears);
+        $this->archivedAt = new \DateTimeImmutable();
+
+        return $this;
+    }
+
+    public function restoreFromArchive(): static
+    {
+        $this->archived = false;
+        $this->archiveReason = null;
+        $this->archivedAt = null;
+        $this->retentionYears = null;
+
+        return $this;
+    }
+
+    public function canBeDeleted(): bool
+    {
+        if (!$this->isArchived()) {
+            return false;
+        }
+
+        $expiration = $this->getExpirationDate();
+
+        return $expiration !== null && $expiration <= new \DateTimeImmutable();
+    }
+
+    public function getExpirationDate(): ?\DateTimeImmutable
+    {
+        if (!$this->archivedAt || $this->retentionYears === null) {
+            return null;
+        }
+
+        $interval = sprintf('P%dY', $this->retentionYears);
+
+        return $this->archivedAt->add(new \DateInterval($interval));
+    }
+
+    public function getArchivedAt(): ?\DateTimeImmutable
+    {
+        return $this->archivedAt;
+    }
+
+    public function setArchivedAt(?\DateTimeImmutable $archivedAt): static
+    {
+        $this->archivedAt = $archivedAt;
+        return $this;
+    }
+
+    public function getArchiveReason(): ?string
+    {
+        return $this->archiveReason;
+    }
+
+    public function setArchiveReason(?string $archiveReason): static
+    {
+        $this->archiveReason = $archiveReason;
+        return $this;
+    }
+
+    public function getRetentionYears(): ?int
+    {
+        return $this->retentionYears;
+    }
+
+    public function setRetentionYears(?int $retentionYears): static
+    {
+        $this->retentionYears = $retentionYears;
+        return $this;
+    }
+
+    public function getAbsence(): ?Absence
+    {
+        return $this->absence;
+    }
+
+    public function setAbsence(?Absence $absence): static
+    {
+        $this->absence = $absence;
+        return $this;
+    }
+
+    public function getFormation(): ?Formation
+    {
+        return $this->formation;
+    }
+
+    public function setFormation(?Formation $formation): static
+    {
+        $this->formation = $formation;
+        return $this;
+    }
+
+    public function getElementVariable(): ?ElementVariable
+    {
+        return $this->elementVariable;
+    }
+
+    public function setElementVariable(?ElementVariable $elementVariable): static
+    {
+        $this->elementVariable = $elementVariable;
+        return $this;
     }
 }

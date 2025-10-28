@@ -25,7 +25,49 @@ class DocumentRepository extends ServiceEntityRepository
 
     public function findByUserAndType(User $user, string $type): ?Document
     {
-        return $this->findOneBy(['user' => $user, 'type' => $type]);
+        return $this->createQueryBuilder('d')
+            ->andWhere('d.user = :user')
+            ->andWhere('d.type = :type')
+            ->andWhere('d.archived = false')
+            ->setParameter('user', $user)
+            ->setParameter('type', $type)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function findActiveByUser(User $user): array
+    {
+        return $this->createQueryBuilder('d')
+            ->andWhere('d.user = :user')
+            ->andWhere('d.archived = false')
+            ->setParameter('user', $user)
+            ->orderBy('d.uploadedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findArchivedByUser(User $user): array
+    {
+        return $this->createQueryBuilder('d')
+            ->andWhere('d.user = :user')
+            ->andWhere('d.archived = true')
+            ->setParameter('user', $user)
+            ->orderBy('d.archivedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findExpiredArchives(\DateTimeImmutable $referenceDate): array
+    {
+        return $this->createQueryBuilder('d')
+            ->andWhere('d.archived = true')
+            ->andWhere('d.archivedAt IS NOT NULL')
+            ->andWhere('d.retentionYears IS NOT NULL')
+            ->andWhere('DATE_ADD(d.archivedAt, d.retentionYears, \'year\') <= :now')
+            ->setParameter('now', $referenceDate)
+            ->getQuery()
+            ->getResult();
     }
 
     public function getUserDocumentCompletionStatus(User $user): array

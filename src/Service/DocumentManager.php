@@ -2,23 +2,130 @@
 
 namespace App\Service;
 
+use App\Entity\Contract;
 use App\Entity\Document;
 use App\Entity\User;
 use App\Repository\DocumentRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\String\Slugger\SluggerInterface;
-use Psr\Log\LoggerInterface;
 
 class DocumentManager
 {
-    private const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 Mo
+    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo
     private const ALLOWED_MIME_TYPES = [
         'application/pdf',
         'image/jpeg',
         'image/jpg',
         'image/png',
+    ];
+
+    private const USER_FOLDER = 'users';
+    private const ARCHIVE_FOLDER = 'archives';
+    private const EXPORT_FOLDER = 'exports';
+
+    private const RETENTION_DEFAULT = 5;
+
+    private const RETENTION_POLICIES = [
+        Document::TYPE_PAYSLIP => 5,
+        Document::TYPE_ABSENCE_JUSTIFICATION => 3,
+        Document::TYPE_MEDICAL_CERTIFICATE => 5,
+        Document::TYPE_CNI => 5,
+        Document::TYPE_RIB => 5,
+        Document::TYPE_DOMICILE => 5,
+    ];
+
+    private const COMPLETION_CATEGORIES = [
+        'identity' => [
+            'label' => 'Identite',
+            'required' => [
+                Document::TYPE_CNI,
+                Document::TYPE_DOMICILE,
+            ],
+            'optional' => [],
+        ],
+        'bank' => [
+            'label' => 'Bancaire',
+            'required' => [
+                Document::TYPE_RIB,
+            ],
+            'optional' => [],
+        ],
+        'contract' => [
+            'label' => 'Contrat',
+            'required' => [
+                Document::TYPE_CONTRAT,
+                Document::TYPE_CONTRACT_SIGNED,
+            ],
+            'optional' => [
+                ['type' => Document::TYPE_CONTRACT_AMENDMENT, 'priority' => 'medium'],
+            ],
+        ],
+        'payroll' => [
+            'label' => 'Paie',
+            'required' => [],
+            'optional' => [
+                ['type' => Document::TYPE_PAYSLIP, 'priority' => 'low'],
+            ],
+        ],
+        'medical' => [
+            'label' => 'Medical',
+            'required' => [],
+            'optional' => [
+                ['type' => Document::TYPE_MEDICAL_CERTIFICATE, 'priority' => 'medium'],
+            ],
+        ],
+        'training' => [
+            'label' => 'Formation',
+            'required' => [],
+            'optional' => [
+                ['type' => Document::TYPE_TRAINING_CERTIFICATE, 'priority' => 'medium'],
+            ],
+        ],
+        'absence' => [
+            'label' => 'Absence',
+            'required' => [],
+            'optional' => [
+                ['type' => Document::TYPE_ABSENCE_JUSTIFICATION, 'priority' => 'medium'],
+            ],
+        ],
+        'expenses' => [
+            'label' => 'Frais',
+            'required' => [],
+            'optional' => [
+                ['type' => Document::TYPE_EXPENSE_REPORT, 'priority' => 'medium'],
+            ],
+        ],
+        'other' => [
+            'label' => 'Autres',
+            'required' => [],
+            'optional' => [
+                ['type' => Document::TYPE_OTHER, 'priority' => 'low'],
+            ],
+        ],
+    ];
+
+    private const CONTRACT_OPTIONAL_DOCUMENTS = [
+        Contract::TYPE_CDD => [
+            'contract' => [
+                Document::TYPE_CONTRACT_AMENDMENT,
+            ],
+        ],
+        Contract::TYPE_STAGE => [
+            'training' => [
+                Document::TYPE_TRAINING_CERTIFICATE,
+            ],
+            'contract' => [
+                Document::TYPE_WORK_CERTIFICATE,
+            ],
+        ],
+        Contract::TYPE_ALTERNANCE => [
+            'training' => [
+                Document::TYPE_TRAINING_CERTIFICATE,
+            ],
+        ],
     ];
 
     public function __construct(
@@ -30,64 +137,20 @@ class DocumentManager
     ) {
     }
 
-    /**
-     * Upload un document pour un utilisateur
-     */
     public function uploadDocument(
         UploadedFile $file,
         User $user,
         string $type,
         ?string $comment = null
     ): Document {
-        // Validations
         $this->validateFile($file);
 
-        // Capture les métadonnées du fichier AVANT de le déplacer
-        $originalName = $file->getClientOriginalName();
-        $mimeType = $file->getClientMimeType() ?? 'application/octet-stream';
-        $fileSize = $file->getSize() ?? 0;
-
-        // Vérifie si un document du même type existe déjà
         $existingDocument = $this->documentRepository->findByUserAndType($user, $type);
         if ($existingDocument) {
-            // Supprime l'ancien fichier
-            $this->deleteFile($existingDocument);
-            $this->entityManager->remove($existingDocument);
+            return $this->replaceDocument($existingDocument, $file, $comment);
         }
 
-        // Génère un nom de fichier unique
-        $originalFilename = pathinfo($originalName, PATHINFO_FILENAME);
-        $safeFilename = $this->slugger->slug($originalFilename);
-        $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
-
-        // Crée le répertoire utilisateur si nécessaire
-        $userDirectory = $this->getUserDirectory($user);
-        if (!is_dir($userDirectory)) {
-            mkdir($userDirectory, 0755, true);
-        }
-
-        // Déplace le fichier
-        try {
-            $file->move($userDirectory, $newFilename);
-        } catch (FileException $e) {
-            $this->logger->error('Failed to upload file', [
-                'error' => $e->getMessage(),
-                'user_id' => $user->getId(),
-            ]);
-
-            throw new \RuntimeException('Erreur lors de l\'upload du fichier : ' . $e->getMessage());
-        }
-
-        // Crée l'entité Document avec les métadonnées capturées
-        $document = new Document();
-        $document
-            ->setUser($user)
-            ->setType($type)
-            ->setFileName($newFilename)
-            ->setOriginalName($originalName)
-            ->setMimeType($mimeType)
-            ->setFileSize($fileSize)
-            ->setComment($comment);
+        $document = $this->createDocumentFromUpload($file, $user, $type, $comment, 1);
 
         $this->entityManager->persist($document);
         $this->entityManager->flush();
@@ -96,29 +159,173 @@ class DocumentManager
             'document_id' => $document->getId(),
             'user_id' => $user->getId(),
             'type' => $type,
+            'version' => $document->getVersion(),
+            'size' => $document->getFileSize(),
         ]);
 
         return $document;
     }
 
-    /**
-     * Supprime un document
-     */
-    public function deleteDocument(Document $document): void
+    public function replaceDocument(Document $oldDocument, UploadedFile $newFile, ?string $comment = null): Document
     {
-        $this->deleteFile($document);
-        $this->entityManager->remove($document);
+        $this->validateFile($newFile);
+
+        $user = $oldDocument->getUser();
+        $newVersion = $oldDocument->getVersion() + 1;
+
+        $retentionYears = $this->resolveRetentionYears($oldDocument->getType(), $oldDocument->getRetentionYears());
+        $this->archiveDocument(
+            $oldDocument,
+            'Document remplace par une nouvelle version',
+            $retentionYears,
+            false
+        );
+
+        $document = $this->createDocumentFromUpload(
+            $newFile,
+            $user,
+            $oldDocument->getType(),
+            $comment,
+            $newVersion
+        );
+
+        $document
+            ->setContract($oldDocument->getContract())
+            ->setAbsence($oldDocument->getAbsence())
+            ->setFormation($oldDocument->getFormation())
+            ->setElementVariable($oldDocument->getElementVariable());
+
+        $this->entityManager->persist($document);
         $this->entityManager->flush();
 
-        $this->logger->info('Document deleted', [
+        $this->logger->info('Document replaced', [
+            'document_id' => $document->getId(),
+            'old_document_id' => $oldDocument->getId(),
+            'user_id' => $user->getId(),
+            'type' => $document->getType(),
+            'version' => $document->getVersion(),
+        ]);
+
+        return $document;
+    }
+
+    public function archiveDocument(
+        Document $document,
+        string $reason,
+        int $retentionYears,
+        bool $flush = true
+    ): void {
+        if ($document->isArchived()) {
+            return;
+        }
+
+        $sourcePath = $this->getDocumentPath($document, false);
+        $targetPath = $this->getArchiveDirectory($document->getUser()) . '/' . $document->getFileName();
+
+        try {
+            $this->moveFile($sourcePath, $targetPath);
+        } catch (\RuntimeException $exception) {
+            $this->logger->warning('Unable to move file while archiving document', [
+                'document_id' => $document->getId(),
+                'user_id' => $document->getUser()->getId(),
+                'path' => $sourcePath,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        $document->markAsArchived($reason, $retentionYears);
+
+        if ($flush) {
+            $this->entityManager->flush();
+        }
+
+        $this->logger->info('Document archived', [
+            'document_id' => $document->getId(),
+            'user_id' => $document->getUser()->getId(),
+            'reason' => $reason,
+            'retention_years' => $retentionYears,
+            'version' => $document->getVersion(),
+        ]);
+    }
+
+    public function restoreDocument(Document $document, bool $flush = true): void
+    {
+        if (!$document->isArchived()) {
+            return;
+        }
+
+        $sourcePath = $this->getDocumentPath($document);
+        $targetPath = $this->getUserDirectory($document->getUser()) . '/' . $document->getFileName();
+
+        try {
+            $this->moveFile($sourcePath, $targetPath);
+        } catch (\RuntimeException $exception) {
+            $this->logger->warning('Unable to move file while restoring document', [
+                'document_id' => $document->getId(),
+                'user_id' => $document->getUser()->getId(),
+                'path' => $sourcePath,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        $document->restoreFromArchive();
+
+        if ($flush) {
+            $this->entityManager->flush();
+        }
+
+        $this->logger->info('Document restored', [
             'document_id' => $document->getId(),
             'user_id' => $document->getUser()->getId(),
         ]);
     }
 
     /**
-     * Valide un document
+     * @return Document[]
      */
+    public function getArchivedDocuments(User $user): array
+    {
+        return $this->documentRepository->findArchivedByUser($user);
+    }
+
+    public function cleanExpiredDocuments(): int
+    {
+        $now = new \DateTimeImmutable();
+        $expiredDocuments = $this->documentRepository->findExpiredArchives($now);
+
+        $removed = 0;
+        foreach ($expiredDocuments as $document) {
+            $this->deleteDocument($document);
+            $removed++;
+        }
+
+        if ($removed > 0) {
+            $this->logger->info('Expired archived documents removed', [
+                'count' => $removed,
+            ]);
+        }
+
+        return $removed;
+    }
+
+    public function deleteDocument(Document $document): void
+    {
+        $filePath = $this->getDocumentPath($document);
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+
+        $this->entityManager->remove($document);
+        $this->entityManager->flush();
+
+        $this->logger->info('Document deleted', [
+            'document_id' => $document->getId(),
+            'user_id' => $document->getUser()->getId(),
+            'type' => $document->getType(),
+            'archived' => $document->isArchived(),
+        ]);
+    }
+
     public function validateDocument(Document $document, ?string $comment = null): void
     {
         $document->markAsValidated($comment);
@@ -126,12 +333,11 @@ class DocumentManager
 
         $this->logger->info('Document validated', [
             'document_id' => $document->getId(),
+            'user_id' => $document->getUser()->getId(),
+            'type' => $document->getType(),
         ]);
     }
 
-    /**
-     * Rejette un document
-     */
     public function rejectDocument(Document $document, string $reason): void
     {
         $document->markAsRejected($reason);
@@ -139,49 +345,168 @@ class DocumentManager
 
         $this->logger->info('Document rejected', [
             'document_id' => $document->getId(),
+            'user_id' => $document->getUser()->getId(),
+            'type' => $document->getType(),
             'reason' => $reason,
         ]);
     }
 
-    /**
-     * Récupère le statut de complétion des documents pour un utilisateur
-     */
     public function getCompletionStatus(User $user): array
     {
-        return $this->documentRepository->getUserDocumentCompletionStatus($user);
+        $documents = $this->documentRepository->findActiveByUser($user);
+        $documentsByType = [];
+
+        foreach ($documents as $document) {
+            $documentsByType[$document->getType()] = $document;
+        }
+
+        $contractType = null;
+        if ($user->getActiveContract() instanceof Contract) {
+            $contractType = $user->getActiveContract()->getType();
+        }
+
+        $categoriesConfig = $this->buildCompletionCategories($contractType);
+
+        $categories = [];
+        $missing = [];
+        $totalRequired = 0;
+        $completedRequired = 0;
+
+        foreach ($categoriesConfig as $key => $config) {
+            $requiredStatuses = [];
+            foreach ($config['required'] as $type) {
+                $status = $this->buildDocumentStatus($type, true, $documentsByType, $key);
+                $requiredStatuses[] = $status;
+                $totalRequired++;
+
+                if ($status['uploaded']) {
+                    $completedRequired++;
+                } else {
+                    $missing[] = [
+                        'type' => $status['type'],
+                        'label' => $status['label'],
+                        'category' => $key,
+                        'priority' => $status['priority'],
+                    ];
+                }
+            }
+
+            $optionalStatuses = [];
+            foreach ($config['optional'] as $optionalConfig) {
+                $type = is_array($optionalConfig) ? $optionalConfig['type'] : $optionalConfig;
+                $priority = is_array($optionalConfig) && isset($optionalConfig['priority'])
+                    ? $optionalConfig['priority']
+                    : 'low';
+
+                $status = $this->buildDocumentStatus($type, false, $documentsByType, $key, $priority);
+                $optionalStatuses[] = $status;
+
+                if (!$status['uploaded']) {
+                    $missing[] = [
+                        'type' => $status['type'],
+                        'label' => $status['label'],
+                        'category' => $key,
+                        'priority' => $status['priority'],
+                        'optional' => true,
+                    ];
+                }
+            }
+
+            $requiredTotal = count($requiredStatuses);
+            $requiredCompleted = count(array_filter(
+                $requiredStatuses,
+                static fn(array $item): bool => $item['uploaded'] === true
+            ));
+
+            $categories[] = [
+                'key' => $key,
+                'label' => $config['label'],
+                'required' => $requiredStatuses,
+                'optional' => $optionalStatuses,
+                'completion' => [
+                    'required_total' => $requiredTotal,
+                    'required_completed' => $requiredCompleted,
+                    'percentage' => $requiredTotal > 0
+                        ? round(($requiredCompleted / $requiredTotal) * 100, 1)
+                        : 100.0,
+                ],
+            ];
+        }
+
+        $percentage = $totalRequired > 0
+            ? round(($completedRequired / $totalRequired) * 100, 1)
+            : 100.0;
+
+        return [
+            'total_required' => $totalRequired,
+            'completed_required' => $completedRequired,
+            'percentage' => $percentage,
+            'is_complete' => $totalRequired > 0 ? $completedRequired === $totalRequired : true,
+            'contract_type' => $contractType,
+            'categories' => $categories,
+            'missing' => $missing,
+        ];
     }
 
-    /**
-     * Vérifie si tous les documents obligatoires sont uploadés
-     */
     public function hasAllRequiredDocuments(User $user): bool
     {
         $status = $this->getCompletionStatus($user);
-        return $status['is_complete'];
+
+        return $status['total_required'] > 0 && $status['completed_required'] === $status['total_required'];
     }
 
-    /**
-     * Récupère le chemin complet d'un document
-     */
-    public function getDocumentPath(Document $document): string
+    public function exportDocumentsList(User $user, string $format = 'pdf'): string
     {
-        return $this->getUserDirectory($document->getUser()) . '/' . $document->getFileName();
+        $status = $this->getCompletionStatus($user);
+
+        if ($format !== 'pdf') {
+            throw new \InvalidArgumentException(sprintf('Format "%s" non supporte.', $format));
+        }
+
+        $lines = $this->buildExportLines($user, $status);
+        $pdfContent = $this->generateSimplePdf($lines);
+
+        $directory = $this->getExportDirectory($user);
+        $this->ensureDirectoryExists($directory);
+
+        $fileName = sprintf(
+            'documents-%d-%s.pdf',
+            $user->getId(),
+            (new \DateTimeImmutable())->format('Ymd-His')
+        );
+
+        $filePath = $directory . '/' . $fileName;
+        file_put_contents($filePath, $pdfContent);
+
+        $this->logger->info('Documents list exported', [
+            'user_id' => $user->getId(),
+            'path' => $filePath,
+            'format' => $format,
+        ]);
+
+        return $filePath;
     }
 
-    /**
-     * Valide un fichier uploadé
-     */
+    public function getDocumentPath(Document $document, bool $considerArchive = true): string
+    {
+        $directory = $this->getUserDirectory($document->getUser());
+
+        if ($considerArchive && $document->isArchived()) {
+            $directory = $this->getArchiveDirectory($document->getUser());
+        }
+
+        return $directory . '/' . $document->getFileName();
+    }
+
     private function validateFile(UploadedFile $file): void
     {
-        // Vérifier que le fichier est valide (uploadé sans erreur)
         if (!$file->isValid()) {
-            throw new \InvalidArgumentException('Le fichier n\'a pas été uploadé correctement.');
+            throw new \InvalidArgumentException('Le fichier n\'a pas ete uploade correctement.');
         }
 
         $errors = [];
-
-        // Taille du fichier - utiliser getClientSize() au lieu de getSize()
         $fileSize = $file->getSize();
+
         if ($fileSize && $fileSize > self::MAX_FILE_SIZE) {
             $errors[] = sprintf(
                 'Le fichier est trop volumineux (max %d Mo).',
@@ -189,10 +514,9 @@ class DocumentManager
             );
         }
 
-        // Type MIME - utiliser getClientMimeType() pour éviter d'accéder au fichier temporaire
         $mimeType = $file->getClientMimeType();
-        if ($mimeType && !in_array($mimeType, self::ALLOWED_MIME_TYPES)) {
-            $errors[] = 'Type de fichier non autorisé. Formats acceptés : PDF, JPG, PNG.';
+        if ($mimeType && !in_array($mimeType, self::ALLOWED_MIME_TYPES, true)) {
+            $errors[] = 'Type de fichier non autorise. Formats acceptes : PDF, JPG, PNG.';
         }
 
         if (!empty($errors)) {
@@ -200,23 +524,271 @@ class DocumentManager
         }
     }
 
-    /**
-     * Récupère le répertoire de stockage pour un utilisateur
-     */
-    private function getUserDirectory(User $user): string
-    {
-        return $this->uploadsDirectory . '/users/' . $user->getId();
+    private function createDocumentFromUpload(
+        UploadedFile $file,
+        User $user,
+        string $type,
+        ?string $comment,
+        int $version
+    ): Document {
+        $metadata = $this->captureMetadata($file);
+
+        $targetDirectory = $this->getUserDirectory($user);
+        $this->ensureDirectoryExists($targetDirectory);
+
+        try {
+            $file->move($targetDirectory, $metadata['fileName']);
+        } catch (FileException $exception) {
+            $this->logger->error('Failed to move uploaded document', [
+                'error' => $exception->getMessage(),
+                'user_id' => $user->getId(),
+                'type' => $type,
+            ]);
+
+            throw new \RuntimeException('Erreur lors de l\'upload du fichier : ' . $exception->getMessage());
+        }
+
+        $document = new Document();
+        $document
+            ->setUser($user)
+            ->setType($type)
+            ->setFileName($metadata['fileName'])
+            ->setOriginalName($metadata['originalName'])
+            ->setMimeType($metadata['mimeType'])
+            ->setFileSize($metadata['fileSize'])
+            ->setComment($comment)
+            ->setVersion($version);
+
+        return $document;
     }
 
-    /**
-     * Supprime physiquement un fichier
-     */
-    private function deleteFile(Document $document): void
+    private function captureMetadata(UploadedFile $file): array
     {
-        $filePath = $this->getDocumentPath($document);
+        $originalName = $file->getClientOriginalName();
+        $extension = $file->guessExtension() ?: pathinfo($originalName, PATHINFO_EXTENSION);
+        $extension = $extension ? '.' . $extension : '';
+        $originalFilename = pathinfo($originalName, PATHINFO_FILENAME);
 
-        if (file_exists($filePath)) {
-            unlink($filePath);
+        $safeFilename = $this->slugger->slug($originalFilename ?: 'document');
+        $uniqueFilename = $safeFilename . '-' . uniqid('', true) . $extension;
+
+        return [
+            'originalName' => $originalName,
+            'fileName' => $uniqueFilename,
+            'mimeType' => $file->getClientMimeType() ?? 'application/octet-stream',
+            'fileSize' => $file->getSize() ?? 0,
+        ];
+    }
+
+    private function getUserDirectory(User $user): string
+    {
+        return $this->uploadsDirectory . '/' . self::USER_FOLDER . '/' . $user->getId();
+    }
+
+    private function getArchiveDirectory(User $user): string
+    {
+        return $this->uploadsDirectory . '/' . self::ARCHIVE_FOLDER . '/' . $user->getId();
+    }
+
+    private function getExportDirectory(User $user): string
+    {
+        return $this->uploadsDirectory . '/' . self::EXPORT_FOLDER . '/' . $user->getId();
+    }
+
+    private function ensureDirectoryExists(string $directory): void
+    {
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
         }
+    }
+
+    private function resolveRetentionYears(string $type, ?int $override): int
+    {
+        if ($override !== null) {
+            return max(0, $override);
+        }
+
+        return self::RETENTION_POLICIES[$type] ?? self::RETENTION_DEFAULT;
+    }
+
+    private function buildCompletionCategories(?string $contractType): array
+    {
+        $categories = [];
+
+        foreach (self::COMPLETION_CATEGORIES as $key => $config) {
+            $categories[$key] = [
+                'label' => $config['label'],
+                'required' => $config['required'],
+                'optional' => $config['optional'],
+            ];
+        }
+
+        if ($contractType && isset(self::CONTRACT_OPTIONAL_DOCUMENTS[$contractType])) {
+            foreach (self::CONTRACT_OPTIONAL_DOCUMENTS[$contractType] as $categoryKey => $types) {
+                foreach ($types as $type) {
+                    $categories[$categoryKey]['optional'][] = [
+                        'type' => $type,
+                        'priority' => 'medium',
+                    ];
+                }
+            }
+        }
+
+        return $categories;
+    }
+
+    private function buildDocumentStatus(
+        string $type,
+        bool $isRequired,
+        array $documentsByType,
+        string $categoryKey,
+        ?string $priority = null
+    ): array {
+        $document = $documentsByType[$type] ?? null;
+        $uploaded = $document instanceof Document;
+
+        return [
+            'type' => $type,
+            'label' => Document::TYPES[$type] ?? $type,
+            'uploaded' => $uploaded,
+            'document' => $document,
+            'priority' => $priority ?? ($isRequired ? 'high' : 'low'),
+            'category' => $categoryKey,
+        ];
+    }
+
+    private function buildExportLines(User $user, array $status): array
+    {
+        $lines = [];
+        $now = new \DateTimeImmutable();
+
+        $lines[] = sprintf('Documents RH - %s %s', $user->getFirstName(), $user->getLastName());
+        $lines[] = sprintf('Genere le %s', $now->format('d/m/Y H:i'));
+        $lines[] = sprintf(
+            'Completion : %.1f%% (%d / %d)',
+            $status['percentage'],
+            $status['completed_required'],
+            $status['total_required']
+        );
+        $lines[] = '';
+
+        foreach ($status['categories'] as $category) {
+            $lines[] = sprintf(
+                '%s (%d / %d)',
+                $category['label'],
+                $category['completion']['required_completed'],
+                $category['completion']['required_total']
+            );
+
+            foreach ($category['required'] as $required) {
+                $lines[] = sprintf(
+                    '  [%s] %s',
+                    $required['uploaded'] ? 'X' : ' ',
+                    $required['label']
+                );
+            }
+
+            foreach ($category['optional'] as $optional) {
+                $lines[] = sprintf(
+                    '  (%s) %s',
+                    $optional['uploaded'] ? 'X' : ' ',
+                    $optional['label']
+                );
+            }
+
+            $lines[] = '';
+        }
+
+        if (!empty($status['missing'])) {
+            $lines[] = 'Documents a completer :';
+            foreach ($status['missing'] as $missing) {
+                $lines[] = sprintf(
+                    '- %s (catégorie : %s, priorité : %s%s)',
+                    $missing['label'],
+                    $missing['category'],
+                    $missing['priority'],
+                    !empty($missing['optional']) ? ', optionnel' : ''
+                );
+            }
+        }
+
+        return $lines;
+    }
+
+    private function generateSimplePdf(array $lines): string
+    {
+        $stream = "BT\n/F1 12 Tf\n16 TL\n50 800 Td\n";
+
+        foreach ($lines as $index => $line) {
+            $escaped = $this->escapePdfText($line);
+            if ($index > 0) {
+                $stream .= "T*\n";
+            }
+            $stream .= sprintf('(%s) Tj' . "\n", $escaped);
+        }
+
+        $stream .= "ET";
+        $length = strlen($stream);
+
+        $objects = [
+            [1, "<< /Type /Catalog /Pages 2 0 R >>"],
+            [2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"],
+            [3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>"],
+            [4, "<< /Length $length >>\nstream\n$stream\nendstream"],
+            [5, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"],
+        ];
+
+        $buffer = "%PDF-1.4\n";
+        $offsets = [0];
+
+        foreach ($objects as [$number, $body]) {
+            $offsets[$number] = strlen($buffer);
+            $buffer .= $number . " 0 obj\n" . $body . "\nendobj\n";
+        }
+
+        $xrefPosition = strlen($buffer);
+        $count = count($objects) + 1;
+
+        $buffer .= "xref\n0 $count\n";
+        $buffer .= "0000000000 65535 f \n";
+
+        for ($i = 1; $i <= count($objects); $i++) {
+            $offset = $offsets[$i] ?? 0;
+            $buffer .= sprintf("%010d 00000 n \n", $offset);
+        }
+
+        $buffer .= "trailer << /Size $count /Root 1 0 R >>\n";
+        $buffer .= "startxref\n$xrefPosition\n%%EOF";
+
+        return $buffer;
+    }
+
+    private function escapePdfText(string $text): string
+    {
+        return str_replace(
+            ['\\', '(', ')'],
+            ['\\\\', '\\(', '\\)'],
+            $text
+        );
+    }
+
+    private function moveFile(string $source, string $destination): void
+    {
+        $directory = dirname($destination);
+        $this->ensureDirectoryExists($directory);
+
+        if (!file_exists($source)) {
+            return;
+        }
+
+        if (@rename($source, $destination)) {
+            return;
+        }
+
+        if (!@copy($source, $destination)) {
+            throw new \RuntimeException(sprintf('Impossible de déplacer le fichier vers %s', $destination));
+        }
+
+        @unlink($source);
     }
 }
