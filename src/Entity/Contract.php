@@ -87,6 +87,9 @@ class Contract
     #[ORM\Column(type: Types::DECIMAL, precision: 3, scale: 2, options: ['default' => '1.00'])]
     private string $activityRate = '1.00';
 
+    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, nullable: true)]
+    private ?string $weeklyHours = null;
+
     #[ORM\Column(options: ['default' => false])]
     private bool $mutuelle = false;
 
@@ -271,6 +274,17 @@ class Contract
     public function setActivityRate(string $activityRate): static
     {
         $this->activityRate = $activityRate;
+        return $this;
+    }
+
+    public function getWeeklyHours(): ?string
+    {
+        return $this->weeklyHours;
+    }
+
+    public function setWeeklyHours(?string $weeklyHours): static
+    {
+        $this->weeklyHours = $weeklyHours;
         return $this;
     }
 

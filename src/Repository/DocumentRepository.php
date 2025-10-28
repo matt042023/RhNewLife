@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Document;
+use App\Entity\Contract;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -72,6 +73,14 @@ class DocumentRepository extends ServiceEntityRepository
     {
         return $this->findBy(
             ['user' => $user, 'status' => Document::STATUS_VALIDATED],
+            ['uploadedAt' => 'DESC']
+        );
+    }
+
+    public function findSignedContractDocument(Contract $contract): ?Document
+    {
+        return $this->findOneBy(
+            ['contract' => $contract, 'type' => Document::TYPE_CONTRACT_SIGNED],
             ['uploadedAt' => 'DESC']
         );
     }

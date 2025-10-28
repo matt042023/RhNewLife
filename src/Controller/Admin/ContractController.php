@@ -6,6 +6,7 @@ use App\Entity\Contract;
 use App\Entity\User;
 use App\Repository\ContractRepository;
 use App\Repository\UserRepository;
+use App\Repository\DocumentRepository;
 use App\Service\ContractManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,7 +22,8 @@ class ContractController extends AbstractController
     public function __construct(
         private ContractManager $contractManager,
         private ContractRepository $contractRepository,
-        private UserRepository $userRepository
+        private UserRepository $userRepository,
+        private DocumentRepository $documentRepository
     ) {
     }
 
@@ -72,13 +74,17 @@ class ContractController extends AbstractController
                 $errors[] = 'Erreur : ' . $e->getMessage();
             }
 
-            return $this->render('admin/contracts/form.html.twig', [
-                'user' => $user,
-                'errors' => $errors,
-                'formData' => $request->request->all(),
-                'isEdit' => false,
-                'contract' => null,
-            ]);
+            return $this->render(
+                'admin/contracts/form.html.twig',
+                [
+                    'user' => $user,
+                    'errors' => $errors,
+                    'formData' => $request->request->all(),
+                    'isEdit' => false,
+                    'contract' => null,
+                ],
+                new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY)
+            );
         }
 
         return $this->render('admin/contracts/form.html.twig', [
@@ -100,6 +106,7 @@ class ContractController extends AbstractController
 
         return $this->render('admin/contracts/view.html.twig', [
             'contract' => $contract,
+            'signedDocument' => $this->documentRepository->findSignedContractDocument($contract),
         ]);
     }
 
@@ -161,13 +168,17 @@ class ContractController extends AbstractController
                 $errors[] = 'Erreur : ' . $e->getMessage();
             }
 
-            return $this->render('admin/contracts/form.html.twig', [
-                'contract' => $contract,
-                'user' => $contract->getUser(),
-                'errors' => $errors,
-                'formData' => $request->request->all(),
-                'isEdit' => true,
-            ]);
+            return $this->render(
+                'admin/contracts/form.html.twig',
+                [
+                    'contract' => $contract,
+                    'user' => $contract->getUser(),
+                    'errors' => $errors,
+                    'formData' => $request->request->all(),
+                    'isEdit' => true,
+                ],
+                new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY)
+            );
         }
 
         return $this->render('admin/contracts/form.html.twig', [
@@ -195,6 +206,33 @@ class ContractController extends AbstractController
         }
 
         return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+    }
+
+    #[Route('/{id}/download-signed', name: 'app_admin_contracts_download_signed', methods: ['GET'])]
+    public function downloadSigned(Contract $contract): Response
+    {
+        $this->denyAccessUnlessGranted('CONTRACT_VIEW', $contract);
+
+        $document = $this->documentRepository->findSignedContractDocument($contract);
+
+        if (!$document) {
+            $this->addFlash('error', 'Aucun contrat signé disponible pour ce contrat.');
+            return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+        }
+
+        $basePath = $this->getParameter('kernel.project_dir') . '/var/uploads/';
+        $filePath = $basePath . $document->getFileName();
+
+        if (!is_file($filePath)) {
+            $this->addFlash('error', 'Le fichier du contrat signé est introuvable.');
+            return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+        }
+
+        return $this->file(
+            $filePath,
+            $document->getOriginalName() ?? sprintf('contrat-signe-%d.pdf', $contract->getId()),
+            $document->getMimeType() ?: 'application/pdf'
+        );
     }
 
     /**
@@ -232,12 +270,16 @@ class ContractController extends AbstractController
         }
 
         // Vérifier que c'est un PDF
-        if ($file->getMimeType() !== 'application/pdf') {
+        if ($file->getClientMimeType() !== 'application/pdf') {
             $this->addFlash('error', 'Le fichier doit être au format PDF.');
             return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
         }
 
         try {
+            $originalName = $file->getClientOriginalName();
+            $mimeType = $file->getClientMimeType() ?: 'application/pdf';
+            $fileSize = $file->getSize();
+
             // Déplacer le fichier vers le répertoire d'upload
             $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/contracts';
             if (!is_dir($uploadDir)) {
@@ -251,9 +293,15 @@ class ContractController extends AbstractController
             );
 
             $file->move($uploadDir, $filename);
-            $filePath = 'contracts/' . $filename;
+            $storedFileName = 'contracts/' . $filename;
 
-            $this->contractManager->uploadSignedContract($contract, $filePath, $file->getClientOriginalName());
+            $this->contractManager->uploadSignedContract(
+                $contract,
+                $storedFileName,
+                $originalName,
+                $mimeType,
+                $fileSize
+            );
 
             $this->addFlash('success', 'Contrat signé uploadé avec succès.');
         } catch (\Exception $e) {
@@ -262,6 +310,7 @@ class ContractController extends AbstractController
 
         return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
     }
+
 
     /**
      * Formulaire de création d'un avenant
@@ -300,7 +349,7 @@ class ContractController extends AbstractController
                     $data['workingDays'] = $workingDays;
                 }
 
-                $reason = $request->request->get('reason');
+                $reason = $request->request->get('amendment_reason');
 
                 $amendment = $this->contractManager->createAmendment($contract, $data, $reason);
 
@@ -310,11 +359,15 @@ class ContractController extends AbstractController
                 $errors[] = 'Erreur : ' . $e->getMessage();
             }
 
-            return $this->render('admin/contracts/amendment_form.html.twig', [
-                'contract' => $contract,
-                'errors' => $errors,
-                'formData' => $request->request->all(),
-            ]);
+            return $this->render(
+                'admin/contracts/amendment_form.html.twig',
+                [
+                    'contract' => $contract,
+                    'errors' => $errors,
+                    'formData' => $request->request->all(),
+                ],
+                new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY)
+            );
         }
 
         return $this->render('admin/contracts/amendment_form.html.twig', [
@@ -353,11 +406,15 @@ class ContractController extends AbstractController
                 $errors[] = 'Erreur : ' . $e->getMessage();
             }
 
-            return $this->render('admin/contracts/close_form.html.twig', [
-                'contract' => $contract,
-                'errors' => $errors,
-                'formData' => $request->request->all(),
-            ]);
+            return $this->render(
+                'admin/contracts/close_form.html.twig',
+                [
+                    'contract' => $contract,
+                    'errors' => $errors,
+                    'formData' => $request->request->all(),
+                ],
+                new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY)
+            );
         }
 
         return $this->render('admin/contracts/close_form.html.twig', [

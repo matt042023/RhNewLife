@@ -31,8 +31,7 @@ class ContractManager
         private MailerInterface $mailer,
         private ParameterBagInterface $params,
         private EventDispatcherInterface $eventDispatcher
-    ) {
-    }
+    ) {}
 
     /**
      * Crée un nouveau contrat pour un utilisateur
@@ -69,6 +68,7 @@ class ContractManager
      * Valide un contrat brouillon
      * Passe le statut de draft à active
      * Définit la date d'embauche de l'utilisateur si elle n'existe pas
+     * Si c'est un avenant, clôture automatiquement le contrat parent
      */
     public function validateContract(Contract $contract, ?User $validatedBy = null): void
     {
@@ -78,6 +78,14 @@ class ContractManager
 
         $contract->setStatus(Contract::STATUS_ACTIVE);
         $contract->setValidatedAt(new \DateTime());
+
+        // Si c'est un avenant, clôturer le contrat parent automatiquement
+        $parentContract = $contract->getParentContract();
+        if ($parentContract && in_array($parentContract->getStatus(), [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED])) {
+            $parentContract->setStatus(Contract::STATUS_TERMINATED);
+            $parentContract->setTerminationReason('Remplacé par avenant version ' . $contract->getVersion());
+            $parentContract->setTerminatedAt(new \DateTime());
+        }
 
         // Définir la date d'embauche si elle n'existe pas
         $user = $contract->getUser();
@@ -111,7 +119,7 @@ class ContractManager
         $user = $contract->getUser();
 
         $email = (new Email())
-            ->from($this->params->get('mailer_from'))
+            ->from($this->params->get('app.mailer.sender_email'))
             ->to($accountingEmail)
             ->subject(sprintf('Nouveau contrat - %s', $user->getFullName()))
             ->html($this->generateAccountingEmailBody($contract));
@@ -123,34 +131,39 @@ class ContractManager
     }
 
     /**
-     * Upload d'un contrat signé (PDF)
-     * Crée un Document de type CONTRACT_SIGNED lié au contrat
-     * Change le statut du contrat à SIGNED
-     * Envoie une notification à l'utilisateur
+     * Upload d'un contrat signe (PDF)
+     * Cree un Document de type CONTRACT_SIGNED lie au contrat
+     * Change le statut du contrat en SIGNED
+     * Envoie une notification a l'utilisateur
      */
-    public function uploadSignedContract(Contract $contract, string $filePath, string $originalFilename): Document
-    {
+    public function uploadSignedContract(
+        Contract $contract,
+        string $storedFileName,
+        string $originalName,
+        ?string $mimeType = null,
+        ?int $fileSize = null
+    ): Document {
         if ($contract->getStatus() === Contract::STATUS_DRAFT) {
-            throw new \RuntimeException('Le contrat doit être validé avant d\'uploader la version signée.');
+            throw new \RuntimeException('Le contrat doit etre valide avant d\'uploader la version signee.');
         }
 
-        // Créer le document
         $document = new Document();
-        $document->setUser($contract->getUser());
-        $document->setContract($contract);
-        $document->setType(Document::TYPE_CONTRACT_SIGNED);
-        $document->setFilePath($filePath);
-        $document->setOriginalFilename($originalFilename);
-        $document->setUploadedAt(new \DateTime());
+        $document
+            ->setUser($contract->getUser())
+            ->setContract($contract)
+            ->setType(Document::TYPE_CONTRACT_SIGNED)
+            ->setFileName($storedFileName)
+            ->setOriginalName($originalName)
+            ->setMimeType($mimeType)
+            ->setFileSize($fileSize);
 
-        // Marquer le contrat comme signé
+        $contract->addDocument($document);
         $contract->setStatus(Contract::STATUS_SIGNED);
         $contract->setSignedAt(new \DateTime());
 
         $this->entityManager->persist($document);
         $this->entityManager->flush();
 
-        // Dispatcher l'event (l'email sera envoyé par le listener)
         $this->eventDispatcher->dispatch(
             new ContractSignedEvent($contract),
             ContractSignedEvent::NAME
@@ -209,8 +222,10 @@ class ContractManager
         // Vérifier si l'utilisateur a d'autres contrats actifs
         $hasOtherActiveContracts = false;
         foreach ($user->getContracts() as $otherContract) {
-            if ($otherContract->getId() !== $contract->getId()
-                && in_array($otherContract->getStatus(), [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED])) {
+            if (
+                $otherContract->getId() !== $contract->getId()
+                && in_array($otherContract->getStatus(), [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED])
+            ) {
                 $hasOtherActiveContracts = true;
                 break;
             }
@@ -395,3 +410,4 @@ class ContractManager
         );
     }
 }
+

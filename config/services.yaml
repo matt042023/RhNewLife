@@ -7,6 +7,7 @@ parameters:
     app.uploads_directory: '%kernel.project_dir%/public/uploads'
     app.mailer.sender_email: 'noreply@rhnewlife.fr'
     app.mailer.sender_name: 'RH NewLife'
+    accounting_email: 'comptabilite@rhnewlife.fr'
 
 services:
     # default configuration for services in *this* file
