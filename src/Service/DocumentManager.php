@@ -595,6 +595,11 @@ class DocumentManager
         return $this->uploadsDirectory . '/' . self::EXPORT_FOLDER . '/' . $user->getId();
     }
 
+    public function getSuggestedRetentionYears(string $type): int
+    {
+        return self::RETENTION_POLICIES[$type] ?? self::RETENTION_DEFAULT;
+    }
+
     private function ensureDirectoryExists(string $directory): void
     {
         if (!is_dir($directory)) {

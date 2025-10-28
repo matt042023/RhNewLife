@@ -70,6 +70,83 @@ class DocumentRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Recherche des documents pour l'interface admin avec filtres.
+     *
+     * @param array{
+     *     status?: string|null,
+     *     type?: string|null,
+     *     archived?: bool|null,
+     *     user?: int|null,
+     *     search?: string|null,
+     *     from?: \DateTimeImmutable|null,
+     *     to?: \DateTimeImmutable|null,
+     *     limit?: int|null,
+     *     min_size?: int|null,
+     *     max_size?: int|null
+     * } $filters
+     *
+     * @return Document[]
+     */
+    public function searchForAdmin(array $filters = []): array
+    {
+        $qb = $this->createQueryBuilder('d')
+            ->leftJoin('d.user', 'u')
+            ->addSelect('u')
+            ->orderBy('d.uploadedAt', 'DESC');
+
+        if (!empty($filters['status'])) {
+            $qb->andWhere('d.status = :status')
+               ->setParameter('status', $filters['status']);
+        }
+
+        if (!empty($filters['type'])) {
+            $qb->andWhere('d.type = :type')
+               ->setParameter('type', $filters['type']);
+        }
+
+        if (array_key_exists('archived', $filters) && $filters['archived'] !== null) {
+            $qb->andWhere('d.archived = :archived')
+               ->setParameter('archived', (bool) $filters['archived']);
+        }
+
+        if (!empty($filters['user'])) {
+            $qb->andWhere('u.id = :userId')
+               ->setParameter('userId', (int) $filters['user']);
+        }
+
+        if (!empty($filters['search'])) {
+            $qb->andWhere('d.originalName LIKE :search OR d.comment LIKE :search')
+               ->setParameter('search', '%' . $filters['search'] . '%');
+        }
+
+        if (!empty($filters['from']) && $filters['from'] instanceof \DateTimeImmutable) {
+            $qb->andWhere('d.uploadedAt >= :from')
+               ->setParameter('from', $filters['from']);
+        }
+
+        if (!empty($filters['to']) && $filters['to'] instanceof \DateTimeImmutable) {
+            $qb->andWhere('d.uploadedAt <= :to')
+               ->setParameter('to', $filters['to']);
+        }
+
+        if (!empty($filters['min_size'])) {
+            $qb->andWhere('d.fileSize >= :minSize')
+               ->setParameter('minSize', (int) $filters['min_size']);
+        }
+
+        if (!empty($filters['max_size'])) {
+            $qb->andWhere('d.fileSize <= :maxSize')
+               ->setParameter('maxSize', (int) $filters['max_size']);
+        }
+
+        if (!empty($filters['limit'])) {
+            $qb->setMaxResults((int) $filters['limit']);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
     public function getUserDocumentCompletionStatus(User $user): array
     {
         $documents = $this->findByUser($user);

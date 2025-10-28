@@ -1,0 +1,75 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Document #{{ document.id }}{% endblock %}
+
+{% block body %}
+<section class="container py-4">
+    <h1 class="h3 mb-4">Document : {{ document.typeLabel ?? document.type }}</h1>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Fichier</span>
+                    <a class="btn btn-sm btn-outline-primary" href="{{ downloadRoute }}">Télécharger</a>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-0">
+                        Aperçu fichier non implémenté (prévu en phase 6).<br>
+                        Nom original : <strong>{{ document.originalName }}</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header">Métadonnées</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-5">Salarié</dt>
+                        <dd class="col-7">{{ document.user ? document.user.fullName : '—' }}</dd>
+
+                        <dt class="col-5">Statut</dt>
+                        <dd class="col-7">{{ document.status }}</dd>
+
+                        <dt class="col-5">Archivé</dt>
+                        <dd class="col-7">{{ document.isArchived ? 'Oui' : 'Non' }}</dd>
+
+                        <dt class="col-5">Téléversé le</dt>
+                        <dd class="col-7">{{ document.uploadedAt ? document.uploadedAt|date('d/m/Y H:i') : '—' }}</dd>
+
+                        <dt class="col-5">Taille</dt>
+                        <dd class="col-7">{{ document.fileSizeFormatted }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Actions rapides</div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if canValidate %}
+                            <button class="btn btn-success disabled" type="button">Valider (à implémenter UI)</button>
+                            <button class="btn btn-danger disabled" type="button">Rejeter (à implémenter UI)</button>
+                        {% endif %}
+
+                        {% if canArchive %}
+                            <button class="btn btn-outline-warning disabled" type="button">Archiver</button>
+                        {% elseif canRestore %}
+                            <button class="btn btn-outline-primary disabled" type="button">Restaurer</button>
+                        {% endif %}
+
+                        {% if canReplace %}
+                            <button class="btn btn-outline-secondary disabled" type="button">Remplacer</button>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted small mt-3 mb-0">
+                        Les boutons seront reliés aux modales/actions AJAX lors de la phase front (EP03 - Phase 6).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

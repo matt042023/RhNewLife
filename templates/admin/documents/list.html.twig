@@ -1,0 +1,63 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Gestion des documents{% endblock %}
+
+{% block body %}
+<section class="container py-4">
+    <h1 class="h3 mb-3">
+        {% if isArchiveView %}
+            Archives documents RH
+        {% else %}
+            Documents RH
+        {% endif %}
+    </h1>
+
+    <p class="text-muted">Vue d’administration provisoire. Les filtres et l’interface seront affinés en phase 6.</p>
+
+    <div class="mb-3">
+        <strong>Total :</strong> {{ stats.total }} |
+        <strong>En attente :</strong> {{ stats.pending }} |
+        <strong>Validés :</strong> {{ stats.validated }} |
+        <strong>Rejetés :</strong> {{ stats.rejected }}
+    </div>
+
+    <table class="table table-striped align-middle">
+        <thead>
+        <tr>
+            <th>Type</th>
+            <th>Salarié</th>
+            <th>Statut</th>
+            <th>Archivé</th>
+            <th>Téléversé le</th>
+            <th class="text-end">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for document in documents %}
+            <tr>
+                <td>{{ document.typeLabel ?? (types[document.type] ?? document.type) }}</td>
+                <td>{{ document.user ? document.user.fullName : '—' }}</td>
+                <td>{{ statuses[document.status] ?? document.status }}</td>
+                <td>
+                    {% if document.isArchived %}
+                        <span class="badge text-bg-warning">Archivé</span>
+                    {% else %}
+                        <span class="badge text-bg-success">Actif</span>
+                    {% endif %}
+                </td>
+                <td>{{ document.uploadedAt ? document.uploadedAt|date('d/m/Y H:i') : '—' }}</td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary" href="{{ path('app_admin_documents_view', {id: document.id}) }}">
+                        Détails
+                    </a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">Aucun document trouvé avec ces filtres.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
