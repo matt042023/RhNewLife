@@ -1,0 +1,224 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mon contrat - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gray-50 p-8">
+    <div class="max-w-5xl mx-auto">
+
+        {# Header #}
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Mon contrat</h1>
+            <p class="text-gray-600 mt-1">Consultez les détails de votre contrat de travail</p>
+        </div>
+
+        {# Flash messages #}
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-6">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        {% if activeContract %}
+            {# Contrat actif #}
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900">{{ activeContract.type }}</h2>
+                            <p class="text-gray-600">Contrat en cours</p>
+                        </div>
+                    </div>
+                    <span class="badge badge-success badge-lg">{{ activeContract.status }}</span>
+                </div>
+
+                {# Informations principales #}
+                <div class="grid grid-cols-3 gap-6 mb-8 p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl">
+                    <div>
+                        <dt class="text-sm text-gray-600 mb-1">Date de début</dt>
+                        <dd class="text-lg font-bold text-gray-900">{{ activeContract.startDate|date('d/m/Y') }}</dd>
+                    </div>
+                    {% if activeContract.endDate %}
+                        <div>
+                            <dt class="text-sm text-gray-600 mb-1">Date de fin</dt>
+                            <dd class="text-lg font-bold text-gray-900">{{ activeContract.endDate|date('d/m/Y') }}</dd>
+                        </div>
+                    {% else %}
+                        <div>
+                            <dt class="text-sm text-gray-600 mb-1">Type de contrat</dt>
+                            <dd class="text-lg font-bold text-gray-900">Contrat à durée indéterminée</dd>
+                        </div>
+                    {% endif %}
+                    {% if activeContract.essaiEndDate %}
+                        <div>
+                            <dt class="text-sm text-gray-600 mb-1">Fin de période d'essai</dt>
+                            <dd class="text-lg font-bold text-gray-900">{{ activeContract.essaiEndDate|date('d/m/Y') }}</dd>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Rémunération #}
+                <div class="mb-8">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Rémunération
+                    </h3>
+                    <div class="grid grid-cols-3 gap-6">
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <dt class="text-sm text-gray-600 mb-1">Salaire brut mensuel</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ activeContract.baseSalary|number_format(2, ',', ' ') }} €</dd>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <dt class="text-sm text-gray-600 mb-1">Taux d'activité</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ activeContract.activityRate ?? 100 }}%</dd>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <dt class="text-sm text-gray-600 mb-1">Heures/semaine</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ activeContract.weeklyHours }}h</dd>
+                        </div>
+                    </div>
+                </div>
+
+                {# Jours travaillés #}
+                {% if activeContract.workingDays %}
+                    <div class="mb-8">
+                        <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Jours travaillés
+                        </h3>
+                        <div class="flex gap-2">
+                            {% set days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'] %}
+                            {% for day in days %}
+                                <div class="flex-1 text-center py-3 rounded-xl {{ day in activeContract.workingDays ? 'bg-green-100 text-green-800 font-semibold' : 'bg-gray-100 text-gray-400' }}">
+                                    {{ day|slice(0, 3) }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {# Villa #}
+                {% if activeContract.villa %}
+                    <div class="mb-8">
+                        <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Villa
+                        </h3>
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <p class="font-semibold text-gray-900">{{ activeContract.villa }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {# Document signé #}
+                {% if activeContract.signedContractPath %}
+                    <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-900">Contrat signé disponible</h4>
+                                    <p class="text-sm text-gray-600">Téléchargez votre contrat de travail signé</p>
+                                </div>
+                            </div>
+                            <a href="{{ path('app_contracts_download_signed', {id: activeContract.id}) }}" class="btn btn-primary">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Télécharger
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            {# Historique des modifications #}
+            {% if contractHistory is defined and contractHistory is not empty %}
+                <div class="bg-white rounded-2xl shadow-lg p-8">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Historique des modifications
+                    </h2>
+
+                    <div class="space-y-4">
+                        {% for history in contractHistory %}
+                            <div class="flex gap-4 pb-4 border-b border-gray-200 last:border-0">
+                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <h4 class="font-semibold text-gray-900">{{ history.action }}</h4>
+                                        <span class="text-sm text-gray-500">{{ history.createdAt|date('d/m/Y H:i') }}</span>
+                                    </div>
+                                    {% if history.description %}
+                                        <p class="text-sm text-gray-600">{{ history.description }}</p>
+                                    {% endif %}
+                                    {% if history.performedBy %}
+                                        <p class="text-xs text-gray-500 mt-1">Par {{ history.performedBy.fullName }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+        {% else %}
+            {# Aucun contrat actif #}
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center">
+                <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Aucun contrat actif</h3>
+                <p class="text-gray-600 mb-6">Votre contrat est en cours de préparation par le service RH.</p>
+                <div class="alert alert-info inline-block text-left">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                            <p class="font-semibold">Besoin d'aide ?</p>
+                            <p class="text-sm mt-1">Contactez le service RH pour plus d'informations sur votre contrat.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Retour profil #}
+        <div class="mt-6">
+            <a href="{{ path('app_profile_view') }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Retour au profil
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

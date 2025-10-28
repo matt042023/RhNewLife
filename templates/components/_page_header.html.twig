@@ -1,0 +1,25 @@
+<div class="px-4 py-8 lg:px-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        {# Page title and description #}
+        <div class="flex-1 min-w-0">
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">
+                {% block page_title %}Tableau de bord{% endblock %}
+            </h1>
+            <p class="text-blue-100 text-sm md:text-base">
+                {% block page_description %}Bienvenue sur votre espace personnel{% endblock %}
+            </p>
+        </div>
+
+        {# Quick actions #}
+        <div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0">
+            {% block page_actions %}
+                {# Child templates can add action buttons here #}
+            {% endblock %}
+        </div>
+    </div>
+
+    {# Stats overview (optional) #}
+    {% block page_stats %}
+        {# Child templates can add quick stats here #}
+    {% endblock %}
+</div>
