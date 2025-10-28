@@ -1,0 +1,152 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Salariés - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gray-50 p-8">
+    <div class="max-w-7xl mx-auto">
+
+        {# Header #}
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Salariés</h1>
+                <p class="text-gray-600 mt-1">Gérez les employés et leurs contrats</p>
+            </div>
+            <a href="{{ path('app_admin_users_create') }}" class="btn btn-primary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Créer un salarié
+            </a>
+        </div>
+
+        {# Flash messages #}
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-4">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        {# Filtres #}
+        <div class="bg-white rounded-2xl p-6 shadow-lg mb-6">
+            <form method="get" class="flex gap-4">
+                <div class="flex-1">
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ search ?? '' }}"
+                        placeholder="Rechercher par nom, email ou matricule..."
+                        class="form-input"
+                    >
+                </div>
+                <div>
+                    <select name="status" class="form-select">
+                        <option value="">Tous les statuts</option>
+                        <option value="invited" {{ currentStatus == 'invited' ? 'selected' : '' }}>Invité</option>
+                        <option value="onboarding" {{ currentStatus == 'onboarding' ? 'selected' : '' }}>Onboarding</option>
+                        <option value="active" {{ currentStatus == 'active' ? 'selected' : '' }}>Actif</option>
+                        <option value="archived" {{ currentStatus == 'archived' ? 'selected' : '' }}>Archivé</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-secondary">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    Filtrer
+                </button>
+            </form>
+        </div>
+
+        {# Liste des salariés #}
+        {% if users is empty %}
+            <div class="bg-white rounded-2xl p-12 shadow-lg text-center">
+                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Aucun salarié</h3>
+                <p class="text-gray-600 mb-6">Créez votre premier employé pour commencer</p>
+                <a href="{{ path('app_admin_users_create') }}" class="btn btn-primary inline-flex">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Créer un salarié
+                </a>
+            </div>
+        {% else %}
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Salarié</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Matricule</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Poste</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Structure</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Embauche</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for user in users %}
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                            {{ user.firstName|first }}{{ user.lastName|first }}
+                                        </div>
+                                        <div>
+                                            <div class="font-semibold text-gray-900">{{ user.fullName }}</div>
+                                            <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if user.matricule %}
+                                        <span class="font-mono text-sm text-gray-900">{{ user.matricule }}</span>
+                                    {% else %}
+                                        <span class="text-gray-400 text-sm">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600">{{ user.position ?? '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">{{ user.structure ?? '-' }}</td>
+                                <td class="px-6 py-4">
+                                    {% if user.status == 'invited' %}
+                                        <span class="badge badge-info">Invité</span>
+                                    {% elseif user.status == 'onboarding' %}
+                                        <span class="badge badge-warning">Onboarding</span>
+                                    {% elseif user.status == 'active' %}
+                                        <span class="badge badge-success">Actif</span>
+                                    {% elseif user.status == 'archived' %}
+                                        <span class="badge badge-neutral">Archivé</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600">
+                                    {{ user.hiringDate ? user.hiringDate|date('d/m/Y') : '-' }}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <a href="{{ path('app_admin_users_view', {id: user.id}) }}" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                                        Voir
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+        {# Retour dashboard #}
+        <div class="mt-6">
+            <a href="{{ path('app_dashboard') }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Retour au dashboard
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

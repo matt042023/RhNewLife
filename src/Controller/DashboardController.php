@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Controller;
+
+use App\Entity\User;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
+class DashboardController extends AbstractController
+{
+    #[Route('/dashboard', name: 'app_dashboard')]
+    #[IsGranted('ROLE_USER')]
+    public function index(#[CurrentUser] User $user): Response
+    {
+        // Si l'utilisateur est en onboarding, rediriger vers l'étape appropriée
+        if ($user->getStatus() === User::STATUS_ONBOARDING) {
+            // Vérifier s'il a déjà rempli les infos perso
+            if (!$user->getPhone() || !$user->getAddress()) {
+                return $this->redirectToRoute('app_onboarding_step1');
+            }
+
+            return $this->redirectToRoute('app_onboarding_step2');
+        }
+
+        // Rediriger vers le dashboard approprié selon le rôle
+        if ($this->isGranted('ROLE_ADMIN')) {
+            return $this->redirectToRoute('app_dashboard_admin');
+        }
+
+        if ($this->isGranted('ROLE_DIRECTOR')) {
+            return $this->redirectToRoute('app_dashboard_director');
+        }
+
+        return $this->redirectToRoute('app_dashboard_employee');
+    }
+
+    #[Route('/dashboard/employee', name: 'app_dashboard_employee')]
+    #[IsGranted('ROLE_USER')]
+    public function employee(#[CurrentUser] User $user): Response
+    {
+        return $this->render('dashboard/employee.html.twig', [
+            'user' => $user,
+        ]);
+    }
+
+    #[Route('/dashboard/director', name: 'app_dashboard_director')]
+    #[IsGranted('ROLE_DIRECTOR')]
+    public function director(#[CurrentUser] User $user): Response
+    {
+        return $this->render('dashboard/director.html.twig', [
+            'user' => $user,
+        ]);
+    }
+
+    #[Route('/dashboard/admin', name: 'app_dashboard_admin')]
+    #[IsGranted('ROLE_ADMIN')]
+    public function admin(#[CurrentUser] User $user): Response
+    {
+        return $this->render('dashboard/admin.html.twig', [
+            'user' => $user,
+        ]);
+    }
+}

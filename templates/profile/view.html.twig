@@ -1,0 +1,200 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mon profil - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gray-50 p-8">
+    <div class="max-w-5xl mx-auto">
+
+        {# Header #}
+        <div class="mb-8">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                    {{ user.firstName|first }}{{ user.lastName|first }}
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Mon profil</h1>
+                    <p class="text-gray-600 mt-1">{{ user.fullName }} • {{ user.matricule }}</p>
+                </div>
+            </div>
+        </div>
+
+        {# Flash messages #}
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-6">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        {# Alerte si dossier incomplet #}
+        {% if not completionStatus.isComplete %}
+            <div class="alert alert-warning mb-6">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div class="flex-1">
+                        <p class="font-semibold">Complétez votre profil ({{ completionStatus.percentage }}%)</p>
+                        {% if completionStatus.missingFields is not empty %}
+                            <p class="text-sm mt-1">Informations manquantes : {{ completionStatus.missingFields|join(', ') }}</p>
+                        {% endif %}
+                        {% if completionStatus.missingDocuments is not empty %}
+                            <p class="text-sm mt-1">Documents manquants : {{ completionStatus.missingDocuments|join(', ') }}</p>
+                        {% endif %}
+                        <a href="{{ path('app_profile_edit_request') }}" class="text-sm font-semibold underline mt-2 inline-block">
+                            Demander une modification →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Navigation rapide #}
+        <div class="grid grid-cols-3 gap-4 mb-8">
+            <a href="{{ path('app_profile_edit_request') }}" class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition text-center">
+                <svg class="w-12 h-12 text-blue-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <h3 class="font-bold text-gray-900">Modifier mon profil</h3>
+                <p class="text-sm text-gray-600 mt-1">Demander des changements</p>
+            </a>
+
+            <a href="{{ path('app_profile_documents') }}" class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition text-center">
+                <svg class="w-12 h-12 text-green-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <h3 class="font-bold text-gray-900">Mes documents</h3>
+                <p class="text-sm text-gray-600 mt-1">Consulter et télécharger</p>
+            </a>
+
+            <a href="{{ path('app_profile_contract') }}" class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition text-center">
+                <svg class="w-12 h-12 text-purple-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 class="font-bold text-gray-900">Mon contrat</h3>
+                <p class="text-sm text-gray-600 mt-1">Voir les détails</p>
+            </a>
+        </div>
+
+        {# Informations personnelles #}
+        <div class="grid grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Informations personnelles
+                </h2>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm text-gray-500">Email</dt>
+                        <dd class="text-gray-900">{{ user.email }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Téléphone</dt>
+                        <dd class="text-gray-900">{{ user.phone ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Adresse</dt>
+                        <dd class="text-gray-900">{{ user.address ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Situation familiale</dt>
+                        <dd class="text-gray-900">{{ user.familyStatus ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Enfants</dt>
+                        <dd class="text-gray-900">{{ user.children ?? 0 }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Informations professionnelles
+                </h2>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm text-gray-500">Poste</dt>
+                        <dd class="text-gray-900">{{ user.position ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Structure</dt>
+                        <dd class="text-gray-900">{{ user.structure ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Date d'embauche</dt>
+                        <dd class="text-gray-900">{{ user.hiringDate ? user.hiringDate|date('d/m/Y') : '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Matricule</dt>
+                        <dd class="font-mono text-gray-900">{{ user.matricule ?? '-' }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        {# Contrat actif #}
+        {% if activeContract %}
+            <div class="mt-6 bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Contrat actuel
+                    </h2>
+                    <span class="badge badge-success">{{ activeContract.type }}</span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-6">
+                    <div>
+                        <dt class="text-sm text-gray-500">Période</dt>
+                        <dd class="text-gray-900 mt-1">
+                            Du {{ activeContract.startDate|date('d/m/Y') }}
+                            {% if activeContract.endDate %}
+                                au {{ activeContract.endDate|date('d/m/Y') }}
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Salaire brut</dt>
+                        <dd class="text-gray-900 font-bold mt-1">{{ activeContract.baseSalary }} €</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Heures/semaine</dt>
+                        <dd class="text-gray-900 mt-1">{{ activeContract.weeklyHours }}h</dd>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Progression #}
+        <div class="mt-6 bg-white rounded-2xl shadow-lg p-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-semibold text-gray-700">Complétude du dossier</span>
+                <span class="text-sm font-bold text-gray-900">{{ completionStatus.percentage }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all" style="width: {{ completionStatus.percentage }}%"></div>
+            </div>
+        </div>
+
+        {# Retour dashboard #}
+        <div class="mt-6">
+            <a href="{{ path('app_dashboard') }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Retour au dashboard
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

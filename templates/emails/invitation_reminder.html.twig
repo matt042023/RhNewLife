@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rappel - Activez votre compte RH NewLife</title>
+    <style>
+        body { font-family: sans-serif; background: #f9fafb; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; }
+        .button { display: inline-block; background: #10b981; color: white; text-decoration: none; padding: 16px 32px; border-radius: 10px; font-weight: 600; margin: 20px 0; }
+        .expiry { background: #fee2e2; border-left: 4px solid #ef4444; padding: 12px; margin: 20px 0; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⏰ Rappel : Activez votre compte</h1>
+        </div>
+        <div class="content">
+            <h2>Bonjour {{ invitation.firstName }},</h2>
+            <p>Nous avons remarqué que vous n'avez pas encore activé votre compte RH NewLife.</p>
+            <div class="expiry">
+                <strong>⚠️ Attention :</strong> Votre lien d'invitation expire le <strong>{{ expiresAt|date('d/m/Y à H:i') }}</strong>.
+            </div>
+            <p>Ne manquez pas cette opportunité ! Activez votre compte dès maintenant :</p>
+            <center>
+                <a href="{{ activationUrl }}" class="button">Activer mon compte</a>
+            </center>
+            <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
+                Lien : <a href="{{ activationUrl }}" style="color: #3b82f6; word-break: break-all;">{{ activationUrl }}</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

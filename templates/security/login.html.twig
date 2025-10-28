@@ -1,0 +1,95 @@
+{% extends 'layouts/auth.html.twig' %}
+
+{% block title %}Connexion - RH NewLife{% endblock %}
+
+{% block page_title %}Connexion{% endblock %}
+
+{% block page_subtitle %}
+    <p class="mt-2 text-sm text-gray-600">Connectez-vous à votre espace RH</p>
+{% endblock %}
+
+{% block content %}
+    {% if error %}
+        <div class="alert alert-error mb-4">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            {{ error.messageKey|trans(error.messageData, 'security') }}
+        </div>
+    {% endif %}
+
+    <form method="post" action="{{ path('app_login') }}" class="space-y-6">
+
+        <div>
+            <label for="email" class="form-label">
+                Adresse email
+            </label>
+            <input
+                type="email"
+                name="_username"
+                id="email"
+                value="{{ last_username }}"
+                class="form-input"
+                required
+                autofocus
+                placeholder="votre.email@example.com"
+            >
+        </div>
+
+        <div>
+            <label for="password" class="form-label">
+                Mot de passe
+            </label>
+            <input
+                type="password"
+                name="_password"
+                id="password"
+                class="form-input"
+                required
+                placeholder="••••••••"
+            >
+        </div>
+
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <input
+                    type="checkbox"
+                    name="_remember_me"
+                    id="remember_me"
+                    class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                >
+                <label for="remember_me" class="ml-2 block text-sm text-gray-700">
+                    Se souvenir de moi
+                </label>
+            </div>
+
+            {# TODO: Ajouter lien "Mot de passe oublié" #}
+        </div>
+
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+        <div>
+            <button type="submit" class="btn btn-primary w-full justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                Se connecter
+            </button>
+        </div>
+    </form>
+
+    <div class="mt-6">
+        <div class="relative">
+            <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-300"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+                <span class="px-2 bg-white text-gray-500">Besoin d'aide ?</span>
+            </div>
+        </div>
+
+        <div class="mt-4 text-center text-sm text-gray-600">
+            <p>Contactez votre administrateur RH si vous rencontrez des difficultés.</p>
+        </div>
+    </div>
+{% endblock %}

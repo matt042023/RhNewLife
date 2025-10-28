@@ -1,0 +1,91 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Clôturer le contrat - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gray-50 p-8">
+    <div class="max-w-3xl mx-auto">
+
+        {# Header #}
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Clôturer le contrat</h1>
+            <p class="text-gray-600 mt-1">{{ contract.user.fullName }} - {{ contract.type }}</p>
+        </div>
+
+        {# Warning #}
+        <div class="alert alert-warning mb-6">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+                <p class="font-bold">Action irréversible</p>
+                <p class="text-sm mt-1">La clôture d'un contrat est définitive. Si le salarié n'a pas d'autre contrat actif, il sera automatiquement archivé.</p>
+            </div>
+        </div>
+
+        {# Errors #}
+        {% if errors is not empty %}
+            <div class="alert alert-error mb-6">
+                <ul class="list-disc list-inside">
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {# Form #}
+        <form method="post" class="bg-white rounded-2xl shadow-lg p-8">
+
+            <div class="space-y-6">
+                <div>
+                    <label class="form-label">Date de fin du contrat *</label>
+                    <input type="date" name="termination_date"
+                           value="{{ formData.termination_date ?? 'now'|date('Y-m-d') }}"
+                           class="form-input" required>
+                    <p class="text-sm text-gray-500 mt-1">Date effective de fin du contrat</p>
+                </div>
+
+                <div>
+                    <label class="form-label">Raison de la clôture *</label>
+                    <select name="reason" class="form-select" required>
+                        <option value="">Sélectionner...</option>
+                        <option value="Fin de période">Fin de période (CDD/Stage)</option>
+                        <option value="Démission">Démission</option>
+                        <option value="Licenciement">Licenciement</option>
+                        <option value="Rupture conventionnelle">Rupture conventionnelle</option>
+                        <option value="Retraite">Retraite</option>
+                        <option value="Fin période d'essai">Fin de période d'essai</option>
+                        <option value="Autre">Autre</option>
+                    </select>
+                </div>
+            </div>
+
+            {# Info complémentaire #}
+            <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-sm text-blue-800">
+                    <span class="font-semibold">Ce qui va se passer :</span><br>
+                    • Le contrat sera marqué comme terminé<br>
+                    • Le salarié recevra une notification<br>
+                    • Si c'est son dernier contrat actif, il sera archivé<br>
+                    • Le processus d'offboarding sera déclenché
+                </p>
+            </div>
+
+            {# Actions #}
+            <div class="flex items-center justify-between pt-6 mt-6 border-t">
+                <a href="{{ path('app_admin_contracts_view', {id: contract.id}) }}" class="text-gray-600 hover:text-gray-800 font-semibold">
+                    Annuler
+                </a>
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir clôturer ce contrat ? Cette action est irréversible.')">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Clôturer le contrat
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock %}
