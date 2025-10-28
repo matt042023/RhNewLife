@@ -2,10 +2,17 @@
 
 namespace App\Controller;
 
+use App\Entity\Document;
 use App\Entity\User;
-use App\Service\UserManager;
+use App\Repository\DocumentRepository;
+use App\Security\Voter\DocumentVoter;
+use App\Service\DocumentManager;
 use App\Service\ProfileUpdateRequestManager;
+use App\Service\UserManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -17,23 +24,19 @@ class ProfileController extends AbstractController
 {
     public function __construct(
         private UserManager $userManager,
-        private ProfileUpdateRequestManager $profileUpdateRequestManager
+        private ProfileUpdateRequestManager $profileUpdateRequestManager,
+        private DocumentManager $documentManager,
+        private DocumentRepository $documentRepository
     ) {
     }
 
-    /**
-     * Voir son propre profil
-     */
     #[Route('', name: 'app_profile_view', methods: ['GET'])]
     public function view(): Response
     {
         /** @var User $user */
         $user = $this->getUser();
 
-        // Récupérer le statut de complétion
         $completionStatus = $this->userManager->getUserCompletionStatus($user);
-
-        // Récupérer le contrat actif
         $activeContract = $user->getActiveContract();
 
         return $this->render('profile/view.html.twig', [
@@ -43,9 +46,6 @@ class ProfileController extends AbstractController
         ]);
     }
 
-    /**
-     * Formulaire de demande de modification de profil
-     */
     #[Route('/edit-request', name: 'app_profile_edit_request', methods: ['GET', 'POST'])]
     public function editRequest(Request $request): Response
     {
@@ -58,7 +58,6 @@ class ProfileController extends AbstractController
             try {
                 $requestedData = [];
 
-                // Collecter les champs modifiables par l'utilisateur
                 $phone = $request->request->get('phone');
                 if ($phone !== null && $phone !== $user->getPhone()) {
                     $requestedData['phone'] = $phone;
@@ -75,8 +74,8 @@ class ProfileController extends AbstractController
                 }
 
                 $children = $request->request->get('children');
-                if ($children !== null && (int)$children !== $user->getChildren()) {
-                    $requestedData['children'] = (int)$children;
+                if ($children !== null && (int) $children !== $user->getChildren()) {
+                    $requestedData['children'] = (int) $children;
                 }
 
                 $iban = $request->request->get('iban');
@@ -91,11 +90,10 @@ class ProfileController extends AbstractController
 
                 $reason = $request->request->get('reason');
 
-                // Vérifier qu'il y a au moins un changement
                 if (empty($requestedData)) {
                     $errors[] = 'Aucune modification détectée.';
                 } else {
-                    $profileUpdateRequest = $this->profileUpdateRequestManager->createRequest(
+                    $this->profileUpdateRequestManager->createRequest(
                         $user,
                         $requestedData,
                         $reason
@@ -104,8 +102,8 @@ class ProfileController extends AbstractController
                     $this->addFlash('success', 'Votre demande de modification a été envoyée à l\'administrateur.');
                     return $this->redirectToRoute('app_profile_view');
                 }
-            } catch (\Exception $e) {
-                $errors[] = 'Erreur : ' . $e->getMessage();
+            } catch (\Exception $exception) {
+                $errors[] = 'Erreur : ' . $exception->getMessage();
             }
 
             return $this->render('profile/edit_request.html.twig', [
@@ -120,53 +118,164 @@ class ProfileController extends AbstractController
         ]);
     }
 
-    /**
-     * Voir ses documents
-     */
     #[Route('/documents', name: 'app_profile_documents', methods: ['GET'])]
     public function documents(): Response
     {
         /** @var User $user */
         $user = $this->getUser();
 
-        $documents = $user->getDocuments();
-        $missingDocuments = $user->getMissingDocuments();
+        $documents = $this->documentRepository->findActiveByUser($user);
+        $completion = $this->documentManager->getCompletionStatus($user);
 
-        // Filtrer les documents par catégorie
-        $personalDocuments = [];
-        $contractDocuments = [];
-        $administrativeDocuments = [];
-
+        $documentsByType = [];
         foreach ($documents as $document) {
-            $type = $document->getType();
-
-            // Documents personnels : CNI, RIB, Domicile, Honorabilité, Diplôme
-            if (in_array($type, ['cni', 'rib', 'domicile', 'honorabilite', 'diplome'])) {
-                $personalDocuments[] = $document;
-            }
-            // Documents contractuels : Contrat, Contrat signé, Avenant
-            elseif (in_array($type, ['contrat', 'contract_signed', 'contract_amendment'])) {
-                $contractDocuments[] = $document;
-            }
-            // Documents administratifs : Bulletin de paie, Autres
-            elseif (in_array($type, ['payslip', 'other'])) {
-                $administrativeDocuments[] = $document;
-            }
+            $documentsByType[$document->getType()][] = $document;
         }
 
         return $this->render('profile/documents.html.twig', [
             'user' => $user,
             'documents' => $documents,
-            'personalDocuments' => $personalDocuments,
-            'contractDocuments' => $contractDocuments,
-            'administrativeDocuments' => $administrativeDocuments,
-            'missingDocuments' => $missingDocuments,
+            'documentsByType' => $documentsByType,
+            'completion' => $completion,
+            'categories' => $completion['categories'] ?? [],
+            'missingDocuments' => $completion['missing'] ?? [],
+            'types' => Document::TYPES,
         ]);
     }
 
-    /**
-     * Voir son contrat actif
-     */
+    #[Route('/documents/upload', name: 'app_profile_documents_upload', methods: ['POST'])]
+    public function uploadDocument(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $this->denyAccessUnlessGranted(DocumentVoter::UPLOAD, $user);
+
+        /** @var UploadedFile|null $file */
+        $file = $request->files->get('file');
+        $type = (string) $request->request->get('type');
+        $comment = $request->request->get('comment');
+
+        if (!$file instanceof UploadedFile) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Aucun fichier fourni.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!isset(Document::TYPES[$type])) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Type de document invalide.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $document = $this->documentManager->uploadDocument($file, $user, $type, $comment);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], Response::HTTP_BAD_REQUEST);
+        } catch (\Throwable $exception) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors du téléversement du document.',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return $this->json([
+            'success' => true,
+            'document' => $this->serializeDocument($document),
+            'completion' => $this->documentManager->getCompletionStatus($user),
+        ], Response::HTTP_CREATED);
+    }
+
+    #[Route('/documents/{id}/replace', name: 'app_profile_documents_replace', methods: ['POST'])]
+    public function replaceDocument(Document $document, Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $this->denyAccessUnlessGranted(DocumentVoter::REPLACE, $document);
+
+        /** @var UploadedFile|null $file */
+        $file = $request->files->get('file');
+        $comment = $request->request->get('comment');
+
+        if (!$file instanceof UploadedFile) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Aucun fichier fourni.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $newDocument = $this->documentManager->replaceDocument($document, $file, $comment);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], Response::HTTP_BAD_REQUEST);
+        } catch (\Throwable $exception) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors du remplacement du document.',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return $this->json([
+            'success' => true,
+            'document' => $this->serializeDocument($newDocument),
+            'completion' => $this->documentManager->getCompletionStatus($user),
+        ]);
+    }
+
+    #[Route('/documents/{id}', name: 'app_profile_documents_delete', methods: ['DELETE'])]
+    public function deleteDocument(Document $document): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $this->denyAccessUnlessGranted(DocumentVoter::DELETE, $document);
+
+        try {
+            $this->documentManager->deleteDocument($document);
+        } catch (\Throwable $exception) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Impossible de supprimer ce document.',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return $this->json([
+            'success' => true,
+            'completion' => $this->documentManager->getCompletionStatus($user),
+        ]);
+    }
+
+    #[Route('/documents/{id}/download', name: 'app_profile_documents_download', methods: ['GET'])]
+    public function downloadDocument(Document $document): Response
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::DOWNLOAD, $document);
+
+        $filePath = $this->documentManager->getDocumentPath($document);
+        if (!is_file($filePath)) {
+            throw $this->createNotFoundException('Le fichier demandé est introuvable.');
+        }
+
+        return new BinaryFileResponse($filePath);
+    }
+
+    #[Route('/documents/completion', name: 'app_profile_documents_completion', methods: ['GET'])]
+    public function completion(): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        return $this->json($this->documentManager->getCompletionStatus($user));
+    }
+
     #[Route('/contract', name: 'app_profile_contract', methods: ['GET'])]
     public function contract(): Response
     {
@@ -185,5 +294,19 @@ class ProfileController extends AbstractController
             'activeContract' => $activeContract,
             'allContracts' => $allContracts,
         ]);
+    }
+
+    private function serializeDocument(Document $document): array
+    {
+        return [
+            'id' => $document->getId(),
+            'type' => $document->getType(),
+            'typeLabel' => Document::TYPES[$document->getType()] ?? $document->getType(),
+            'status' => $document->getStatus(),
+            'uploadedAt' => $document->getUploadedAt()?->format('Y-m-d H:i:s'),
+            'fileSize' => $document->getFileSize(),
+            'fileSizeFormatted' => $document->getFileSizeFormatted(),
+            'archived' => $document->isArchived(),
+        ];
     }
 }
