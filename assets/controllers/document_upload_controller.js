@@ -364,9 +364,17 @@ export default class extends Controller {
                 this.formTarget.reset();
                 this.removeFile();
             } else {
-                const error = xhr.responseText || 'Erreur lors de l\'upload';
-                this.showError(error);
-                this.dispatch('uploadError', { detail: { error } });
+                // Try to parse error response as JSON
+                let errorMessage = 'Erreur lors de l\'upload';
+                try {
+                    const errorResponse = JSON.parse(xhr.responseText);
+                    errorMessage = errorResponse.message || errorMessage;
+                } catch (e) {
+                    errorMessage = xhr.responseText || errorMessage;
+                }
+
+                this.showError(errorMessage);
+                this.dispatch('uploadError', { detail: { error: errorMessage, message: errorMessage } });
             }
         });
 

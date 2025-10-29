@@ -10,26 +10,18 @@
                     Mes documents
                 </h1>
                 <p class="text-blue-100 text-sm md:text-base">
-                    Gérez vos documents personnels en toute simplicité
+                    Consultez et téléversez vos justificatifs personnels
                 </p>
-            </div>
-            <div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0">
-                <button type="button"
-                        data-action="click->document-modal#open"
-                        data-document-modal-modal-id-param="uploadModal"
-                        class="inline-flex items-center px-4 py-2 bg-white text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition-colors">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Ajouter un document
-                </button>
             </div>
         </div>
     </div>
 {% endblock %}
 
-{% block page_content %}
-<div class="max-w-7xl mx-auto space-y-6" data-controller="document-modal document-upload document-actions">
+{% block dashboard_content %}
+<div class="max-w-7xl mx-auto space-y-6"
+     data-controller="document-modal document-upload document-actions"
+     data-document-upload-upload-url-value="{{ path('app_profile_documents_upload') }}"
+     data-action="document-upload:uploadSuccess->document-modal#handleUploadSuccess document-upload:uploadError->document-modal#handleUploadError">
     {% set completionPercent = completion.percentage ?? 0 %}
     {# Global Completion Card #}
     <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
@@ -307,7 +299,7 @@
 {# Upload Modal #}
 <div id="uploadModal" data-document-modal-target="modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4"
      data-action="click->document-modal#closeOnBackdropClick">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Ajouter un document</h3>
             <button type="button"
@@ -329,7 +321,9 @@
                     <select name="type" id="uploadType" required
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
                         <option value="">Sélectionnez un type...</option>
-                        {# Options will be populated by JavaScript or you can list them #}
+                        {% for typeKey, typeLabel in types %}
+                            <option value="{{ typeKey }}">{{ typeLabel }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -377,7 +371,7 @@
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Commentaire (optionnel)
                     </label>
-                    <textarea name="commentaire" rows="2"
+                    <textarea name="comment" rows="2"
                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
                 </div>
             </div>
@@ -398,12 +392,24 @@
 </div>
 
 {# Replace Modal #}
-<div id="replaceModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+<div id="replaceModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4"
+     onclick="if(event.target === this) { this.classList.add('hidden'); document.body.style.overflow = ''; }">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Remplacer le document</h3>
+            <button type="button"
+                    onclick="document.getElementById('replaceModal').classList.add('hidden'); document.body.style.overflow = '';"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
         </div>
-        <form method="post" id="replaceForm" enctype="multipart/form-data">
+        <form method="post" id="replaceForm" enctype="multipart/form-data" action=""
+              data-controller="document-replace"
+              data-document-replace-target="form"
+              data-action="submit->document-replace#submit">
+            <input type="hidden" name="document_id" value="">
             <div class="px-6 py-4 space-y-4">
                 <p class="text-sm text-gray-600 dark:text-gray-300">
                     Le fichier actuel sera remplacé. L'ancienne version sera conservée dans l'historique.
@@ -417,11 +423,13 @@
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-                <button type="button" onclick="closeReplaceModal()"
+                <button type="button"
+                        onclick="document.getElementById('replaceModal').classList.add('hidden'); document.body.style.overflow = '';"
                         class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     Annuler
                 </button>
                 <button type="submit"
+                        data-document-replace-target="submitButton"
                         class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
                     Remplacer
                 </button>
@@ -431,12 +439,21 @@
 </div>
 
 {# Delete Modal #}
-<div id="deleteModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+<div id="deleteModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4"
+     onclick="if(event.target === this) { this.classList.add('hidden'); document.body.style.overflow = ''; }">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-red-600 dark:text-red-400">Supprimer le document</h3>
+            <button type="button"
+                    onclick="document.getElementById('deleteModal').classList.add('hidden'); document.body.style.overflow = '';"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
         </div>
-        <form method="post" id="deleteForm">
+        <form method="post" id="deleteForm" action="">
+            <input type="hidden" name="document_id" value="">
             <div class="px-6 py-4">
                 <div class="flex items-start gap-3 mb-4">
                     <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -447,13 +464,14 @@
                             Êtes-vous sûr ?
                         </p>
                         <p class="text-sm text-gray-600 dark:text-gray-300">
-                            Cette action est irréversible. Le document <span id="deleteDocumentName" class="font-medium"></span> sera définitivement supprimé.
+                            Cette action est irréversible. Le document <span data-document-label class="font-medium"></span> sera définitivement supprimé.
                         </p>
                     </div>
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-                <button type="button" onclick="closeDeleteModal()"
+                <button type="button"
+                        onclick="document.getElementById('deleteModal').classList.add('hidden'); document.body.style.overflow = '';"
                         class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     Annuler
                 </button>
@@ -467,18 +485,20 @@
 </div>
 
 {# View Document Modal #}
-<div id="viewModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4">
+<div id="viewModal" data-document-modal-target="modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4"
+     onclick="if(event.target === this) { this.classList.add('hidden'); document.body.style.overflow = ''; }">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu du document</h3>
-            <button type="button" onclick="closeViewModal()"
+            <button type="button"
+                    onclick="document.getElementById('viewModal').classList.add('hidden'); document.body.style.overflow = '';"
                     class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         </div>
-        <div id="viewModalContent" class="flex-1 p-6 overflow-y-auto">
+        <div data-modal-content class="flex-1 p-6 overflow-y-auto">
             {# Content will be loaded dynamically #}
             <div class="flex items-center justify-center h-full">
                 <div class="text-center">

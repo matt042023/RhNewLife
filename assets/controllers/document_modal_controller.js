@@ -83,14 +83,36 @@ export default class extends Controller {
             event.preventDefault();
         }
 
-        if (!this.currentModal) {
+        // Try to find modal from current context or button clicked
+        let modalToClose = this.currentModal;
+
+        // If no currentModal, try to find it from the event target
+        if (!modalToClose && event?.target) {
+            // Find closest modal element
+            modalToClose = event.target.closest('[data-document-modal-target="modal"]');
+
+            // Or try to find by id if we're in a specific modal
+            if (!modalToClose) {
+                const modalIds = ['uploadModal', 'replaceModal', 'deleteModal', 'viewModal'];
+                for (const id of modalIds) {
+                    const modal = document.getElementById(id);
+                    if (modal && !modal.classList.contains('hidden')) {
+                        modalToClose = modal;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!modalToClose) {
+            console.warn('No modal to close');
             return;
         }
 
-        this.hideModal(this.currentModal);
+        this.hideModal(modalToClose);
 
         // Dispatch event
-        this.dispatch('modalClosed', { detail: { modal: this.currentModal } });
+        this.dispatch('modalClosed', { detail: { modal: modalToClose } });
 
         this.currentModal = null;
     }
@@ -152,7 +174,11 @@ export default class extends Controller {
 
         // Only close if clicking the backdrop itself, not its children
         if (event.target === event.currentTarget) {
-            this.close();
+            // Store reference to the modal before closing
+            if (!this.currentModal) {
+                this.currentModal = event.currentTarget;
+            }
+            this.close(event);
         }
     }
 
@@ -160,8 +186,22 @@ export default class extends Controller {
      * Handle escape key press
      */
     handleEscape(event) {
-        if (event.key === 'Escape' && this.currentModal) {
-            this.close();
+        if (event.key === 'Escape') {
+            // If no currentModal, try to find any open modal
+            if (!this.currentModal) {
+                const modalIds = ['viewModal', 'uploadModal', 'replaceModal', 'deleteModal'];
+                for (const id of modalIds) {
+                    const modal = document.getElementById(id);
+                    if (modal && !modal.classList.contains('hidden')) {
+                        this.currentModal = modal;
+                        break;
+                    }
+                }
+            }
+
+            if (this.currentModal) {
+                this.close(event);
+            }
         }
     }
 
@@ -200,6 +240,9 @@ export default class extends Controller {
 
             const html = await response.text();
             contentContainer.innerHTML = html;
+
+            // Re-bind event listeners to dynamically loaded content
+            this.bindDynamicEventListeners(contentContainer);
 
             // Dispatch event
             this.dispatch('contentLoaded', { detail: { modal, url } });
@@ -249,6 +292,14 @@ export default class extends Controller {
 
             if (field) {
                 field.value = data[fieldName];
+
+                // If this is the type field, also update the label display
+                if (fieldName === 'type') {
+                    const labelField = modal.querySelector('#uploadTypeLabel');
+                    if (labelField && data['label']) {
+                        labelField.value = data['label'];
+                    }
+                }
             }
         });
 
@@ -271,6 +322,12 @@ export default class extends Controller {
             const labelElement = modal.querySelector('[data-document-label]');
             if (labelElement) {
                 labelElement.textContent = trigger.dataset.documentLabel;
+            }
+
+            // Also update uploadTypeLabel if it exists (for upload modal)
+            const uploadTypeLabelField = modal.querySelector('#uploadTypeLabel');
+            if (uploadTypeLabelField) {
+                uploadTypeLabelField.value = trigger.dataset.documentLabel;
             }
         }
     }
@@ -308,10 +365,16 @@ export default class extends Controller {
         const modal = document.getElementById('replaceModal');
 
         if (modal) {
-            // Set document ID
+            // Set document ID in hidden field
             const idField = modal.querySelector('[name="document_id"]');
             if (idField) {
                 idField.value = documentId;
+            }
+
+            // Set form action dynamically
+            const form = modal.querySelector('#replaceForm');
+            if (form && documentId) {
+                form.action = `/profile/documents/${documentId}/replace`;
             }
 
             // Set document label
@@ -335,10 +398,16 @@ export default class extends Controller {
         const modal = document.getElementById('deleteModal');
 
         if (modal) {
-            // Set document ID
+            // Set document ID in hidden field
             const idField = modal.querySelector('[name="document_id"]');
             if (idField) {
                 idField.value = documentId;
+            }
+
+            // Set form action dynamically
+            const form = modal.querySelector('#deleteForm');
+            if (form && documentId) {
+                form.action = `/profile/documents/${documentId}`;
             }
 
             // Set document label
@@ -366,6 +435,86 @@ export default class extends Controller {
             this.loadModalContent(modal, url);
             this.showModal(modal);
         }
+    }
+
+    /**
+     * Handle successful upload
+     */
+    handleUploadSuccess(event) {
+        console.log('Upload success:', event.detail);
+
+        // Close the modal
+        this.close();
+
+        // Show success message
+        const message = event.detail.response?.message || 'Document téléversé avec succès';
+        this.showNotification('success', message);
+
+        // Reload the page to update the document list
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    }
+
+    /**
+     * Handle upload error
+     */
+    handleUploadError(event) {
+        console.log('Upload error:', event.detail);
+
+        const message = event.detail.error || event.detail.message || 'Erreur lors du téléversement';
+        this.showNotification('error', message);
+    }
+
+    /**
+     * Show notification message
+     */
+    showNotification(type, message) {
+        // Try to use existing notification system if available
+        if (window.showNotification) {
+            window.showNotification(type, message);
+            return;
+        }
+
+        // Fallback to creating a simple toast notification
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-[9999] px-6 py-3 rounded-lg shadow-lg text-white transform transition-all duration-300 ${
+            type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        }`;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        // Animate in
+        setTimeout(() => {
+            notification.style.opacity = '1';
+        }, 10);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
+    }
+
+    /**
+     * Bind event listeners to dynamically loaded content
+     */
+    bindDynamicEventListeners(container) {
+        // Find all elements with data-action that should close the modal
+        const closeButtons = container.querySelectorAll('[data-action*="document-modal#close"]');
+
+        closeButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.close(e);
+            });
+        });
+
+        // Also handle any other dynamic actions if needed
+        console.log(`Bound ${closeButtons.length} close button(s) in dynamic content`);
     }
 
     /**

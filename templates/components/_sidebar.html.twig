@@ -1,14 +1,18 @@
 <div class="h-full px-3 py-4 overflow-y-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
     {# Logo and branding #}
     <div class="flex items-center mb-5 px-3 py-2">
-        <svg class="w-8 h-8 mr-3 text-blue-600 dark:text-blue-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"></path>
-        </svg>
-        <span class="text-xl font-semibold text-gray-900 dark:text-white">RH NewLife</span>
+        <a href="{{ path('app_dashboard') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group {{ app.request.get('_route') starts with 'app_dashboard' ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+            <svg class="w-8 h-8 mr-3 text-blue-600 dark:text-blue-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"></path>
+            </svg>
+            <span class="text-xl font-semibold text-gray-900 dark:text-white">RH NewLife</span>
+        </a>
     </div>
 
     {# User info card #}
     <div class="mb-5 px-3 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <a href="{{ path('app_profile_view') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group {{ app.request.get('_route') starts with 'app_profile' ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+
         <div class="flex items-center">
             <div class="flex-shrink-0">
                 <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
@@ -24,6 +28,7 @@
                 </p>
             </div>
         </div>
+        </a>
     </div>
 
     {# Navigation menu #}
@@ -87,12 +92,12 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{{ path('app_admin_users_list') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group {{ app.request.get('_route') starts with 'app_admin_contracts' ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                    <a href="{{ path('app_admin_documents_list') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group {{ app.request.get('_route') starts with 'app_admin_documents' ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
                         <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M5 5V.13a2.96 2.96 0 0 0-1.293.749L.879 3.707A2.96 2.96 0 0 0 .13 5H5Z"/>
                             <path d="M14.066 0H7v5a2 2 0 0 1-2 2H0v11a1.97 1.97 0 0 0 1.934 2h12.132A1.97 1.97 0 0 0 16 18V2a1.97 1.97 0 0 0-1.934-2ZM9 13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2Zm4 .382a1 1 0 0 1-1.447.894L10 13.618V12a1 1 0 0 1 2 0v1.382ZM11 9V8h2a1 1 0 0 1 0 2h-2Z"/>
                         </svg>
-                        <span class="ml-3">Contrats</span>
+                        <span class="ml-3">Documents</span>
                     </a>
                 </li>
                 <li>

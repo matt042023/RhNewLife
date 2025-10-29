@@ -184,10 +184,13 @@ class ProfileController extends AbstractController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+        $completion = $this->documentManager->getCompletionStatus($user);
+
         return $this->json([
             'success' => true,
+            'message' => 'Document téléversé avec succès',
             'document' => $this->serializeDocument($document),
-            'completion' => $this->documentManager->getCompletionStatus($user),
+            'completion' => $this->serializeCompletionStatus($completion),
         ], Response::HTTP_CREATED);
     }
 
@@ -224,10 +227,13 @@ class ProfileController extends AbstractController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+        $completion = $this->documentManager->getCompletionStatus($user);
+
         return $this->json([
             'success' => true,
+            'message' => 'Document remplacé avec succès',
             'document' => $this->serializeDocument($newDocument),
-            'completion' => $this->documentManager->getCompletionStatus($user),
+            'completion' => $this->serializeCompletionStatus($completion),
         ]);
     }
 
@@ -248,9 +254,29 @@ class ProfileController extends AbstractController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+        $completion = $this->documentManager->getCompletionStatus($user);
+
         return $this->json([
             'success' => true,
-            'completion' => $this->documentManager->getCompletionStatus($user),
+            'message' => 'Document supprimé avec succès',
+            'completion' => $this->serializeCompletionStatus($completion),
+        ]);
+    }
+
+    #[Route('/documents/{id}/view', name: 'app_profile_documents_view', methods: ['GET'])]
+    public function viewDocument(Document $document): Response
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::VIEW, $document);
+
+        $filePath = $this->documentManager->getDocumentPath($document);
+        if (!is_file($filePath)) {
+            throw $this->createNotFoundException('Le fichier demandé est introuvable.');
+        }
+
+        // Return HTML fragment for modal content
+        return $this->render('profile/partials/_document_viewer.html.twig', [
+            'document' => $document,
+            'filePath' => $filePath,
         ]);
     }
 
@@ -307,6 +333,56 @@ class ProfileController extends AbstractController
             'fileSize' => $document->getFileSize(),
             'fileSizeFormatted' => $document->getFileSizeFormatted(),
             'archived' => $document->isArchived(),
+        ];
+    }
+
+    private function serializeCompletionStatus(array $completion): array
+    {
+        // Serialize categories to avoid circular references
+        $serializedCategories = [];
+
+        foreach ($completion['categories'] as $category) {
+            $serializedRequired = [];
+            foreach ($category['required'] as $item) {
+                $serializedRequired[] = [
+                    'type' => $item['type'],
+                    'label' => $item['label'],
+                    'uploaded' => $item['uploaded'],
+                    'priority' => $item['priority'],
+                    'category' => $item['category'],
+                    'document' => $item['document'] ? $this->serializeDocument($item['document']) : null,
+                ];
+            }
+
+            $serializedOptional = [];
+            foreach ($category['optional'] as $item) {
+                $serializedOptional[] = [
+                    'type' => $item['type'],
+                    'label' => $item['label'],
+                    'uploaded' => $item['uploaded'],
+                    'priority' => $item['priority'],
+                    'category' => $item['category'],
+                    'document' => $item['document'] ? $this->serializeDocument($item['document']) : null,
+                ];
+            }
+
+            $serializedCategories[] = [
+                'key' => $category['key'],
+                'label' => $category['label'],
+                'required' => $serializedRequired,
+                'optional' => $serializedOptional,
+                'completion' => $category['completion'],
+            ];
+        }
+
+        return [
+            'total_required' => $completion['total_required'],
+            'completed_required' => $completion['completed_required'],
+            'percentage' => $completion['percentage'],
+            'is_complete' => $completion['is_complete'],
+            'contract_type' => $completion['contract_type'],
+            'categories' => $serializedCategories,
+            'missing' => $completion['missing'],
         ];
     }
 }
