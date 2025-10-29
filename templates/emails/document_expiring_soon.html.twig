@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documents proches de l'expiration</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .content h2 {
+            color: #1f2937;
+            font-size: 22px;
+            margin-top: 0;
+        }
+        .warning-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .info-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .documents-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        .documents-table th {
+            background: #f3f4f6;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: #1f2937;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .documents-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .documents-table tr:hover {
+            background: #f9fafb;
+        }
+        .urgent {
+            color: #dc2626;
+            font-weight: 600;
+        }
+        .soon {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+        .footer {
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .action-link {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .action-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⏰ Alerte : Documents proches de l'expiration</h1>
+        </div>
+
+        <div class="content">
+            <h2>Rapport de rétention documentaire</h2>
+
+            <p>
+                Bonjour,<br>
+                Voici le rapport quotidien des documents archivés dont la période de rétention arrive bientôt à échéance.
+                <strong>{{ expiringDocuments|length }} document(s)</strong> nécessite(nt) votre attention.
+            </p>
+
+            <div class="warning-box">
+                <strong>⚠️ Action requise :</strong><br>
+                Les documents listés ci-dessous approchent de leur date d'expiration de rétention.
+                Veuillez vérifier s'ils doivent être conservés plus longtemps ou archivés définitivement.
+            </div>
+
+            <div class="info-box">
+                <strong>📋 Politique de rétention :</strong><br>
+                • <strong>Documents identité/bancaires :</strong> 5 ans<br>
+                • <strong>Bulletins de paie :</strong> 5 ans<br>
+                • <strong>Justificatifs d'absence :</strong> 3 ans<br>
+                • <strong>Certificats médicaux :</strong> 5 ans<br>
+                • <strong>Autres documents :</strong> Variable selon le type
+            </div>
+
+            <h3 style="color: #1f2937; font-size: 18px; margin-top: 30px;">Documents concernés :</h3>
+
+            <table class="documents-table">
+                <thead>
+                    <tr>
+                        <th>Salarié</th>
+                        <th>Type de document</th>
+                        <th>Date d'archivage</th>
+                        <th>Expiration</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in expiringDocuments %}
+                    <tr>
+                        <td>
+                            <strong>{{ doc.user.fullName }}</strong><br>
+                            <span style="color: #6b7280; font-size: 12px;">{{ doc.user.email }}</span>
+                        </td>
+                        <td>{{ doc.typeLabel }}</td>
+                        <td>{{ doc.archivedAt|date('d/m/Y') }}</td>
+                        <td>
+                            {% set daysLeft = doc.daysUntilExpiration %}
+                            {% if daysLeft <= 7 %}
+                                <span class="urgent">⚠️ {{ daysLeft }} jour(s)</span>
+                            {% elseif daysLeft <= 30 %}
+                                <span class="soon">⏰ {{ daysLeft }} jours</span>
+                            {% else %}
+                                {{ daysLeft }} jours
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ doc.viewUrl }}" class="action-link">Voir</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h3 style="color: #1f2937; font-size: 18px; margin-top: 30px;">Actions recommandées :</h3>
+
+            <ul style="line-height: 1.8;">
+                <li><strong>📦 Archiver définitivement :</strong> Si le document n'est plus nécessaire et que la période légale est respectée</li>
+                <li><strong>📅 Prolonger la rétention :</strong> Si le document doit être conservé pour des raisons légales ou administratives</li>
+                <li><strong>📝 Demander mise à jour :</strong> Si un document plus récent est nécessaire</li>
+                <li><strong>🗑️ Supprimer :</strong> Après validation que la suppression est conforme aux obligations légales</li>
+            </ul>
+
+            <center>
+                <a href="{{ archivesUrl }}" class="button">
+                    📊 Gérer les archives
+                </a>
+            </center>
+
+            <p style="font-size: 14px; color: #6b7280;">
+                Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br>
+                <a href="{{ archivesUrl }}" style="color: #3b82f6; word-break: break-all;">{{ archivesUrl }}</a>
+            </p>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="font-size: 14px; color: #6b7280;">
+                <strong>ℹ️ À propos de ce rapport :</strong><br>
+                Ce rapport est généré automatiquement chaque jour. Il liste tous les documents archivés
+                dont la date d'expiration de rétention est dans les <strong>90 jours</strong> à venir.<br>
+                Les documents avec moins de <strong>7 jours</strong> restants sont marqués comme urgents.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>
+                <strong>Plateforme RH NewLife</strong><br>
+                Gestion automatisée de la rétention documentaire
+            </p>
+            <p style="margin-top: 20px; font-size: 12px;">
+                © {{ currentYear|default("now"|date("Y")) }} RH NewLife. Tous droits réservés.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

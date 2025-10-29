@@ -6,10 +6,15 @@ use App\Entity\Contract;
 use App\Entity\Document;
 use App\Entity\User;
 use App\Repository\DocumentRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
 class DocumentManager
@@ -131,8 +136,11 @@ class DocumentManager
     public function __construct(
         private EntityManagerInterface $entityManager,
         private DocumentRepository $documentRepository,
+        private UserRepository $userRepository,
         private SluggerInterface $slugger,
         private LoggerInterface $logger,
+        private MailerInterface $mailer,
+        private UrlGeneratorInterface $urlGenerator,
         private string $uploadsDirectory
     ) {
     }
@@ -158,7 +166,11 @@ class DocumentManager
         $this->logger->info('Document uploaded', [
             'document_id' => $document->getId(),
             'user_id' => $user->getId(),
+            'user_name' => $user->getFullName(),
+            'user_email' => $user->getEmail(),
             'type' => $type,
+            'type_label' => $document->getTypeLabel(),
+            'original_filename' => $document->getOriginalName(),
             'version' => $document->getVersion(),
             'size' => $document->getFileSize(),
         ]);
@@ -202,8 +214,12 @@ class DocumentManager
             'document_id' => $document->getId(),
             'old_document_id' => $oldDocument->getId(),
             'user_id' => $user->getId(),
+            'user_name' => $user->getFullName(),
             'type' => $document->getType(),
+            'type_label' => $document->getTypeLabel(),
+            'original_filename' => $document->getOriginalName(),
             'version' => $document->getVersion(),
+            'old_version' => $oldDocument->getVersion(),
         ]);
 
         return $document;
@@ -242,9 +258,13 @@ class DocumentManager
         $this->logger->info('Document archived', [
             'document_id' => $document->getId(),
             'user_id' => $document->getUser()->getId(),
+            'user_name' => $document->getUser()->getFullName(),
+            'type' => $document->getType(),
+            'type_label' => $document->getTypeLabel(),
             'reason' => $reason,
             'retention_years' => $retentionYears,
             'version' => $document->getVersion(),
+            'archived_at' => $document->getArchivedAt()?->format('Y-m-d H:i:s'),
         ]);
     }
 
@@ -277,6 +297,10 @@ class DocumentManager
         $this->logger->info('Document restored', [
             'document_id' => $document->getId(),
             'user_id' => $document->getUser()->getId(),
+            'user_name' => $document->getUser()->getFullName(),
+            'type' => $document->getType(),
+            'type_label' => $document->getTypeLabel(),
+            'version' => $document->getVersion(),
         ]);
     }
 
@@ -321,8 +345,12 @@ class DocumentManager
         $this->logger->info('Document deleted', [
             'document_id' => $document->getId(),
             'user_id' => $document->getUser()->getId(),
+            'user_name' => $document->getUser()->getFullName(),
             'type' => $document->getType(),
+            'type_label' => $document->getTypeLabel(),
+            'original_filename' => $document->getOriginalName(),
             'archived' => $document->isArchived(),
+            'version' => $document->getVersion(),
         ]);
     }
 
@@ -334,7 +362,12 @@ class DocumentManager
         $this->logger->info('Document validated', [
             'document_id' => $document->getId(),
             'user_id' => $document->getUser()->getId(),
+            'user_name' => $document->getUser()->getFullName(),
             'type' => $document->getType(),
+            'type_label' => $document->getTypeLabel(),
+            'comment' => $comment,
+            'validated_at' => $document->getValidatedAt()?->format('Y-m-d H:i:s'),
+            'validated_by' => $document->getValidatedBy()?->getFullName(),
         ]);
     }
 
@@ -346,8 +379,12 @@ class DocumentManager
         $this->logger->info('Document rejected', [
             'document_id' => $document->getId(),
             'user_id' => $document->getUser()->getId(),
+            'user_name' => $document->getUser()->getFullName(),
             'type' => $document->getType(),
+            'type_label' => $document->getTypeLabel(),
             'reason' => $reason,
+            'rejected_at' => $document->getValidatedAt()?->format('Y-m-d H:i:s'),
+            'rejected_by' => $document->getValidatedBy()?->getFullName(),
         ]);
     }
 
@@ -795,5 +832,326 @@ class DocumentManager
         }
 
         @unlink($source);
+    }
+
+    // ===== EMAIL NOTIFICATIONS =====
+
+    /**
+     * Send notification to admins when a document is uploaded by an employee
+     */
+    public function sendDocumentUploadedNotification(Document $document): void
+    {
+        try {
+            // Get all users with ROLE_ADMIN or ROLE_RH
+            $admins = $this->userRepository->findByRole('ROLE_ADMIN');
+
+            if (empty($admins)) {
+                $this->logger->warning('No admin users found to notify about document upload', [
+                    'document_id' => $document->getId(),
+                ]);
+                return;
+            }
+
+            $validationUrl = $this->urlGenerator->generate(
+                'admin_documents_view',
+                ['id' => $document->getId()],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+
+            foreach ($admins as $admin) {
+                $email = (new TemplatedEmail())
+                    ->from(new Address('noreply@rhnewlife.com', 'RH NewLife'))
+                    ->to(new Address($admin->getEmail(), $admin->getFullName()))
+                    ->replyTo(new Address('rh@rhnewlife.com', 'Service RH'))
+                    ->subject('Nouveau document à valider')
+                    ->htmlTemplate('emails/document_uploaded.html.twig')
+                    ->context([
+                        'document' => $document,
+                        'user' => $document->getUser(),
+                        'validationUrl' => $validationUrl,
+                        'currentYear' => date('Y'),
+                    ]);
+
+                $this->mailer->send($email);
+            }
+
+            $this->logger->info('Document upload notification sent to admins', [
+                'document_id' => $document->getId(),
+                'admin_count' => count($admins),
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to send document upload notification', [
+                'document_id' => $document->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send notification to employee when their document is validated
+     */
+    public function sendDocumentValidatedNotification(Document $document, ?User $validator = null, ?string $comment = null): void
+    {
+        try {
+            $user = $document->getUser();
+
+            if (!$user || !$user->getEmail()) {
+                $this->logger->warning('Cannot send validation notification: user or email missing', [
+                    'document_id' => $document->getId(),
+                ]);
+                return;
+            }
+
+            $profileUrl = $this->urlGenerator->generate(
+                'app_profile_documents',
+                [],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+
+            // Calculate completion percentage
+            $completionData = $this->calculateUserCompletion($user);
+            $completionPercent = $completionData['percentage'] ?? 0;
+
+            $email = (new TemplatedEmail())
+                ->from(new Address('noreply@rhnewlife.com', 'RH NewLife'))
+                ->to(new Address($user->getEmail(), $user->getFullName()))
+                ->replyTo(new Address('rh@rhnewlife.com', 'Service RH'))
+                ->subject('✅ Votre document a été validé')
+                ->htmlTemplate('emails/document_validated.html.twig')
+                ->context([
+                    'document' => $document,
+                    'user' => $user,
+                    'validator' => $validator,
+                    'comment' => $comment,
+                    'profileUrl' => $profileUrl,
+                    'completionPercent' => $completionPercent,
+                    'currentYear' => date('Y'),
+                ]);
+
+            $this->mailer->send($email);
+
+            $this->logger->info('Document validation notification sent', [
+                'document_id' => $document->getId(),
+                'user_id' => $user->getId(),
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to send document validation notification', [
+                'document_id' => $document->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send notification to employee when their document is rejected
+     */
+    public function sendDocumentRejectedNotification(Document $document, string $reason): void
+    {
+        try {
+            $user = $document->getUser();
+
+            if (!$user || !$user->getEmail()) {
+                $this->logger->warning('Cannot send rejection notification: user or email missing', [
+                    'document_id' => $document->getId(),
+                ]);
+                return;
+            }
+
+            $resubmitUrl = $this->urlGenerator->generate(
+                'app_profile_documents',
+                [],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+
+            $email = (new TemplatedEmail())
+                ->from(new Address('noreply@rhnewlife.com', 'RH NewLife'))
+                ->to(new Address($user->getEmail(), $user->getFullName()))
+                ->replyTo(new Address('rh@rhnewlife.com', 'Service RH'))
+                ->subject('⚠️ Document refusé - Action requise')
+                ->htmlTemplate('emails/document_rejected.html.twig')
+                ->context([
+                    'document' => $document,
+                    'user' => $user,
+                    'reason' => $reason,
+                    'resubmitUrl' => $resubmitUrl,
+                    'currentYear' => date('Y'),
+                ]);
+
+            $this->mailer->send($email);
+
+            $this->logger->info('Document rejection notification sent', [
+                'document_id' => $document->getId(),
+                'user_id' => $user->getId(),
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to send document rejection notification', [
+                'document_id' => $document->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send notification to admins about documents expiring soon
+     * This method is intended to be called from a console command (cron job)
+     */
+    public function sendExpiringDocumentsNotification(array $expiringDocuments): void
+    {
+        try {
+            if (empty($expiringDocuments)) {
+                return;
+            }
+
+            $admins = $this->userRepository->findByRole('ROLE_ADMIN');
+
+            if (empty($admins)) {
+                $this->logger->warning('No admin users found to notify about expiring documents');
+                return;
+            }
+
+            $archivesUrl = $this->urlGenerator->generate(
+                'admin_documents_archives',
+                [],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+
+            // Enrich documents with calculated data
+            $enrichedDocuments = array_map(function (Document $doc) {
+                $expirationDate = $doc->getArchivedAt()
+                    ? (clone $doc->getArchivedAt())->modify('+' . $doc->getRetentionYears() . ' years')
+                    : null;
+
+                $daysUntilExpiration = $expirationDate
+                    ? (new \DateTime())->diff($expirationDate)->days
+                    : 0;
+
+                $viewUrl = $this->urlGenerator->generate(
+                    'admin_documents_view',
+                    ['id' => $doc->getId()],
+                    UrlGeneratorInterface::ABSOLUTE_URL
+                );
+
+                return [
+                    'document' => $doc,
+                    'user' => $doc->getUser(),
+                    'typeLabel' => $doc->getTypeLabel(),
+                    'daysUntilExpiration' => $daysUntilExpiration,
+                    'viewUrl' => $viewUrl,
+                ];
+            }, $expiringDocuments);
+
+            foreach ($admins as $admin) {
+                $email = (new TemplatedEmail())
+                    ->from(new Address('noreply@rhnewlife.com', 'RH NewLife'))
+                    ->to(new Address($admin->getEmail(), $admin->getFullName()))
+                    ->replyTo(new Address('rh@rhnewlife.com', 'Service RH'))
+                    ->subject('⏰ Documents proches de l\'expiration - ' . count($expiringDocuments) . ' document(s)')
+                    ->htmlTemplate('emails/document_expiring_soon.html.twig')
+                    ->context([
+                        'expiringDocuments' => $enrichedDocuments,
+                        'archivesUrl' => $archivesUrl,
+                        'currentYear' => date('Y'),
+                    ]);
+
+                $this->mailer->send($email);
+            }
+
+            $this->logger->info('Expiring documents notification sent', [
+                'document_count' => count($expiringDocuments),
+                'admin_count' => count($admins),
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to send expiring documents notification', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Reconstruit l'historique d'un document depuis ses métadonnées
+     * Cette méthode est temporaire en attendant l'implémentation de l'entité Journal (EP-11)
+     *
+     * @return array<int, array{action: string, icon: string, color: string, date: \DateTimeImmutable, user: ?User, details: ?string}>
+     */
+    public function getDocumentHistory(Document $document): array
+    {
+        $history = [];
+
+        // 1. Événement : Upload initial
+        if ($document->getUploadedAt()) {
+            $history[] = [
+                'action' => 'Document uploadé',
+                'icon' => 'upload',
+                'color' => 'blue',
+                'date' => $document->getUploadedAt(),
+                'user' => $document->getUser(),
+                'details' => sprintf(
+                    'Version %d • %s • %s',
+                    $document->getVersion(),
+                    $document->getOriginalName(),
+                    $document->getFileSizeFormatted()
+                ),
+            ];
+        }
+
+        // 2. Événement : Remplacement (si version > 1)
+        if ($document->getVersion() > 1) {
+            // On suppose que le remplacement s'est fait peu avant l'upload actuel
+            $history[] = [
+                'action' => sprintf('Document remplacé (v%d → v%d)', $document->getVersion() - 1, $document->getVersion()),
+                'icon' => 'refresh',
+                'color' => 'gray',
+                'date' => $document->getUploadedAt(),
+                'user' => $document->getUser(),
+                'details' => 'Ancienne version archivée automatiquement',
+            ];
+        }
+
+        // 3. Événement : Validation
+        if ($document->getStatus() === Document::STATUS_VALIDATED && $document->getValidatedAt()) {
+            $history[] = [
+                'action' => 'Document validé',
+                'icon' => 'check',
+                'color' => 'green',
+                'date' => $document->getValidatedAt(),
+                'user' => $document->getValidatedBy(),
+                'details' => $document->getCommentaire(),
+            ];
+        }
+
+        // 4. Événement : Rejet
+        if ($document->getStatus() === Document::STATUS_REJECTED && $document->getValidatedAt()) {
+            $history[] = [
+                'action' => 'Document rejeté',
+                'icon' => 'x',
+                'color' => 'red',
+                'date' => $document->getValidatedAt(),
+                'user' => $document->getValidatedBy(),
+                'details' => $document->getCommentaire() ?? 'Aucun motif précisé',
+            ];
+        }
+
+        // 5. Événement : Archivage
+        if ($document->isArchived() && $document->getArchivedAt()) {
+            $history[] = [
+                'action' => 'Document archivé',
+                'icon' => 'archive',
+                'color' => 'yellow',
+                'date' => $document->getArchivedAt(),
+                'user' => null, // L'archiveur n'est pas stocké actuellement
+                'details' => sprintf(
+                    'Rétention : %d ans • Motif : %s',
+                    $document->getRetentionYears() ?? 5,
+                    $document->getArchiveReason() ?? 'Non précisé'
+                ),
+            ];
+        }
+
+        // Trier par date décroissante (plus récent en premier)
+        usort($history, function ($a, $b) {
+            return $b['date'] <=> $a['date'];
+        });
+
+        return $history;
     }
 }

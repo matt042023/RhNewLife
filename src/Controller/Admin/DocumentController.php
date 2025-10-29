@@ -7,6 +7,7 @@ use App\Repository\DocumentRepository;
 use App\Repository\UserRepository;
 use App\Security\Voter\DocumentVoter;
 use App\Service\DocumentManager;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -22,7 +23,8 @@ class DocumentController extends AbstractController
     public function __construct(
         private readonly DocumentRepository $documentRepository,
         private readonly UserRepository $userRepository,
-        private readonly DocumentManager $documentManager
+        private readonly DocumentManager $documentManager,
+        private readonly LoggerInterface $logger
     ) {
     }
 
@@ -95,8 +97,11 @@ class DocumentController extends AbstractController
             $this->denyAccessUnlessGranted(DocumentVoter::VIEW, $document);
         }
 
+        $history = $this->documentManager->getDocumentHistory($document);
+
         return $this->render('admin/documents/view.html.twig', [
             'document' => $document,
+            'history' => $history,
             'canValidate' => $this->isGranted(DocumentVoter::VALIDATE, $document),
             'canArchive' => $this->isGranted(DocumentVoter::ARCHIVE, $document),
             'canRestore' => $this->isGranted(DocumentVoter::RESTORE, $document),
@@ -137,6 +142,9 @@ class DocumentController extends AbstractController
 
         try {
             $document = $this->documentManager->uploadDocument($file, $user, $type, $comment);
+
+            // Envoyer notification email aux admins
+            $this->documentManager->sendDocumentUploadedNotification($document);
         } catch (\InvalidArgumentException $exception) {
             return $this->json([
                 'success' => false,
@@ -169,6 +177,9 @@ class DocumentController extends AbstractController
         $comment = $request->request->get('comment');
         $this->documentManager->validateDocument($document, $comment);
 
+        // Envoyer notification email au salarié
+        $this->documentManager->sendDocumentValidatedNotification($document, $this->getUser(), $comment);
+
         return $this->json(['success' => true]);
     }
 
@@ -187,6 +198,9 @@ class DocumentController extends AbstractController
         }
 
         $this->documentManager->rejectDocument($document, $reason);
+
+        // Envoyer notification email au salarié
+        $this->documentManager->sendDocumentRejectedNotification($document, $reason);
 
         return $this->json(['success' => true]);
     }
@@ -256,6 +270,20 @@ class DocumentController extends AbstractController
         if (!file_exists($filePath)) {
             throw $this->createNotFoundException('Le fichier demandé est introuvable.');
         }
+
+        // Log téléchargement pour audit
+        /** @var \App\Entity\User|null $currentUser */
+        $currentUser = $this->getUser();
+        $this->logger->info('Document downloaded', [
+            'document_id' => $document->getId(),
+            'document_type' => $document->getType(),
+            'document_name' => $document->getOriginalName(),
+            'owner_id' => $document->getUser()->getId(),
+            'owner_name' => $document->getUser()->getFullName(),
+            'downloader_id' => $currentUser?->getId(),
+            'downloader_name' => $currentUser?->getFullName(),
+            'is_archived' => $document->isArchived(),
+        ]);
 
         return new BinaryFileResponse($filePath);
     }

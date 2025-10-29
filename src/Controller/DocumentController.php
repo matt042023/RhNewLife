@@ -6,6 +6,7 @@ use App\Entity\Document;
 use App\Entity\User;
 use App\Repository\DocumentRepository;
 use App\Service\DocumentManager;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,7 +22,8 @@ class DocumentController extends AbstractController
 {
     public function __construct(
         private DocumentManager $documentManager,
-        private DocumentRepository $documentRepository
+        private DocumentRepository $documentRepository,
+        private LoggerInterface $logger
     ) {}
 
     /**
@@ -84,6 +86,9 @@ class DocumentController extends AbstractController
         try {
             $document = $this->documentManager->uploadDocument($file, $user, $type, $comment);
 
+            // Envoyer notification email aux admins
+            $this->documentManager->sendDocumentUploadedNotification($document);
+
             return $this->json([
                 'success' => true,
                 'message' => 'Document uploadé avec succès.',
@@ -137,6 +142,20 @@ class DocumentController extends AbstractController
         if (!file_exists($filePath)) {
             throw $this->createNotFoundException('Le fichier n\'existe pas.');
         }
+
+        // Log téléchargement pour audit
+        /** @var User|null $currentUser */
+        $currentUser = $this->getUser();
+        $this->logger->info('Document downloaded', [
+            'document_id' => $document->getId(),
+            'document_type' => $document->getType(),
+            'document_name' => $document->getOriginalName(),
+            'owner_id' => $document->getUser()->getId(),
+            'owner_name' => $document->getUser()->getFullName(),
+            'downloader_id' => $currentUser?->getId(),
+            'downloader_name' => $currentUser?->getFullName(),
+            'is_archived' => $document->isArchived(),
+        ]);
 
         return new BinaryFileResponse($filePath);
     }

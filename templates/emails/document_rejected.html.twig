@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document refusé</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .content h2 {
+            color: #1f2937;
+            font-size: 22px;
+            margin-top: 0;
+        }
+        .warning-box {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .warning-box strong {
+            color: #991b1b;
+        }
+        .info-box {
+            background: #f3f4f6;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .instructions-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+        .footer {
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+        .checklist li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        .checklist li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Document refusé</h1>
+        </div>
+
+        <div class="content">
+            <h2>Bonjour {{ user.firstName }},</h2>
+
+            <p>
+                Votre document n'a pas pu être validé par notre équipe RH.
+                Nous vous invitons à le soumettre à nouveau après avoir pris connaissance du motif ci-dessous.
+            </p>
+
+            <div class="info-box">
+                <strong>📄 Document concerné :</strong><br>
+                <strong>Type :</strong> {{ document.typeLabel }}<br>
+                <strong>Nom du fichier :</strong> {{ document.originalName }}<br>
+                <strong>Date de soumission :</strong> {{ document.uploadedAt|date('d/m/Y à H:i') }}<br>
+                <strong>Refusé le :</strong> {{ document.rejectedAt|date('d/m/Y à H:i') }}
+            </div>
+
+            <div class="warning-box">
+                <strong>❌ Motif du refus :</strong><br>
+                {{ reason }}
+            </div>
+
+            <div class="instructions-box">
+                <strong>📋 Instructions pour soumettre un nouveau document :</strong>
+                <ul class="checklist">
+                    <li>Assurez-vous que le document est au <strong>format accepté</strong> (PDF, JPG, PNG, DOC, DOCX)</li>
+                    <li>Vérifiez que le document est <strong>lisible</strong> et de <strong>bonne qualité</strong></li>
+                    <li>Le document ne doit pas dépasser <strong>10 MB</strong></li>
+                    <li>Assurez-vous que <strong>toutes les informations</strong> requises sont présentes</li>
+                    <li>Le document doit être <strong>récent et valide</strong></li>
+                </ul>
+            </div>
+
+            <p>
+                Une fois que vous aurez préparé un nouveau document conforme, vous pourrez le soumettre
+                directement depuis votre espace personnel.
+            </p>
+
+            <center>
+                <a href="{{ resubmitUrl }}" class="button">
+                    🔄 Soumettre à nouveau
+                </a>
+            </center>
+
+            <p style="font-size: 14px; color: #6b7280;">
+                Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br>
+                <a href="{{ resubmitUrl }}" style="color: #3b82f6; word-break: break-all;">{{ resubmitUrl }}</a>
+            </p>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="font-size: 14px; color: #6b7280;">
+                <strong>💡 Conseils pour éviter un nouveau refus :</strong><br>
+                • Si vous scannez un document papier, assurez-vous d'une bonne luminosité<br>
+                • Évitez les photos floues ou mal cadrées<br>
+                • Vérifiez que le document est complet (pas de pages manquantes)<br>
+                • Assurez-vous que les informations sont bien lisibles
+            </p>
+
+            <p style="font-size: 14px; color: #6b7280;">
+                <strong>❓ Besoin d'aide ?</strong><br>
+                Si vous avez des questions concernant le motif du refus ou si vous avez besoin d'assistance,
+                n'hésitez pas à contacter notre équipe RH qui se fera un plaisir de vous aider.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>
+                <strong>Service RH disponible</strong><br>
+                Email : <a href="mailto:rh@rhnewlife.com" style="color: #3b82f6;">rh@rhnewlife.com</a><br>
+                Nous sommes là pour vous accompagner !
+            </p>
+            <p style="margin-top: 20px; font-size: 12px;">
+                © {{ currentYear|default("now"|date("Y")) }} RH NewLife. Tous droits réservés.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

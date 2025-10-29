@@ -66,31 +66,75 @@
         </div>
 
         {# Document history timeline #}
-        {% if document.auditLogs is defined and document.auditLogs|length > 0 %}
+        {% if history is defined and history|length > 0 %}
         <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Historique des actions
-            </h3>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Historique des actions
+                </h3>
+                <span class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ history|length }} événement{{ history|length > 1 ? 's' : '' }}
+                </span>
+            </div>
             <div class="space-y-4">
-                {% for log in document.auditLogs %}
+                {% for event in history %}
                 <div class="flex gap-4">
+                    {# Icon with color coding #}
                     <div class="flex-shrink-0">
-                        <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                            <svg class="w-4 h-4 text-blue-600 dark:text-blue-300" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
+                        {% set iconBgClass = event.color == 'green' ? 'bg-green-100 dark:bg-green-900' :
+                                             event.color == 'red' ? 'bg-red-100 dark:bg-red-900' :
+                                             event.color == 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900' :
+                                             event.color == 'gray' ? 'bg-gray-100 dark:bg-gray-700' :
+                                             'bg-blue-100 dark:bg-blue-900' %}
+                        {% set iconTextClass = event.color == 'green' ? 'text-green-600 dark:text-green-300' :
+                                                event.color == 'red' ? 'text-red-600 dark:text-red-300' :
+                                                event.color == 'yellow' ? 'text-yellow-600 dark:text-yellow-300' :
+                                                event.color == 'gray' ? 'text-gray-600 dark:text-gray-300' :
+                                                'text-blue-600 dark:text-blue-300' %}
+
+                        <div class="w-10 h-10 rounded-full {{ iconBgClass }} flex items-center justify-center">
+                            {% if event.icon == 'upload' %}
+                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                </svg>
+                            {% elseif event.icon == 'check' %}
+                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            {% elseif event.icon == 'x' %}
+                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            {% elseif event.icon == 'archive' %}
+                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                </svg>
+                            {% elseif event.icon == 'refresh' %}
+                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                            {% else %}
+                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                </svg>
+                            {% endif %}
                         </div>
                     </div>
-                    <div class="flex-1">
+
+                    {# Event details #}
+                    <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-gray-900 dark:text-white">
-                            {{ log.action }}
+                            {{ event.action }}
                         </p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                            Par {{ log.user.fullName }} • {{ log.createdAt|date('d/m/Y H:i') }}
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {% if event.user %}
+                                Par <span class="font-medium">{{ event.user.fullName }}</span> •
+                            {% endif %}
+                            {{ event.date|date('d/m/Y à H:i') }}
                         </p>
-                        {% if log.commentaire %}
-                        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                            {{ log.commentaire }}
+                        {% if event.details %}
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            {{ event.details }}
                         </p>
                         {% endif %}
                     </div>
