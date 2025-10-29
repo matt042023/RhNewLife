@@ -443,8 +443,15 @@ export default class extends Controller {
     handleUploadSuccess(event) {
         console.log('Upload success:', event.detail);
 
-        // Close the modal
-        this.close();
+        // Close the upload modal directly
+        const uploadModal = document.getElementById('uploadModal');
+        if (uploadModal) {
+            uploadModal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Also try to close via the controller method
+        this.close(event);
 
         // Show success message
         const message = event.detail.response?.message || 'Document téléversé avec succès';

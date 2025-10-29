@@ -306,6 +306,41 @@ export default class extends Controller {
     }
 
     /**
+     * Show notification toast
+     */
+    showNotification(type, message) {
+        // Try to use global notification function if available
+        if (window.showNotification) {
+            window.showNotification(type, message);
+            return;
+        }
+
+        // Fallback to simple toast notification
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-[9999] px-6 py-3 rounded-lg shadow-lg text-white ${
+            type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        }`;
+        notification.textContent = message;
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s';
+
+        document.body.appendChild(notification);
+
+        // Animate in
+        setTimeout(() => {
+            notification.style.opacity = '1';
+        }, 10);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
+    }
+
+    /**
      * Handle form submission
      */
     submit(event) {
@@ -360,9 +395,21 @@ export default class extends Controller {
                 const response = JSON.parse(xhr.responseText);
                 this.dispatch('uploadSuccess', { detail: { response } });
 
-                // Reset form
-                this.formTarget.reset();
-                this.removeFile();
+                // Close modal
+                const uploadModal = document.getElementById('uploadModal');
+                if (uploadModal) {
+                    uploadModal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+
+                // Show success notification
+                const message = response.message || 'Document téléversé avec succès';
+                this.showNotification('success', message);
+
+                // Reload page to show new document
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
                 // Try to parse error response as JSON
                 let errorMessage = 'Erreur lors de l\'upload';
