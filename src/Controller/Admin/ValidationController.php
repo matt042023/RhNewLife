@@ -60,8 +60,8 @@ class ValidationController extends AbstractController
 
         // Prépare le statut de complétion pour le template
         $completionStatus = [
-            'uploaded' => $docCompletionStatus['completed'],
-            'required' => $docCompletionStatus['total'],
+            'uploaded' => $docCompletionStatus['completed_required'],
+            'required' => $docCompletionStatus['total_required'],
             'percentage' => round($docCompletionStatus['percentage']),
             'hasPhone' => !empty($user->getPhone()),
             'hasAddress' => !empty($user->getAddress()),

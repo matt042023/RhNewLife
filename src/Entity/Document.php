@@ -114,11 +114,11 @@ class Document
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?Absence $absence = null;
 
-    #[ORM\ManyToOne(targetEntity: Formation::class)]
+    #[ORM\ManyToOne(targetEntity: Formation::class, inversedBy: 'documents')]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?Formation $formation = null;
 
-    #[ORM\ManyToOne(targetEntity: ElementVariable::class)]
+    #[ORM\ManyToOne(targetEntity: ElementVariable::class, inversedBy: 'documents')]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?ElementVariable $elementVariable = null;
 
