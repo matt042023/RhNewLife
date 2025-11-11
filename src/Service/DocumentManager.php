@@ -354,9 +354,9 @@ class DocumentManager
         ]);
     }
 
-    public function validateDocument(Document $document, ?string $comment = null): void
+    public function validateDocument(Document $document, ?string $comment = null, ?User $validatedBy = null): void
     {
-        $document->markAsValidated($comment);
+        $document->markAsValidated($comment, $validatedBy);
         $this->entityManager->flush();
 
         $this->logger->info('Document validated', [
@@ -1115,7 +1115,7 @@ class DocumentManager
                 'color' => 'green',
                 'date' => $document->getValidatedAt(),
                 'user' => $document->getValidatedBy(),
-                'details' => $document->getCommentaire(),
+                'details' => $document->getComment(),
             ];
         }
 
@@ -1127,7 +1127,7 @@ class DocumentManager
                 'color' => 'red',
                 'date' => $document->getValidatedAt(),
                 'user' => $document->getValidatedBy(),
-                'details' => $document->getCommentaire() ?? 'Aucun motif précisé',
+                'details' => $document->getComment() ?? 'Aucun motif précisé',
             ];
         }
 

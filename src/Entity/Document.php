@@ -122,6 +122,13 @@ class Document
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?ElementVariable $elementVariable = null;
 
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?User $validatedBy = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $validatedAt = null;
+
     public function __construct()
     {
         $this->uploadedAt = new \DateTime();
@@ -300,9 +307,11 @@ class Document
         return round($size, 2) . ' ' . $units[$unitIndex];
     }
 
-    public function markAsValidated(?string $comment = null): static
+    public function markAsValidated(?string $comment = null, ?User $validatedBy = null): static
     {
         $this->status = self::STATUS_VALIDATED;
+        $this->validatedBy = $validatedBy;
+        $this->validatedAt = new \DateTime();
         if ($comment) {
             $this->comment = $comment;
         }
@@ -441,6 +450,28 @@ class Document
     public function setElementVariable(?ElementVariable $elementVariable): static
     {
         $this->elementVariable = $elementVariable;
+        return $this;
+    }
+
+    public function getValidatedBy(): ?User
+    {
+        return $this->validatedBy;
+    }
+
+    public function setValidatedBy(?User $validatedBy): static
+    {
+        $this->validatedBy = $validatedBy;
+        return $this;
+    }
+
+    public function getValidatedAt(): ?\DateTimeInterface
+    {
+        return $this->validatedAt;
+    }
+
+    public function setValidatedAt(?\DateTimeInterface $validatedAt): static
+    {
+        $this->validatedAt = $validatedAt;
         return $this;
     }
 }

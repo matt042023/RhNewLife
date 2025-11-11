@@ -1,573 +1,553 @@
 {% extends 'admin.html.twig' %}
 
-{% block title %}Document #{{ document.id }}{% endblock %}
+{% block title %}Document #{{ document.id }}
+{% endblock %}
 
 {% block admin_title %}
-    <div class="flex items-center gap-3">
-        <a href="{{ path('admin_documents_list') }}" class="text-blue-100 hover:text-white transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-        </a>
-        <span>Document : {{ document.typeLabel ?? document.type }}</span>
-    </div>
+	<div class="flex items-center gap-3">
+		<a href="{{ path('app_admin_documents_list') }}" class="text-blue-100 hover:text-white transition-colors">
+			<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+			</svg>
+		</a>
+		<span>Document :
+			{{ document.typeLabel ?? document.type }}</span>
+	</div>
 {% endblock %}
 
 {% block admin_subtitle %}
-    Consultation et gestion
+	Consultation et gestion
 {% endblock %}
 
 {% block admin_actions %}
-    <div class="flex gap-2">
-        <a href="{{ downloadRoute }}"
-           class="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-            </svg>
-            Télécharger
-        </a>
-    </div>
+	<div class="flex gap-2">
+		<a href="{{ downloadRoute }}" class="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors">
+			<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+			</svg>
+			Télécharger
+		</a>
+	</div>
 {% endblock %}
 
 {% block admin_content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    {# Left column: Document viewer (2/3 width on large screens) #}
-    <div class="lg:col-span-2">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-            {# Viewer header #}
-            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex items-center gap-3">
-                    {% include 'components/documents/_document_type_icon.html.twig' with {
+	<div
+		class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+		{# Left column: Document viewer (2/3 width on large screens) #}
+		<div class="lg:col-span-2">
+			<div
+				class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+				{# Viewer header #}
+				<div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+					<div class="flex items-center gap-3">
+						{% include 'components/documents/_document_type_icon.html.twig' with {
                         'type': document.type,
                         'iconClass': 'w-6 h-6'
                     } %}
-                    <div>
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-                            {{ document.originalName }}
-                        </h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                            {{ document.fileSizeFormatted }} • {{ document.mimeType|default('application/pdf') }}
-                        </p>
-                    </div>
-                </div>
-                {% include 'components/documents/_document_status_badge.html.twig' with {
+						<div>
+							<h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+								{{ document.originalName }}
+							</h2>
+							<p class="text-sm text-gray-500 dark:text-gray-400">
+								{{ document.fileSizeFormatted }}
+								•
+								{{ document.mimeType|default('application/pdf') }}
+							</p>
+						</div>
+					</div>
+					{% include 'components/documents/_document_status_badge.html.twig' with {
                     'status': document.status,
                     'isArchived': document.isArchived
                 } %}
-            </div>
+				</div>
 
-            {# PDF Viewer with PDF.js - Phase 8 integrated #}
-            {% include 'components/documents/_pdf_viewer_placeholder.html.twig' with {
+				{# PDF Viewer with PDF.js - Phase 8 integrated #}
+				{% include 'components/documents/_pdf_viewer_placeholder.html.twig' with {
                 'document': document,
                 'documentUrl': downloadRoute,
                 'downloadRoute': downloadRoute,
                 'height': '600px'
             } %}
-        </div>
+			</div>
 
-        {# Document history timeline #}
-        {% if history is defined and history|length > 0 %}
-        <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    Historique des actions
-                </h3>
-                <span class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ history|length }} événement{{ history|length > 1 ? 's' : '' }}
-                </span>
-            </div>
-            <div class="space-y-4">
-                {% for event in history %}
-                <div class="flex gap-4">
-                    {# Icon with color coding #}
-                    <div class="flex-shrink-0">
-                        {% set iconBgClass = event.color == 'green' ? 'bg-green-100 dark:bg-green-900' :
+			{# Document history timeline #}
+			{% if history is defined and history|length > 0 %}
+				<div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+					<div class="flex items-center justify-between mb-4">
+						<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+							Historique des actions
+						</h3>
+						<span class="text-sm text-gray-500 dark:text-gray-400">
+							{{ history|length }}
+							événement{{ history|length > 1 ? 's' : '' }}
+						</span>
+					</div>
+					<div class="space-y-4">
+						{% for event in history %}
+							<div
+								class="flex gap-4">
+								{# Icon with color coding #}
+								<div class="flex-shrink-0">
+									{% set iconBgClass = event.color == 'green' ? 'bg-green-100 dark:bg-green-900' :
                                              event.color == 'red' ? 'bg-red-100 dark:bg-red-900' :
                                              event.color == 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900' :
                                              event.color == 'gray' ? 'bg-gray-100 dark:bg-gray-700' :
                                              'bg-blue-100 dark:bg-blue-900' %}
-                        {% set iconTextClass = event.color == 'green' ? 'text-green-600 dark:text-green-300' :
+									{% set iconTextClass = event.color == 'green' ? 'text-green-600 dark:text-green-300' :
                                                 event.color == 'red' ? 'text-red-600 dark:text-red-300' :
                                                 event.color == 'yellow' ? 'text-yellow-600 dark:text-yellow-300' :
                                                 event.color == 'gray' ? 'text-gray-600 dark:text-gray-300' :
                                                 'text-blue-600 dark:text-blue-300' %}
 
-                        <div class="w-10 h-10 rounded-full {{ iconBgClass }} flex items-center justify-center">
-                            {% if event.icon == 'upload' %}
-                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                                </svg>
-                            {% elseif event.icon == 'check' %}
-                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                            {% elseif event.icon == 'x' %}
-                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            {% elseif event.icon == 'archive' %}
-                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                                </svg>
-                            {% elseif event.icon == 'refresh' %}
-                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                </svg>
-                            {% else %}
-                                <svg class="w-5 h-5 {{ iconTextClass }}" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                </svg>
-                            {% endif %}
-                        </div>
-                    </div>
+									<div class="w-10 h-10 rounded-full {{ iconBgClass }} flex items-center justify-center">
+										{% if event.icon == 'upload' %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+											</svg>
+										{% elseif event.icon == 'check' %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+											</svg>
+										{% elseif event.icon == 'x' %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+											</svg>
+										{% elseif event.icon == 'archive' %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+											</svg>
+										{% elseif event.icon == 'refresh' %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+											</svg>
+										{% else %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="currentColor" viewbox="0 0 20 20">
+												<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+											</svg>
+										{% endif %}
+									</div>
+								</div>
 
-                    {# Event details #}
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 dark:text-white">
-                            {{ event.action }}
-                        </p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {% if event.user %}
-                                Par <span class="font-medium">{{ event.user.fullName }}</span> •
-                            {% endif %}
-                            {{ event.date|date('d/m/Y à H:i') }}
-                        </p>
-                        {% if event.details %}
-                        <p class="text-sm text-gray-600 dark:text-gray-300 mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                            {{ event.details }}
-                        </p>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-    </div>
+								{# Event details #}
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium text-gray-900 dark:text-white">
+										{{ event.action }}
+									</p>
+									<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+										{% if event.user %}
+											Par
+											<span class="font-medium">{{ event.user.fullName }}</span>
+											•
+										{% endif %}
+										{{ event.date|date('d/m/Y à H:i') }}
+									</p>
+									{% if event.details %}
+										<p class="text-sm text-gray-600 dark:text-gray-300 mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+											{{ event.details }}
+										</p>
+									{% endif %}
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+			{% endif %}
+		</div>
 
-    {# Right column: Metadata & Actions (1/3 width) #}
-    <div class="space-y-6">
-        {# Metadata card #}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    Métadonnées
-                </h3>
-            </div>
-            <div class="px-6 py-4 space-y-4">
-                <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Salarié</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                        {% if document.user %}
-                            <a href="{{ path('admin_users_show', {id: document.user.id}) }}"
-                               class="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                                {{ document.user.fullName }}
-                            </a>
-                        {% else %}
-                            <span class="text-gray-400">—</span>
-                        {% endif %}
-                    </dd>
-                </div>
+		{# Right column: Metadata & Actions (1/3 width) #}
+		<div
+			class="space-y-6">
+			{# Metadata card #}
+			<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+				<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+						Métadonnées
+					</h3>
+				</div>
+				<div class="px-6 py-4 space-y-4">
+					<div>
+						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Salarié</dt>
+						<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+							{% if document.user %}
+								<a href="{{ path('app_admin_users_view', {id: document.user.id}) }}" class="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+									{{ document.user.fullName }}
+								</a>
+							{% else %}
+								<span class="text-gray-400">—</span>
+							{% endif %}
+						</dd>
+					</div>
 
-                <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Type de document</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                        {{ document.typeLabel ?? document.type }}
-                    </dd>
-                </div>
+					<div>
+						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Type de document</dt>
+						<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+							{{ document.typeLabel ?? document.type }}
+						</dd>
+					</div>
 
-                <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Statut</dt>
-                    <dd class="mt-1">
-                        {% include 'components/documents/_document_status_badge.html.twig' with {
+					<div>
+						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Statut</dt>
+						<dd class="mt-1">
+							{% include 'components/documents/_document_status_badge.html.twig' with {
                             'status': document.status,
                             'isArchived': document.isArchived
                         } %}
-                    </dd>
-                </div>
+						</dd>
+					</div>
 
-                <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Date d'upload</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                        {{ document.uploadedAt ? document.uploadedAt|date('d/m/Y à H:i') : '—' }}
-                    </dd>
-                </div>
+					<div>
+						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Date d'upload</dt>
+						<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+							{{ document.uploadedAt ? document.uploadedAt|date('d/m/Y à H:i') : '—' }}
+						</dd>
+					</div>
 
-                <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Taille du fichier</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                        {{ document.fileSizeFormatted }}
-                    </dd>
-                </div>
+					<div>
+						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Taille du fichier</dt>
+						<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+							{{ document.fileSizeFormatted }}
+						</dd>
+					</div>
 
-                {% if document.version > 1 %}
-                <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Version</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                        v{{ document.version }}
-                    </dd>
-                </div>
-                {% endif %}
+					{% if document.version > 1 %}
+						<div>
+							<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Version</dt>
+							<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+								v{{ document.version }}
+							</dd>
+						</div>
+					{% endif %}
 
-                {% if document.validatedBy %}
-                <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Validé par</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                        {{ document.validatedBy.fullName }}<br>
-                        <span class="text-xs text-gray-500">{{ document.validatedAt|date('d/m/Y H:i') }}</span>
-                    </dd>
-                </div>
-                {% endif %}
+					{% if document.validatedBy %}
+						<div>
+							<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Validé par</dt>
+							<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+								{{ document.validatedBy.fullName }}<br>
+								<span class="text-xs text-gray-500">{{ document.validatedAt|date('d/m/Y H:i') }}</span>
+							</dd>
+						</div>
+					{% endif %}
 
-                {% if document.commentaire %}
-                <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Commentaire</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                        {{ document.commentaire }}
-                    </dd>
-                </div>
-                {% endif %}
-            </div>
-        </div>
+					{% if document.comment %}
+						<div>
+							<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Commentaire</dt>
+							<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+								{{ document.comment }}
+							</dd>
+						</div>
+					{% endif %}
+				</div>
+			</div>
 
-        {# Quick actions card #}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    Actions rapides
-                </h3>
-            </div>
-            <div class="px-6 py-4 space-y-2">
-                {% if canValidate %}
-                    <button type="button"
-                            onclick="openValidateModal()"
-                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        Valider
-                    </button>
-                    <button type="button"
-                            onclick="openRejectModal()"
-                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                        Rejeter
-                    </button>
-                {% endif %}
+			{# Quick actions card #}
+			<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+				<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+						Actions rapides
+					</h3>
+				</div>
+				<div class="px-6 py-4 space-y-2">
+					{% if canValidate %}
+						<button type="button" onclick="openValidateModal()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							</svg>
+							Valider
+						</button>
+						<button type="button" onclick="openRejectModal()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+							</svg>
+							Rejeter
+						</button>
+					{% endif %}
 
-                {% if canArchive %}
-                    <button type="button"
-                            onclick="openArchiveModal()"
-                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                        </svg>
-                        Archiver
-                    </button>
-                {% elseif canRestore %}
-                    <button type="button"
-                            onclick="restoreDocument()"
-                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                        Restaurer
-                    </button>
-                {% endif %}
+					{% if canArchive %}
+						<button type="button" onclick="openArchiveModal()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors">
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+							</svg>
+							Archiver
+						</button>
+					{% elseif canRestore %}
+						<button type="button" onclick="restoreDocument()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+							</svg>
+							Restaurer
+						</button>
+					{% endif %}
 
-                {% if canReplace %}
-                    <button type="button"
-                            onclick="openReplaceModal()"
-                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                        </svg>
-                        Remplacer le fichier
-                    </button>
-                {% endif %}
+					{% if canReplace %}
+						<button type="button" onclick="openReplaceModal()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+							</svg>
+							Remplacer le fichier
+						</button>
+					{% endif %}
 
-                {% if canDelete %}
-                    <button type="button"
-                            onclick="openDeleteModal()"
-                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-300 dark:border-red-600 rounded-lg transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                        Supprimer définitivement
-                    </button>
-                {% endif %}
-            </div>
-        </div>
+					{% if canDelete %}
+						<button type="button" onclick="openDeleteModal()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-300 dark:border-red-600 rounded-lg transition-colors">
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+							</svg>
+							Supprimer définitivement
+						</button>
+					{% endif %}
+				</div>
+			</div>
 
-        {# Related documents (if applicable) #}
-        {% if relatedDocuments is defined and relatedDocuments|length > 0 %}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    Documents liés
-                </h3>
-            </div>
-            <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                {% for relatedDoc in relatedDocuments %}
-                <a href="{{ path('admin_documents_view', {id: relatedDoc.id}) }}"
-                   class="block px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div class="flex items-center gap-3">
-                        {% include 'components/documents/_document_type_icon.html.twig' with {
+			{# Related documents (if applicable) #}
+			{% if relatedDocuments is defined and relatedDocuments|length > 0 %}
+				<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+					<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+						<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+							Documents liés
+						</h3>
+					</div>
+					<div class="divide-y divide-gray-200 dark:divide-gray-700">
+						{% for relatedDoc in relatedDocuments %}
+							<a href="{{ path('app_admin_documents_view', {id: relatedDoc.id}) }}" class="block px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+								<div class="flex items-center gap-3">
+									{% include 'components/documents/_document_type_icon.html.twig' with {
                             'type': relatedDoc.type,
                             'iconClass': 'w-5 h-5'
                         } %}
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                {{ relatedDoc.originalName }}
-                            </p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ relatedDoc.uploadedAt|date('d/m/Y') }}
-                            </p>
-                        </div>
-                    </div>
-                </a>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-    </div>
-</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+											{{ relatedDoc.originalName }}
+										</p>
+										<p class="text-xs text-gray-500 dark:text-gray-400">
+											{{ relatedDoc.uploadedAt|date('d/m/Y') }}
+										</p>
+									</div>
+								</div>
+							</a>
+						{% endfor %}
+					</div>
+				</div>
+			{% endif %}
+		</div>
+	</div>
 
-{# Modals - These will be connected to Stimulus controllers in Phase 9 #}
-{# Validate Modal #}
-<div id="validateModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Valider le document</h3>
-        </div>
-        <form method="post" action="{{ path('admin_documents_validate', {id: document.id}) }}">
-            <div class="px-6 py-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Commentaire (optionnel)
-                </label>
-                <textarea name="commentaire" rows="3"
-                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
-            </div>
-            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
-                <button type="button" onclick="closeValidateModal()"
-                        class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                    Annuler
-                </button>
-                <button type="submit"
-                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
-                    Confirmer la validation
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+	{# Modals - These will be connected to Stimulus controllers in Phase 9 #}
+	{# Validate Modal #}
+	<div id="validateModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+			<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Valider le document</h3>
+			</div>
+			<form method="post" action="{{ path('app_admin_documents_validate', {id: document.id}) }}">
+				<div class="px-6 py-4">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						Commentaire (optionnel)
+					</label>
+					<textarea name="commentaire" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
+				</div>
+				<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
+					<button type="button" onclick="closeValidateModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+						Annuler
+					</button>
+					<button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+						Confirmer la validation
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
-{# Reject Modal #}
-<div id="rejectModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Rejeter le document</h3>
-        </div>
-        <form method="post" action="{{ path('admin_documents_reject', {id: document.id}) }}">
-            <div class="px-6 py-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Motif du rejet <span class="text-red-500">*</span>
-                </label>
-                <textarea name="commentaire" rows="3" required
-                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                          placeholder="Veuillez indiquer le motif du rejet..."></textarea>
-            </div>
-            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
-                <button type="button" onclick="closeRejectModal()"
-                        class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                    Annuler
-                </button>
-                <button type="submit"
-                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-                    Confirmer le rejet
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+	{# Reject Modal #}
+	<div id="rejectModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+			<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Rejeter le document</h3>
+			</div>
+			<form method="post" action="{{ path('app_admin_documents_reject', {id: document.id}) }}">
+				<div class="px-6 py-4">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						Motif du rejet
+						<span class="text-red-500">*</span>
+					</label>
+					<textarea name="commentaire" rows="3" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Veuillez indiquer le motif du rejet..."></textarea>
+				</div>
+				<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
+					<button type="button" onclick="closeRejectModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+						Annuler
+					</button>
+					<button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+						Confirmer le rejet
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
-{# Archive Modal #}
-<div id="archiveModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Archiver le document</h3>
-        </div>
-        <form method="post" action="{{ path('admin_documents_archive', {id: document.id}) }}">
-            <div class="px-6 py-4">
-                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                    Êtes-vous sûr de vouloir archiver ce document ? Il ne sera plus visible dans la liste principale mais restera accessible dans les archives.
-                </p>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Commentaire (optionnel)
-                </label>
-                <textarea name="commentaire" rows="2"
-                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
-            </div>
-            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
-                <button type="button" onclick="closeArchiveModal()"
-                        class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                    Annuler
-                </button>
-                <button type="submit"
-                        class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors">
-                    Archiver
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+	{# Archive Modal #}
+	<div id="archiveModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+			<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Archiver le document</h3>
+			</div>
+			<form method="post" action="{{ path('app_admin_documents_archive', {id: document.id}) }}">
+				<div class="px-6 py-4">
+					<p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+						Êtes-vous sûr de vouloir archiver ce document ? Il ne sera plus visible dans la liste principale mais restera accessible dans les archives.
+					</p>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						Commentaire (optionnel)
+					</label>
+					<textarea name="commentaire" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
+				</div>
+				<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
+					<button type="button" onclick="closeArchiveModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+						Annuler
+					</button>
+					<button type="submit" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors">
+						Archiver
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
-{# Delete Modal #}
-<div id="deleteModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-red-600 dark:text-red-400">Supprimer définitivement</h3>
-        </div>
-        <form method="post" action="{{ path('admin_documents_delete', {id: document.id}) }}">
-            <div class="px-6 py-4">
-                <div class="flex items-start gap-3 mb-4">
-                    <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                    </svg>
-                    <div>
-                        <p class="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                            Attention : Cette action est irréversible !
-                        </p>
-                        <p class="text-sm text-gray-600 dark:text-gray-300">
-                            Le fichier sera définitivement supprimé du serveur. Cette action ne peut pas être annulée.
-                        </p>
-                    </div>
-                </div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Motif de suppression <span class="text-red-500">*</span>
-                </label>
-                <textarea name="commentaire" rows="2" required
-                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                          placeholder="Indiquez le motif de la suppression..."></textarea>
-            </div>
-            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
-                <button type="button" onclick="closeDeleteModal()"
-                        class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                    Annuler
-                </button>
-                <button type="submit"
-                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-                    Supprimer définitivement
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+	{# Delete Modal #}
+	<div id="deleteModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+			<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold text-red-600 dark:text-red-400">Supprimer définitivement</h3>
+			</div>
+			<form method="post" action="{{ path('app_admin_documents_delete', {id: document.id}) }}">
+				<div class="px-6 py-4">
+					<div class="flex items-start gap-3 mb-4">
+						<svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+						</svg>
+						<div>
+							<p class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+								Attention : Cette action est irréversible !
+							</p>
+							<p class="text-sm text-gray-600 dark:text-gray-300">
+								Le fichier sera définitivement supprimé du serveur. Cette action ne peut pas être annulée.
+							</p>
+						</div>
+					</div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						Motif de suppression
+						<span class="text-red-500">*</span>
+					</label>
+					<textarea name="commentaire" rows="2" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Indiquez le motif de la suppression..."></textarea>
+				</div>
+				<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
+					<button type="button" onclick="closeDeleteModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+						Annuler
+					</button>
+					<button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+						Supprimer définitivement
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
-{# Replace file Modal #}
-<div id="replaceModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Remplacer le fichier</h3>
-        </div>
-        <form method="post" action="{{ path('admin_documents_replace', {id: document.id}) }}" enctype="multipart/form-data">
-            <div class="px-6 py-4 space-y-4">
-                <p class="text-sm text-gray-600 dark:text-gray-300">
-                    Le fichier actuel sera remplacé. L'ancienne version sera conservée dans l'historique.
-                </p>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Nouveau fichier <span class="text-red-500">*</span>
-                    </label>
-                    <input type="file" name="file" required
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Commentaire (optionnel)
-                    </label>
-                    <textarea name="commentaire" rows="2"
-                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
-                </div>
-            </div>
-            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
-                <button type="button" onclick="closeReplaceModal()"
-                        class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                    Annuler
-                </button>
-                <button type="submit"
-                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                    Remplacer
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+	{# Replace file Modal #}
+	<div id="replaceModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+			<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Remplacer le fichier</h3>
+			</div>
+			<form method="post" action="{{ path('app_admin_documents_replace', {id: document.id}) }}" enctype="multipart/form-data">
+				<div class="px-6 py-4 space-y-4">
+					<p class="text-sm text-gray-600 dark:text-gray-300">
+						Le fichier actuel sera remplacé. L'ancienne version sera conservée dans l'historique.
+					</p>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Nouveau fichier
+							<span class="text-red-500">*</span>
+						</label>
+						<input type="file" name="file" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Commentaire (optionnel)
+						</label>
+						<textarea name="commentaire" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
+					</div>
+				</div>
+				<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
+					<button type="button" onclick="closeReplaceModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+						Annuler
+					</button>
+					<button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+						Remplacer
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
-{# Temporary JavaScript for modals - Will be migrated to Stimulus in Phase 9 #}
-<script>
-    function openValidateModal() {
-        document.getElementById('validateModal').classList.remove('hidden');
-    }
-    function closeValidateModal() {
-        document.getElementById('validateModal').classList.add('hidden');
-    }
+	{# Temporary JavaScript for modals - Will be migrated to Stimulus in Phase 9 #}
+	<script>
+		function openValidateModal() {
+document.getElementById('validateModal').classList.remove('hidden');
+}
+function closeValidateModal() {
+document.getElementById('validateModal').classList.add('hidden');
+}
 
-    function openRejectModal() {
-        document.getElementById('rejectModal').classList.remove('hidden');
-    }
-    function closeRejectModal() {
-        document.getElementById('rejectModal').classList.add('hidden');
-    }
+function openRejectModal() {
+document.getElementById('rejectModal').classList.remove('hidden');
+}
+function closeRejectModal() {
+document.getElementById('rejectModal').classList.add('hidden');
+}
 
-    function openArchiveModal() {
-        document.getElementById('archiveModal').classList.remove('hidden');
-    }
-    function closeArchiveModal() {
-        document.getElementById('archiveModal').classList.add('hidden');
-    }
+function openArchiveModal() {
+document.getElementById('archiveModal').classList.remove('hidden');
+}
+function closeArchiveModal() {
+document.getElementById('archiveModal').classList.add('hidden');
+}
 
-    function openDeleteModal() {
-        document.getElementById('deleteModal').classList.remove('hidden');
-    }
-    function closeDeleteModal() {
-        document.getElementById('deleteModal').classList.add('hidden');
-    }
+function openDeleteModal() {
+document.getElementById('deleteModal').classList.remove('hidden');
+}
+function closeDeleteModal() {
+document.getElementById('deleteModal').classList.add('hidden');
+}
 
-    function openReplaceModal() {
-        document.getElementById('replaceModal').classList.remove('hidden');
-    }
-    function closeReplaceModal() {
-        document.getElementById('replaceModal').classList.add('hidden');
-    }
+function openReplaceModal() {
+document.getElementById('replaceModal').classList.remove('hidden');
+}
+function closeReplaceModal() {
+document.getElementById('replaceModal').classList.add('hidden');
+}
 
-    function restoreDocument() {
-        if (confirm('Êtes-vous sûr de vouloir restaurer ce document ?')) {
-            // AJAX call will be implemented in Phase 9
-            window.location.href = "{{ path('admin_documents_restore', {id: document.id}) }}";
-        }
-    }
+function restoreDocument() {
+if (confirm('Êtes-vous sûr de vouloir restaurer ce document ?')) { // AJAX call will be implemented in Phase 9
+window.location.href = "{{ path('app_admin_documents_restore', {id: document.id}) }}";
+}
+}
 
-    // Close modals on ESC key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeValidateModal();
-            closeRejectModal();
-            closeArchiveModal();
-            closeDeleteModal();
-            closeReplaceModal();
-        }
-    });
+// Close modals on ESC key
+document.addEventListener('keydown', function (e) {
+if (e.key === 'Escape') {
+closeValidateModal();
+closeRejectModal();
+closeArchiveModal();
+closeDeleteModal();
+closeReplaceModal();
+}
+});
 
-    // Close modals on backdrop click
-    document.querySelectorAll('[id$="Modal"]').forEach(modal => {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                this.classList.add('hidden');
-            }
-        });
-    });
-</script>
+// Close modals on backdrop click
+document.querySelectorAll('[id$="Modal"]').forEach(modal => {
+modal.addEventListener('click', function (e) {
+if (e.target === this) {
+this.classList.add('hidden');
+}
+});
+});
+	</script>
 {% endblock %}

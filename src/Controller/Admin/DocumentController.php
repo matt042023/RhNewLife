@@ -106,6 +106,7 @@ class DocumentController extends AbstractController
             'canArchive' => $this->isGranted(DocumentVoter::ARCHIVE, $document),
             'canRestore' => $this->isGranted(DocumentVoter::RESTORE, $document),
             'canReplace' => $this->isGranted(DocumentVoter::REPLACE, $document),
+            'canDelete' => $this->isGranted(DocumentVoter::DELETE, $document),
             'downloadRoute' => $this->generateUrl('app_documents_download', ['id' => $document->getId()]),
         ]);
     }
@@ -175,10 +176,12 @@ class DocumentController extends AbstractController
         $this->denyAccessUnlessGranted(DocumentVoter::VALIDATE, $document);
 
         $comment = $request->request->get('comment');
-        $this->documentManager->validateDocument($document, $comment);
+        /** @var \App\Entity\User|null $currentUser */
+        $currentUser = $this->getUser();
+        $this->documentManager->validateDocument($document, $comment, $currentUser);
 
         // Envoyer notification email au salarié
-        $this->documentManager->sendDocumentValidatedNotification($document, $this->getUser(), $comment);
+        $this->documentManager->sendDocumentValidatedNotification($document, $currentUser, $comment);
 
         return $this->json(['success' => true]);
     }
@@ -237,6 +240,37 @@ class DocumentController extends AbstractController
         $this->documentManager->restoreDocument($document);
 
         return $this->json(['success' => true]);
+    }
+
+    #[Route('/{id}/replace', name: 'replace', methods: ['POST'])]
+    public function replace(Document $document, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::REPLACE, $document);
+
+        /** @var UploadedFile|null $file */
+        $file = $request->files->get('file');
+        $comment = $request->request->get('commentaire');
+
+        if (!$file) {
+            $this->addFlash('error', 'Veuillez sélectionner un fichier.');
+            return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
+        }
+
+        try {
+            $newDocument = $this->documentManager->replaceDocument($document, $file, $comment);
+            $this->addFlash('success', 'Le document a été remplacé avec succès.');
+            return $this->redirectToRoute('app_admin_documents_view', ['id' => $newDocument->getId()]);
+        } catch (\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        } catch (\Throwable $exception) {
+            $this->logger->error('Error replacing document', [
+                'document_id' => $document->getId(),
+                'error' => $exception->getMessage(),
+            ]);
+            $this->addFlash('error', 'Erreur lors du remplacement du document.');
+        }
+
+        return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
     }
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
