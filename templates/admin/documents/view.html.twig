@@ -61,13 +61,53 @@
                 } %}
 				</div>
 
-				{# PDF Viewer with PDF.js - Phase 8 integrated #}
-				{% include 'components/documents/_pdf_viewer_placeholder.html.twig' with {
-                'document': document,
-                'documentUrl': downloadRoute,
-                'downloadRoute': downloadRoute,
-                'height': '600px'
-            } %}
+				{# Document Viewer - PDF or Image based on mime type #}
+				{% set isImage = document.mimeType starts with 'image/' %}
+				{% set isPdf = document.mimeType == 'application/pdf' or document.fileName ends with '.pdf' %}
+
+				{% if isImage %}
+					{# Image Viewer for JPEG/PNG #}
+					{% include 'components/documents/_image_viewer.html.twig' with {
+						'document': document,
+						'imageUrl': downloadRoute,
+						'downloadRoute': downloadRoute,
+						'height': '600px'
+					} %}
+				{% elseif isPdf %}
+					{# PDF Viewer with PDF.js #}
+					{% include 'components/documents/_pdf_viewer_placeholder.html.twig' with {
+						'document': document,
+						'documentUrl': downloadRoute,
+						'downloadRoute': downloadRoute,
+						'height': '600px'
+					} %}
+				{% else %}
+					{# Fallback for other file types #}
+					<div class="bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center p-8" style="min-height: 600px;">
+						<div class="text-center max-w-md">
+							<svg class="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+							</svg>
+							<h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+								Aperçu non disponible
+							</h3>
+							<p class="text-gray-600 dark:text-gray-400 mb-2">
+								Type de fichier : <span class="font-medium">{{ document.mimeType|default('Inconnu') }}</span>
+							</p>
+							<p class="text-gray-600 dark:text-gray-400 mb-6">
+								Ce type de fichier ne peut pas être visualisé en ligne.<br>
+								Veuillez télécharger le document pour le consulter.
+							</p>
+							<a href="{{ downloadRoute }}"
+							   class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm">
+								<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+								</svg>
+								Télécharger le fichier
+							</a>
+						</div>
+					</div>
+				{% endif %}
 			</div>
 
 			{# Document history timeline #}
