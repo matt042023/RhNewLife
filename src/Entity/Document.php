@@ -129,6 +129,10 @@ class Document
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $validatedAt = null;
 
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?User $uploadedBy = null;
+
     public function __construct()
     {
         $this->uploadedAt = new \DateTime();
@@ -472,6 +476,17 @@ class Document
     public function setValidatedAt(?\DateTimeInterface $validatedAt): static
     {
         $this->validatedAt = $validatedAt;
+        return $this;
+    }
+
+    public function getUploadedBy(): ?User
+    {
+        return $this->uploadedBy;
+    }
+
+    public function setUploadedBy(?User $uploadedBy): static
+    {
+        $this->uploadedBy = $uploadedBy;
         return $this;
     }
 }
