@@ -149,16 +149,17 @@ class DocumentManager
         UploadedFile $file,
         User $user,
         string $type,
-        ?string $comment = null
+        ?string $comment = null,
+        ?User $uploadedBy = null
     ): Document {
         $this->validateFile($file);
 
         $existingDocument = $this->documentRepository->findByUserAndType($user, $type);
         if ($existingDocument) {
-            return $this->replaceDocument($existingDocument, $file, $comment);
+            return $this->replaceDocument($existingDocument, $file, $comment, $uploadedBy);
         }
 
-        $document = $this->createDocumentFromUpload($file, $user, $type, $comment, 1);
+        $document = $this->createDocumentFromUpload($file, $user, $type, $comment, 1, $uploadedBy);
 
         $this->entityManager->persist($document);
         $this->entityManager->flush();
@@ -168,6 +169,8 @@ class DocumentManager
             'user_id' => $user->getId(),
             'user_name' => $user->getFullName(),
             'user_email' => $user->getEmail(),
+            'uploaded_by_id' => $uploadedBy?->getId(),
+            'uploaded_by_name' => $uploadedBy?->getFullName(),
             'type' => $type,
             'type_label' => $document->getTypeLabel(),
             'original_filename' => $document->getOriginalName(),
@@ -178,7 +181,7 @@ class DocumentManager
         return $document;
     }
 
-    public function replaceDocument(Document $oldDocument, UploadedFile $newFile, ?string $comment = null): Document
+    public function replaceDocument(Document $oldDocument, UploadedFile $newFile, ?string $comment = null, ?User $uploadedBy = null): Document
     {
         $this->validateFile($newFile);
 
@@ -198,7 +201,8 @@ class DocumentManager
             $user,
             $oldDocument->getType(),
             $comment,
-            $newVersion
+            $newVersion,
+            $uploadedBy
         );
 
         $document
@@ -215,6 +219,8 @@ class DocumentManager
             'old_document_id' => $oldDocument->getId(),
             'user_id' => $user->getId(),
             'user_name' => $user->getFullName(),
+            'uploaded_by_id' => $uploadedBy?->getId(),
+            'uploaded_by_name' => $uploadedBy?->getFullName(),
             'type' => $document->getType(),
             'type_label' => $document->getTypeLabel(),
             'original_filename' => $document->getOriginalName(),
@@ -566,7 +572,8 @@ class DocumentManager
         User $user,
         string $type,
         ?string $comment,
-        int $version
+        int $version,
+        ?User $uploadedBy = null
     ): Document {
         $metadata = $this->captureMetadata($file);
 
@@ -594,7 +601,8 @@ class DocumentManager
             ->setMimeType($metadata['mimeType'])
             ->setFileSize($metadata['fileSize'])
             ->setComment($comment)
-            ->setVersion($version);
+            ->setVersion($version)
+            ->setUploadedBy($uploadedBy ?? $user);
 
         return $document;
     }

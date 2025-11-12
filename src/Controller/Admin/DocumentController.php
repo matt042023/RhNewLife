@@ -142,7 +142,11 @@ class DocumentController extends AbstractController
         $this->denyAccessUnlessGranted(DocumentVoter::UPLOAD, $user);
 
         try {
-            $document = $this->documentManager->uploadDocument($file, $user, $type, $comment);
+            /** @var \App\Entity\User $currentAdmin */
+            $currentAdmin = $this->getUser();
+
+            // L'admin upload pour un utilisateur, donc uploadedBy = admin
+            $document = $this->documentManager->uploadDocument($file, $user, $type, $comment, $currentAdmin);
 
             // Envoyer notification email aux admins
             $this->documentManager->sendDocumentUploadedNotification($document);
@@ -166,6 +170,7 @@ class DocumentController extends AbstractController
                 'typeLabel' => $document->getTypeLabel(),
                 'status' => $document->getStatus(),
                 'uploadedAt' => $document->getUploadedAt()?->format('Y-m-d H:i:s'),
+                'uploadedBy' => $document->getUploadedBy()?->getFullName(),
             ],
         ], Response::HTTP_CREATED);
     }
@@ -278,7 +283,11 @@ class DocumentController extends AbstractController
         }
 
         try {
-            $newDocument = $this->documentManager->replaceDocument($document, $file, $comment);
+            /** @var \App\Entity\User $currentAdmin */
+            $currentAdmin = $this->getUser();
+
+            // L'admin remplace le document, donc uploadedBy = admin
+            $newDocument = $this->documentManager->replaceDocument($document, $file, $comment, $currentAdmin);
             $this->addFlash('success', 'Le document a été remplacé avec succès.');
             return $this->redirectToRoute('app_admin_documents_view', ['id' => $newDocument->getId()]);
         } catch (\InvalidArgumentException $exception) {

@@ -37,10 +37,12 @@ class DocumentController extends AbstractController
 
     /**
      * Upload d'un document (API JSON)
+     * Le salarié ne peut uploader QUE ses propres documents
      */
     #[Route('/upload', name: 'app_documents_upload', methods: ['POST'])]
     public function upload(Request $request, #[CurrentUser] User $user): JsonResponse
     {
+        // Sécurité: Un salarié ne peut uploader que ses propres documents
         $this->denyAccessUnlessGranted('DOCUMENT_UPLOAD', $user);
 
         /** @var UploadedFile|null $file */
@@ -84,7 +86,8 @@ class DocumentController extends AbstractController
         }
 
         try {
-            $document = $this->documentManager->uploadDocument($file, $user, $type, $comment);
+            // Le salarié upload pour lui-même, donc user = uploadedBy
+            $document = $this->documentManager->uploadDocument($file, $user, $type, $comment, $user);
 
             // Envoyer notification email aux admins
             $this->documentManager->sendDocumentUploadedNotification($document);

@@ -149,6 +149,7 @@ class ProfileController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
 
+        // Sécurité: Un salarié ne peut uploader que ses propres documents
         $this->denyAccessUnlessGranted(DocumentVoter::UPLOAD, $user);
 
         /** @var UploadedFile|null $file */
@@ -171,7 +172,8 @@ class ProfileController extends AbstractController
         }
 
         try {
-            $document = $this->documentManager->uploadDocument($file, $user, $type, $comment);
+            // Le salarié upload pour lui-même, donc user = uploadedBy
+            $document = $this->documentManager->uploadDocument($file, $user, $type, $comment, $user);
         } catch (\InvalidArgumentException $exception) {
             return $this->json([
                 'success' => false,
@@ -214,7 +216,8 @@ class ProfileController extends AbstractController
         }
 
         try {
-            $newDocument = $this->documentManager->replaceDocument($document, $file, $comment);
+            // Le salarié remplace son propre document, donc uploadedBy = user
+            $newDocument = $this->documentManager->replaceDocument($document, $file, $comment, $user);
         } catch (\InvalidArgumentException $exception) {
             return $this->json([
                 'success' => false,
