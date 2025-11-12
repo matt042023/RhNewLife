@@ -1,0 +1,195 @@
+{#
+    Document Detail Component
+
+    Affiche les détails complets d'un document avec métadonnées et historique
+
+    Parameters:
+    - document: Entity Document (required)
+    - variant: 'full' | 'compact' | 'readonly' (default: 'full')
+    - showHistory: boolean (default: true)
+    - history: Array d'événements historiques
+    - showActions: boolean (default: true)
+    - canValidate, canArchive, canRestore, canReplace, canDelete: permissions
+    - downloadRoute: URL de téléchargement
+
+    Usage:
+    {% include 'components/documents/_document_detail.html.twig' with {
+        'document': document,
+        'variant': 'full',
+        'showHistory': true,
+        'history': history,
+        'showActions': true
+    } %}
+#}
+
+{% set variant = variant|default('full') %}
+{% set showHistory = showHistory|default(true) %}
+{% set showActions = showActions|default(true) %}
+
+<div class="space-y-6">
+    {# Document Metadata Card #}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Informations du document</h2>
+        </div>
+        <div class="px-6 py-4">
+            <dl class="grid grid-cols-1 {{ variant == 'compact' ? 'gap-3' : 'sm:grid-cols-2 gap-4' }}">
+                {# Type #}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Type</dt>
+                    <dd class="mt-1 flex items-center gap-2">
+                        {% include 'components/documents/_document_type_icon.html.twig' with {
+                            'type': document.type,
+                            'iconClass': 'w-5 h-5'
+                        } %}
+                        <span class="text-sm text-gray-900 dark:text-white">{{ document.typeLabel ?? document.type }}</span>
+                    </dd>
+                </div>
+
+                {# Status #}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Statut</dt>
+                    <dd class="mt-1">
+                        {% include 'components/documents/_document_status_badge.html.twig' with {
+                            'status': document.status,
+                            'isArchived': document.isArchived|default(false)
+                        } %}
+                    </dd>
+                </div>
+
+                {# Employee #}
+                {% if document.user %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Salarié</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ document.user.fullName }}
+                    </dd>
+                </div>
+                {% endif %}
+
+                {# File name #}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Fichier</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white truncate">
+                        {{ document.originalName }}
+                    </dd>
+                </div>
+
+                {# Upload date #}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Date d'upload</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ document.uploadedAt ? document.uploadedAt|date('d/m/Y à H:i') : 'N/A' }}
+                    </dd>
+                </div>
+
+                {# File size #}
+                {% if document.fileSize %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Taille</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ (document.fileSize / 1024 / 1024)|number_format(2) }} MB
+                    </dd>
+                </div>
+                {% endif %}
+
+                {# Version #}
+                {% if document.version > 1 %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Version</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        v{{ document.version }}
+                    </dd>
+                </div>
+                {% endif %}
+
+                {# Validated by #}
+                {% if document.validatedBy %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Validé par</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ document.validatedBy.fullName }}
+                    </dd>
+                </div>
+                {% endif %}
+
+                {# Validated at #}
+                {% if document.validatedAt %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Date de validation</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ document.validatedAt|date('d/m/Y à H:i') }}
+                    </dd>
+                </div>
+                {% endif %}
+
+                {# Comment #}
+                {% if document.comment %}
+                <div class="{{ variant == 'compact' ? '' : 'sm:col-span-2' }}">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Commentaire</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ document.comment }}
+                    </dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    {# History Card #}
+    {% if showHistory and history is defined and history is not empty %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Historique</h2>
+        </div>
+        <div class="px-6 py-4">
+            <div class="flow-root">
+                <ul role="list" class="-mb-8">
+                    {% for event in history %}
+                        <li>
+                            <div class="relative pb-8">
+                                {% if not loop.last %}
+                                    <span class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true"></span>
+                                {% endif %}
+                                <div class="relative flex space-x-3">
+                                    <div>
+                                        <span class="h-8 w-8 rounded-full bg-{{ event.color|default('gray') }}-500 flex items-center justify-center ring-8 ring-white dark:ring-gray-800">
+                                            <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                {% if event.icon == 'upload' %}
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                                {% elseif event.icon == 'check' %}
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                {% elseif event.icon == 'x' %}
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                {% elseif event.icon == 'archive' %}
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                                {% else %}
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                {% endif %}
+                                            </svg>
+                                        </span>
+                                    </div>
+                                    <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
+                                        <div>
+                                            <p class="text-sm text-gray-900 dark:text-white font-medium">{{ event.action }}</p>
+                                            {% if event.user %}
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">par {{ event.user.fullName }}</p>
+                                            {% endif %}
+                                            {% if event.details %}
+                                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ event.details }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="whitespace-nowrap text-right text-xs text-gray-500 dark:text-gray-400">
+                                            {{ event.date|date('d/m/Y H:i') }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>

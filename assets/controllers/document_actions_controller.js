@@ -194,24 +194,18 @@ export default class extends Controller {
     }
 
     /**
-     * View document in modal
+     * View document - redirect to detail page
      */
     viewDocument(event) {
         const documentId = this.getDocumentId(event);
 
-        // Open view modal via document-modal controller
-        const modalController = this.application.getControllerForElementAndIdentifier(
-            document.querySelector('[data-controller*="document-modal"]'),
-            'document-modal'
-        );
-
-        if (modalController) {
-            modalController.openViewModal({
-                params: { documentId }
-            });
-        } else {
-            console.error('Document modal controller not found');
+        if (!documentId) {
+            console.error('No document ID provided');
+            return;
         }
+
+        // Redirect to document detail page (admin view page accessible to all users)
+        window.location.href = `/admin/documents/${documentId}`;
     }
 
     /**

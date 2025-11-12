@@ -246,15 +246,15 @@
 						Actions rapides
 					</h3>
 				</div>
-				<div class="px-6 py-4 space-y-2">
+				<div class="px-6 py-4 space-y-2" data-controller="document">
 					{% if canValidate %}
-						<button type="button" onclick="openValidateModal()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+						<button type="button" data-action="click->document#openModal" data-document-modal-id-param="validateModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
 							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
 							</svg>
 							Valider
 						</button>
-						<button type="button" onclick="openRejectModal()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+						<button type="button" data-action="click->document#openModal" data-document-modal-id-param="rejectModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
 							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
 							</svg>
@@ -263,23 +263,25 @@
 					{% endif %}
 
 					{% if canArchive %}
-						<button type="button" onclick="openArchiveModal()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors">
+						<button type="button" data-action="click->document#openModal" data-document-modal-id-param="archiveModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors">
 							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
 							</svg>
 							Archiver
 						</button>
 					{% elseif canRestore %}
-						<button type="button" onclick="restoreDocument()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-							</svg>
-							Restaurer
-						</button>
+						<form method="post" action="{{ path('app_admin_documents_restore', {id: document.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir restaurer ce document ?');">
+							<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+								<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+								</svg>
+								Restaurer
+							</button>
+						</form>
 					{% endif %}
 
 					{% if canReplace %}
-						<button type="button" onclick="openReplaceModal()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+						<button type="button" data-action="click->document#openModal" data-document-modal-id-param="replaceModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
 							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
 							</svg>
@@ -288,7 +290,7 @@
 					{% endif %}
 
 					{% if canDelete %}
-						<button type="button" onclick="openDeleteModal()" class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-300 dark:border-red-600 rounded-lg transition-colors">
+						<button type="button" data-action="click->document#openModal" data-document-modal-id-param="deleteModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-300 dark:border-red-600 rounded-lg transition-colors">
 							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
 							</svg>
@@ -331,223 +333,11 @@
 		</div>
 	</div>
 
-	{# Modals - These will be connected to Stimulus controllers in Phase 9 #}
-	{# Validate Modal #}
-	<div id="validateModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-			<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Valider le document</h3>
-			</div>
-			<form method="post" action="{{ path('app_admin_documents_validate', {id: document.id}) }}">
-				<div class="px-6 py-4">
-					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-						Commentaire (optionnel)
-					</label>
-					<textarea name="commentaire" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
-				</div>
-				<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
-					<button type="button" onclick="closeValidateModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-						Annuler
-					</button>
-					<button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
-						Confirmer la validation
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
+	{# Modals - Using reusable components #}
+	{% include 'components/modals/_document_action_modal.html.twig' with {'document': document, 'action': 'validate'} %}
+	{% include 'components/modals/_document_action_modal.html.twig' with {'document': document, 'action': 'reject'} %}
+	{% include 'components/modals/_document_action_modal.html.twig' with {'document': document, 'action': 'archive'} %}
+	{% include 'components/modals/_document_action_modal.html.twig' with {'document': document, 'action': 'delete'} %}
+	{% include 'components/modals/_document_action_modal.html.twig' with {'document': document, 'action': 'replace'} %}
 
-	{# Reject Modal #}
-	<div id="rejectModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-			<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Rejeter le document</h3>
-			</div>
-			<form method="post" action="{{ path('app_admin_documents_reject', {id: document.id}) }}">
-				<div class="px-6 py-4">
-					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-						Motif du rejet
-						<span class="text-red-500">*</span>
-					</label>
-					<textarea name="commentaire" rows="3" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Veuillez indiquer le motif du rejet..."></textarea>
-				</div>
-				<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
-					<button type="button" onclick="closeRejectModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-						Annuler
-					</button>
-					<button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-						Confirmer le rejet
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
-
-	{# Archive Modal #}
-	<div id="archiveModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-			<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Archiver le document</h3>
-			</div>
-			<form method="post" action="{{ path('app_admin_documents_archive', {id: document.id}) }}">
-				<div class="px-6 py-4">
-					<p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
-						Êtes-vous sûr de vouloir archiver ce document ? Il ne sera plus visible dans la liste principale mais restera accessible dans les archives.
-					</p>
-					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-						Commentaire (optionnel)
-					</label>
-					<textarea name="commentaire" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
-				</div>
-				<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
-					<button type="button" onclick="closeArchiveModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-						Annuler
-					</button>
-					<button type="submit" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors">
-						Archiver
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
-
-	{# Delete Modal #}
-	<div id="deleteModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-			<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold text-red-600 dark:text-red-400">Supprimer définitivement</h3>
-			</div>
-			<form method="post" action="{{ path('app_admin_documents_delete', {id: document.id}) }}">
-				<div class="px-6 py-4">
-					<div class="flex items-start gap-3 mb-4">
-						<svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-						</svg>
-						<div>
-							<p class="text-sm font-medium text-gray-900 dark:text-white mb-1">
-								Attention : Cette action est irréversible !
-							</p>
-							<p class="text-sm text-gray-600 dark:text-gray-300">
-								Le fichier sera définitivement supprimé du serveur. Cette action ne peut pas être annulée.
-							</p>
-						</div>
-					</div>
-					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-						Motif de suppression
-						<span class="text-red-500">*</span>
-					</label>
-					<textarea name="commentaire" rows="2" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Indiquez le motif de la suppression..."></textarea>
-				</div>
-				<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
-					<button type="button" onclick="closeDeleteModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-						Annuler
-					</button>
-					<button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-						Supprimer définitivement
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
-
-	{# Replace file Modal #}
-	<div id="replaceModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-			<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Remplacer le fichier</h3>
-			</div>
-			<form method="post" action="{{ path('app_admin_documents_replace', {id: document.id}) }}" enctype="multipart/form-data">
-				<div class="px-6 py-4 space-y-4">
-					<p class="text-sm text-gray-600 dark:text-gray-300">
-						Le fichier actuel sera remplacé. L'ancienne version sera conservée dans l'historique.
-					</p>
-					<div>
-						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-							Nouveau fichier
-							<span class="text-red-500">*</span>
-						</label>
-						<input type="file" name="file" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-					</div>
-					<div>
-						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-							Commentaire (optionnel)
-						</label>
-						<textarea name="commentaire" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
-					</div>
-				</div>
-				<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
-					<button type="button" onclick="closeReplaceModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-						Annuler
-					</button>
-					<button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-						Remplacer
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
-
-	{# Temporary JavaScript for modals - Will be migrated to Stimulus in Phase 9 #}
-	<script>
-		function openValidateModal() {
-document.getElementById('validateModal').classList.remove('hidden');
-}
-function closeValidateModal() {
-document.getElementById('validateModal').classList.add('hidden');
-}
-
-function openRejectModal() {
-document.getElementById('rejectModal').classList.remove('hidden');
-}
-function closeRejectModal() {
-document.getElementById('rejectModal').classList.add('hidden');
-}
-
-function openArchiveModal() {
-document.getElementById('archiveModal').classList.remove('hidden');
-}
-function closeArchiveModal() {
-document.getElementById('archiveModal').classList.add('hidden');
-}
-
-function openDeleteModal() {
-document.getElementById('deleteModal').classList.remove('hidden');
-}
-function closeDeleteModal() {
-document.getElementById('deleteModal').classList.add('hidden');
-}
-
-function openReplaceModal() {
-document.getElementById('replaceModal').classList.remove('hidden');
-}
-function closeReplaceModal() {
-document.getElementById('replaceModal').classList.add('hidden');
-}
-
-function restoreDocument() {
-if (confirm('Êtes-vous sûr de vouloir restaurer ce document ?')) { // AJAX call will be implemented in Phase 9
-window.location.href = "{{ path('app_admin_documents_restore', {id: document.id}) }}";
-}
-}
-
-// Close modals on ESC key
-document.addEventListener('keydown', function (e) {
-if (e.key === 'Escape') {
-closeValidateModal();
-closeRejectModal();
-closeArchiveModal();
-closeDeleteModal();
-closeReplaceModal();
-}
-});
-
-// Close modals on backdrop click
-document.querySelectorAll('[id$="Modal"]').forEach(modal => {
-modal.addEventListener('click', function (e) {
-if (e.target === this) {
-this.classList.add('hidden');
-}
-});
-});
-	</script>
 {% endblock %}

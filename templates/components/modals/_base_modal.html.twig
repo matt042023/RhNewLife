@@ -1,0 +1,72 @@
+{#
+    Base Modal Component
+
+    Composant modale réutilisable avec structure commune
+
+    Parameters:
+    - id: ID de la modale (required)
+    - title: Titre de la modale (required)
+    - size: 'sm' | 'md' | 'lg' | 'xl' | 'full' (default: 'md')
+    - titleClass: Classes CSS additionnelles pour le titre
+    - closeOnBackdrop: Fermer au clic sur le backdrop (default: true)
+    - closeOnEscape: Fermer sur touche Escape (default: true)
+    - content: Contenu du corps de la modale (block)
+    - footer: Contenu du pied de modale (block)
+
+    Usage:
+    {% embed 'components/modals/_base_modal.html.twig' with {
+        'id': 'myModal',
+        'title': 'Mon titre',
+        'size': 'lg'
+    } %}
+        {% block content %}
+            <p>Contenu de la modale</p>
+        {% endblock %}
+
+        {% block footer %}
+            <button>Action</button>
+        {% endblock %}
+    {% endembed %}
+#}
+
+{% set modalId = id|default('baseModal') %}
+{% set modalSize = size|default('md') %}
+{% set closeOnBackdrop = closeOnBackdrop|default(true) %}
+{% set closeOnEscape = closeOnEscape|default(true) %}
+
+<div id="{{ modalId }}" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4" {% if closeOnBackdrop %} onclick="if(event.target === this) this.classList.add('hidden');" {% endif %}>
+
+	<div
+		class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation();">
+
+		{# Modal Header #}
+		<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
+			<h3 class="text-lg font-semibold text-gray-900 dark:text-white {{ titleClass|default('') }}">
+				{{ title|default('Modal') }}
+			</h3>
+			<button type="button" onclick="this.closest('[id$=Modal]').classList.add('hidden');" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" aria-label="Fermer">
+				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+				</svg>
+			</button>
+		</div>
+
+		{# Modal Body #}
+		<div class="px-6 py-4">
+			{% block content %}
+				<p class="text-gray-600 dark:text-gray-400">Contenu de la modale</p>
+			{% endblock %}
+		</div>
+
+		{# Modal Footer #}
+		{% if block('footer') is defined %}
+			<div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 sticky bottom-0">
+				{% block footer %}
+					<button type="button" onclick="this.closest('[id$=Modal]').classList.add('hidden');" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+						Annuler
+					</button>
+				{% endblock %}
+			</div>
+		{% endif %}
+	</div>
+</div>
