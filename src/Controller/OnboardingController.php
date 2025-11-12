@@ -6,6 +6,7 @@ use App\Entity\User;
 use App\Service\InvitationManager;
 use App\Service\OnboardingManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -16,7 +17,8 @@ class OnboardingController extends AbstractController
 {
     public function __construct(
         private InvitationManager $invitationManager,
-        private OnboardingManager $onboardingManager
+        private OnboardingManager $onboardingManager,
+        private Security $security
     ) {
     }
 
@@ -61,12 +63,13 @@ class OnboardingController extends AbstractController
                         (bool) $acceptCGU
                     );
 
-                    // Connexion automatique et redirection vers étape 1
+                    // Connexion automatique de l'utilisateur
+                    $this->security->login($user);
+
+                    // Message de bienvenue et redirection vers étape 1
                     $this->addFlash('success', 'Votre compte a été activé avec succès ! Bienvenue, ' . $user->getFirstName() . ' !');
 
-                    // TODO: Auto-login du user
-                    // Pour l'instant, redirection vers login
-                    return $this->redirectToRoute('app_login');
+                    return $this->redirectToRoute('app_onboarding_step1');
                 }
             } catch (\InvalidArgumentException $e) {
                 $errors[] = $e->getMessage();
