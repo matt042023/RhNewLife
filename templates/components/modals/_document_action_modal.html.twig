@@ -65,7 +65,7 @@
         'confirmText': 'Supprimer définitivement',
         'confirmClass': 'bg-red-600 hover:bg-red-700',
         'route': 'app_admin_documents_delete',
-        'method': 'POST',
+        'method': 'DELETE',
         'icon': 'trash',
         'requireComment': true,
         'commentLabel': 'Motif de suppression',
@@ -103,7 +103,13 @@
         <form method="post"
               action="{{ path(config.route, {id: document.id}) }}"
               {% if config.requireFile|default(false) %}enctype="multipart/form-data"{% endif %}
+              data-turbo="false"
               id="form{{ config.id }}">
+
+            {# Symfony method spoofing for non-POST methods #}
+            {% if config.method|default('POST') != 'POST' %}
+                <input type="hidden" name="_method" value="{{ config.method }}">
+            {% endif %}
 
             {# Warning Message #}
             {% if config.warning|default(false) %}
@@ -153,7 +159,7 @@
                     {{ config.commentLabel }}
                     {% if config.requireComment %}<span class="text-red-500">*</span>{% endif %}
                 </label>
-                <textarea name="commentaire"
+                <textarea name="{{ action == 'reject' or action == 'delete' ? 'reason' : 'commentaire' }}"
                           rows="3"
                           {% if config.requireComment %}required{% endif %}
                           {% if config.commentPlaceholder %}placeholder="{{ config.commentPlaceholder }}"{% endif %}
@@ -164,7 +170,7 @@
 
     {% block footer %}
         <button type="button"
-                data-action="click->document-modal#close"
+                onclick="var m = this.closest('[id$=Modal]'); m.style.display = 'none'; document.body.style.overflow = '';"
                 class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
             Annuler
         </button>

@@ -171,11 +171,11 @@ class DocumentController extends AbstractController
     }
 
     #[Route('/{id}/validate', name: 'validate', methods: ['POST'])]
-    public function validate(Document $document, Request $request): JsonResponse
+    public function validate(Document $document, Request $request): Response
     {
         $this->denyAccessUnlessGranted(DocumentVoter::VALIDATE, $document);
 
-        $comment = $request->request->get('comment');
+        $comment = $request->request->get('commentaire');
         /** @var \App\Entity\User|null $currentUser */
         $currentUser = $this->getUser();
         $this->documentManager->validateDocument($document, $comment, $currentUser);
@@ -183,21 +183,35 @@ class DocumentController extends AbstractController
         // Envoyer notification email au salarié
         $this->documentManager->sendDocumentValidatedNotification($document, $currentUser, $comment);
 
-        return $this->json(['success' => true]);
+        // Si requête AJAX, retourner JSON
+        if ($request->isXmlHttpRequest()) {
+            return $this->json(['success' => true]);
+        }
+
+        // Sinon, rediriger avec message flash
+        $this->addFlash('success', 'Document validé avec succès.');
+        return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
     }
 
     #[Route('/{id}/reject', name: 'reject', methods: ['POST'])]
-    public function reject(Document $document, Request $request): JsonResponse
+    public function reject(Document $document, Request $request): Response
     {
         $this->denyAccessUnlessGranted(DocumentVoter::VALIDATE, $document);
 
         $reason = trim((string) $request->request->get('reason'));
 
         if ($reason === '') {
-            return $this->json([
-                'success' => false,
-                'message' => 'Merci de préciser un motif de rejet.',
-            ], Response::HTTP_BAD_REQUEST);
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Merci de préciser un motif de rejet.',
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            // Sinon, rediriger avec message flash
+            $this->addFlash('error', 'Merci de préciser un motif de rejet.');
+            return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
         }
 
         $this->documentManager->rejectDocument($document, $reason);
@@ -205,23 +219,23 @@ class DocumentController extends AbstractController
         // Envoyer notification email au salarié
         $this->documentManager->sendDocumentRejectedNotification($document, $reason);
 
-        return $this->json(['success' => true]);
+        // Si requête AJAX, retourner JSON
+        if ($request->isXmlHttpRequest()) {
+            return $this->json(['success' => true]);
+        }
+
+        // Sinon, rediriger avec message flash
+        $this->addFlash('success', 'Document rejeté avec succès.');
+        return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
     }
 
     #[Route('/{id}/archive', name: 'archive', methods: ['POST'])]
-    public function archive(Document $document, Request $request): JsonResponse
+    public function archive(Document $document, Request $request): Response
     {
         $this->denyAccessUnlessGranted(DocumentVoter::ARCHIVE, $document);
 
-        $reason = trim((string) $request->request->get('reason', ''));
+        $reason = trim((string) $request->request->get('commentaire', ''));
         $retentionYears = $request->request->getInt('retention_years', 0);
-
-        if ($reason === '') {
-            return $this->json([
-                'success' => false,
-                'message' => 'Merci de préciser un motif d\'archivage.',
-            ], Response::HTTP_BAD_REQUEST);
-        }
 
         if ($retentionYears <= 0) {
             $retentionYears = $this->documentManager->getSuggestedRetentionYears($document->getType());
@@ -229,7 +243,14 @@ class DocumentController extends AbstractController
 
         $this->documentManager->archiveDocument($document, $reason, $retentionYears);
 
-        return $this->json(['success' => true]);
+        // Si requête AJAX, retourner JSON
+        if ($request->isXmlHttpRequest()) {
+            return $this->json(['success' => true]);
+        }
+
+        // Sinon, rediriger avec message flash
+        $this->addFlash('success', 'Document archivé avec succès.');
+        return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
     }
 
     #[Route('/{id}/restore', name: 'restore', methods: ['POST'])]
@@ -273,21 +294,37 @@ class DocumentController extends AbstractController
         return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
     }
 
-    #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
-    public function delete(Document $document): JsonResponse
+    #[Route('/{id}', name: 'delete', methods: ['DELETE', 'POST'])]
+    public function delete(Document $document, Request $request): Response
     {
         $this->denyAccessUnlessGranted(DocumentVoter::DELETE, $document);
+
+        $userId = $document->getUser()->getId();
 
         try {
             $this->documentManager->deleteDocument($document);
         } catch (\Throwable $exception) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Erreur lors de la suppression du document.',
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de la suppression du document.',
+                ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
+            // Sinon, rediriger avec message flash
+            $this->addFlash('error', 'Erreur lors de la suppression du document.');
+            return $this->redirectToRoute('app_admin_users_view', ['id' => $userId]);
         }
 
-        return $this->json(['success' => true]);
+        // Si requête AJAX, retourner JSON
+        if ($request->isXmlHttpRequest()) {
+            return $this->json(['success' => true]);
+        }
+
+        // Sinon, rediriger avec message flash vers la liste des documents de l'utilisateur
+        $this->addFlash('success', 'Document supprimé avec succès.');
+        return $this->redirectToRoute('app_admin_users_view', ['id' => $userId]);
     }
 
     #[Route('/{id}/download', name: 'download', methods: ['GET'])]

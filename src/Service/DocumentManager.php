@@ -909,7 +909,7 @@ class DocumentManager
             );
 
             // Calculate completion percentage
-            $completionData = $this->calculateUserCompletion($user);
+            $completionData = $this->getCompletionStatus($user);
             $completionPercent = $completionData['percentage'] ?? 0;
 
             $email = (new TemplatedEmail())
