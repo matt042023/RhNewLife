@@ -179,6 +179,18 @@ export default class extends Controller {
         if (replaceModal) {
             replaceModal.dataset.documentId = documentId;
             replaceModal.dataset.documentLabel = label;
+
+            // Set form action URL based on context (profile or admin)
+            const form = replaceModal.querySelector('form');
+            if (form) {
+                // Check if we're on profile or admin page
+                const isProfilePage = window.location.pathname.includes('/profile/');
+                const replaceUrl = isProfilePage
+                    ? `/profile/documents/${documentId}/replace`
+                    : `/admin/documents/${documentId}/replace`;
+                form.action = replaceUrl;
+            }
+
             this.openModal({ params: { modalId: 'replaceModal' } });
         } else {
             console.error('Replace modal not found');
