@@ -236,7 +236,7 @@
             'badge': '7 demandes',
             'badge_color': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
             'actions': [
-                {'label': 'Traiter les demandes', 'url': path('app_admin_validation_list'), 'type': 'success'}
+                {'label': 'Traiter les demandes', 'url': path('app_admin_onboarding_list', {filter: 'a_valider'}), 'type': 'success'}
             ]
         } %}
 			{% block widget_content %}
@@ -391,7 +391,7 @@
 				</div>
 				<span class="text-sm font-medium text-gray-900 dark:text-white text-center">Créer un contrat</span>
 			</a>
-			<a href="{{ path('app_admin_validation_list') }}" class="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg hover:shadow-md transition-shadow">
+			<a href="{{ path('app_admin_onboarding_list', {filter: 'a_valider'}) }}" class="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg hover:shadow-md transition-shadow">
 				<div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mb-2">
 					<svg class="w-6 h-6 text-purple-600 dark:text-purple-300" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
 						<path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
