@@ -280,16 +280,23 @@ class OnboardingManager
     /**
      * Valide le dossier d'onboarding (admin)
      */
-    public function validateOnboarding(User $user): void
+    public function validateOnboarding(User $user, array $rejectedDocuments = []): void
     {
         $user->setStatus(User::STATUS_ACTIVE);
         $this->entityManager->flush();
 
-        // Envoie email de bienvenue
-        $this->sendWelcomeEmail($user);
+        // Envoie email en fonction du statut des documents
+        if (empty($rejectedDocuments)) {
+            // Tous les documents sont validés
+            $this->sendWelcomeEmail($user);
+        } else {
+            // Certains documents sont rejetés
+            $this->sendOnboardingValidatedWithRejectionsEmail($user, $rejectedDocuments);
+        }
 
         $this->logger->info('Onboarding validated by admin', [
             'user_id' => $user->getId(),
+            'rejected_documents_count' => count($rejectedDocuments),
         ]);
     }
 
@@ -362,6 +369,24 @@ class OnboardingManager
             ->htmlTemplate('emails/onboarding_validated.html.twig')
             ->context([
                 'user' => $user,
+            ]);
+
+        $this->mailer->send($email);
+    }
+
+    /**
+     * Envoie l'email de validation avec liste des documents rejetés
+     */
+    private function sendOnboardingValidatedWithRejectionsEmail(User $user, array $rejectedDocuments): void
+    {
+        $email = (new TemplatedEmail())
+            ->from(new Address($this->senderEmail, $this->senderName))
+            ->to(new Address($user->getEmail(), $user->getFullName()))
+            ->subject('Votre compte RH NewLife est activé - Action requise')
+            ->htmlTemplate('emails/onboarding_validated_with_rejections.html.twig')
+            ->context([
+                'user' => $user,
+                'rejectedDocuments' => $rejectedDocuments,
             ]);
 
         $this->mailer->send($email);

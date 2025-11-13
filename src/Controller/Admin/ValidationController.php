@@ -87,8 +87,26 @@ class ValidationController extends AbstractController
         }
 
         try {
-            $this->onboardingManager->validateOnboarding($user);
-            $this->addFlash('success', 'Dossier validé ! L\'utilisateur a été activé.');
+            // Récupérer tous les documents du user
+            $documents = $this->documentRepository->findByUser($user);
+
+            // Collecter les documents rejetés
+            $rejectedDocuments = [];
+            foreach ($documents as $document) {
+                if ($document->isRejected()) {
+                    $rejectedDocuments[] = $document;
+                }
+            }
+
+            // Valider l'onboarding (même avec des documents rejetés)
+            $this->onboardingManager->validateOnboarding($user, $rejectedDocuments);
+
+            if (empty($rejectedDocuments)) {
+                $this->addFlash('success', 'Dossier validé ! L\'utilisateur a été activé.');
+            } else {
+                $this->addFlash('success', 'Dossier validé avec ' . count($rejectedDocuments) . ' document(s) rejeté(s). L\'utilisateur a été notifié et peut remplacer les documents.');
+            }
+
             return $this->redirectToRoute('app_admin_onboarding_list');
         } catch (\Exception $e) {
             $this->addFlash('error', 'Erreur : ' . $e->getMessage());
