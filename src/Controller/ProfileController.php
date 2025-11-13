@@ -293,7 +293,15 @@ class ProfileController extends AbstractController
             throw $this->createNotFoundException('Le fichier demandé est introuvable.');
         }
 
-        return new BinaryFileResponse($filePath);
+        $response = new BinaryFileResponse($filePath);
+
+        // Force le téléchargement au lieu de l'affichage dans le navigateur
+        $response->setContentDisposition(
+            'attachment',
+            $document->getOriginalName()
+        );
+
+        return $response;
     }
 
     #[Route('/documents/completion', name: 'app_profile_documents_completion', methods: ['GET'])]

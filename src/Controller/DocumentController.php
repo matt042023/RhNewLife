@@ -160,7 +160,15 @@ class DocumentController extends AbstractController
             'is_archived' => $document->isArchived(),
         ]);
 
-        return new BinaryFileResponse($filePath);
+        $response = new BinaryFileResponse($filePath);
+
+        // Force le téléchargement au lieu de l'affichage dans le navigateur
+        $response->setContentDisposition(
+            'attachment',
+            $document->getOriginalName()
+        );
+
+        return $response;
     }
 
     /**
