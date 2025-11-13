@@ -1,314 +1,327 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Validation {{ user.firstName }} {{ user.lastName }} - RH NewLife{% endblock %}
+{% block title %}Validation
+	{{ user.firstName }}
+	{{ user.lastName }}
+	- RH NewLife
+{% endblock %}
 
 {% block body %}
 <div class="min-h-screen bg-gray-50 p-8">
-    <div class="max-w-7xl mx-auto">
+	<div
+		class="max-w-7xl mx-auto">
 
-        {# Header #}
-        <div class="flex items-center justify-between mb-8">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900">Validation du dossier</h1>
-                <p class="text-gray-600 mt-1">{{ user.firstName }} {{ user.lastName }}</p>
-            </div>
-            <span class="badge badge-warning">En attente de validation</span>
-        </div>
+		{# Header #}
+		<div class="flex items-center justify-between mb-8">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900">Validation du dossier</h1>
+				<p class="text-gray-600 mt-1">{{ user.firstName }}
+					{{ user.lastName }}</p>
+			</div>
+			<span class="badge badge-warning">En attente de validation</span>
+		</div>
 
-        {# Flash messages #}
-        {% for label, messages in app.flashes %}
-            {% for message in messages %}
-                <div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-4">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endfor %}
+		{# Flash messages #}
+		{% for label, messages in app.flashes %}
+			{% for message in messages %}
+				<div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-4">
+					{{ message }}
+				</div>
+			{% endfor %}
+		{% endfor %}
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+		<div
+			class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            {# Colonne principale : Informations #}
-            <div class="lg:col-span-2 space-y-6">
+			{# Colonne principale : Informations #}
+			<div
+				class="lg:col-span-2 space-y-6">
 
-                {# Informations personnelles #}
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">👤 Informations personnelles</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <span class="text-gray-600">Prénom</span>
-                                <p class="font-semibold text-gray-900">{{ user.firstName }}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">Nom</span>
-                                <p class="font-semibold text-gray-900">{{ user.lastName }}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">Email</span>
-                                <p class="font-semibold text-gray-900">{{ user.email }}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">Téléphone</span>
-                                <p class="font-semibold text-gray-900">{{ user.phone ?? '-' }}</p>
-                            </div>
-                            <div class="col-span-2">
-                                <span class="text-gray-600">Adresse</span>
-                                <p class="font-semibold text-gray-900">{{ user.address ?? '-' }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+				{# Informations personnelles #}
+				<div class="card">
+					<div class="card-header">
+						<h2 class="card-title">👤 Informations personnelles</h2>
+					</div>
+					<div class="card-body">
+						<div class="grid grid-cols-2 gap-4 text-sm">
+							<div>
+								<span class="text-gray-600">Prénom</span>
+								<p class="font-semibold text-gray-900">{{ user.firstName }}</p>
+							</div>
+							<div>
+								<span class="text-gray-600">Nom</span>
+								<p class="font-semibold text-gray-900">{{ user.lastName }}</p>
+							</div>
+							<div>
+								<span class="text-gray-600">Email</span>
+								<p class="font-semibold text-gray-900">{{ user.email }}</p>
+							</div>
+							<div>
+								<span class="text-gray-600">Téléphone</span>
+								<p class="font-semibold text-gray-900">{{ user.phone ?? '-' }}</p>
+							</div>
+							<div class="col-span-2">
+								<span class="text-gray-600">Adresse</span>
+								<p class="font-semibold text-gray-900">{{ user.address ?? '-' }}</p>
+							</div>
+						</div>
+					</div>
+				</div>
 
-                {# Informations professionnelles #}
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">🏢 Informations professionnelles</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <span class="text-gray-600">Poste</span>
-                                <p class="font-semibold text-gray-900">{{ user.position ?? '-' }}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">Structure</span>
-                                <p class="font-semibold text-gray-900">{{ user.structure ?? '-' }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+				{# Informations professionnelles #}
+				<div class="card">
+					<div class="card-header">
+						<h2 class="card-title">🏢 Informations professionnelles</h2>
+					</div>
+					<div class="card-body">
+						<div class="grid grid-cols-2 gap-4 text-sm">
+							<div>
+								<span class="text-gray-600">Poste</span>
+								<p class="font-semibold text-gray-900">{{ user.position ?? '-' }}</p>
+							</div>
+							<div>
+								<span class="text-gray-600">Structure</span>
+								<p class="font-semibold text-gray-900">{{ user.structure ?? '-' }}</p>
+							</div>
+						</div>
+					</div>
+				</div>
 
-                {# Situation familiale #}
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">👨‍👩‍👧‍👦 Situation familiale</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <span class="text-gray-600">Situation</span>
-                                <p class="font-semibold text-gray-900">{{ user.familyStatus ?? '-' }}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">Enfants à charge</span>
-                                <p class="font-semibold text-gray-900">{{ user.children ?? '0' }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+				{# Situation familiale #}
+				<div class="card">
+					<div class="card-header">
+						<h2 class="card-title">👨‍👩‍👧‍👦 Situation familiale</h2>
+					</div>
+					<div class="card-body">
+						<div class="grid grid-cols-2 gap-4 text-sm">
+							<div>
+								<span class="text-gray-600">Situation</span>
+								<p class="font-semibold text-gray-900">{{ user.familyStatus ?? '-' }}</p>
+							</div>
+							<div>
+								<span class="text-gray-600">Enfants à charge</span>
+								<p class="font-semibold text-gray-900">{{ user.children ?? '0' }}</p>
+							</div>
+						</div>
+					</div>
+				</div>
 
-                {# Informations bancaires #}
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">💳 Coordonnées bancaires</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <span class="text-gray-600">IBAN</span>
-                                <p class="font-semibold text-gray-900 font-mono">{{ user.iban ?? '-' }}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">BIC</span>
-                                <p class="font-semibold text-gray-900 font-mono">{{ user.bic ?? '-' }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+				{# Informations bancaires #}
+				<div class="card">
+					<div class="card-header">
+						<h2 class="card-title">💳 Coordonnées bancaires</h2>
+					</div>
+					<div class="card-body">
+						<div class="grid grid-cols-2 gap-4 text-sm">
+							<div>
+								<span class="text-gray-600">IBAN</span>
+								<p class="font-semibold text-gray-900 font-mono">{{ user.iban ?? '-' }}</p>
+							</div>
+							<div>
+								<span class="text-gray-600">BIC</span>
+								<p class="font-semibold text-gray-900 font-mono">{{ user.bic ?? '-' }}</p>
+							</div>
+						</div>
+					</div>
+				</div>
 
-                {# Documents #}
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📄 Justificatifs ({{ user.documents|length }})</h2>
-                    </div>
-                    <div class="card-body">
-                        {% if user.documents is empty %}
-                            <p class="text-gray-600 text-sm">Aucun document téléversé</p>
-                        {% else %}
-                            <div class="space-y-3">
-                                {% for document in user.documents %}
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <p class="font-semibold text-gray-900 text-sm">
-                                                    {% if document.type == 'cni' %}
-                                                        📄 Carte d'identité
-                                                    {% elseif document.type == 'rib' %}
-                                                        💳 RIB
-                                                    {% elseif document.type == 'domicile' %}
-                                                        🏠 Justificatif de domicile
-                                                    {% elseif document.type == 'honorabilite' %}
-                                                        ✅ Attestation d'honorabilité
-                                                    {% else %}
-                                                        📎 {{ document.type }}
-                                                    {% endif %}
-                                                </p>
-                                                <p class="text-xs text-gray-600">{{ document.originalName }}</p>
-                                                <p class="text-xs text-gray-500">Téléversé le {{ document.uploadedAt|date('d/m/Y à H:i') }}</p>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            {% if document.status == 'validated' %}
-                                                <span class="badge badge-success">Validé</span>
-                                            {% elseif document.status == 'rejected' %}
-                                                <span class="badge badge-danger">Rejeté</span>
-                                            {% else %}
-                                                <span class="badge badge-warning">En attente</span>
-                                            {% endif %}
-                                            <a href="{{ path('app_documents_download', {id: document.id}) }}" target="_blank" class="text-blue-600 hover:text-blue-800">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
-                                            </a>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+				{# Documents #}
+				<div class="card">
+					<div class="card-header">
+						<h2 class="card-title">📄 Justificatifs ({{ user.documents|length }})</h2>
+					</div>
+					<div class="card-body">
+						{% if user.documents is empty %}
+							<p class="text-gray-600 text-sm">Aucun document téléversé</p>
+						{% else %}
+							<div class="space-y-3">
+								{% for document in user.documents %}
+									<div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+										<div class="flex items-center gap-3">
+											<div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+												<svg class="w-5 h-5 text-blue-600" fill="currentColor" viewbox="0 0 20 20">
+													<path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+												</svg>
+											</div>
+											<div>
+												<p class="font-semibold text-gray-900 text-sm">
+													{% if document.type == 'cni' %}
+														📄 Carte d'identité
+													{% elseif document.type == 'rib' %}
+														💳 RIB
+													{% elseif document.type == 'domicile' %}
+														🏠 Justificatif de domicile
+													{% elseif document.type == 'honorabilite' %}
+														✅ Attestation d'honorabilité
+													{% else %}
+														📎
+														{{ document.type }}
+													{% endif %}
+												</p>
+												<p class="text-xs text-gray-600">{{ document.originalName }}</p>
+												<p class="text-xs text-gray-500">Téléversé le
+													{{ document.uploadedAt|date('d/m/Y à H:i') }}</p>
+											</div>
+										</div>
+										<div class="flex items-center gap-2">
+											{% if document.status == 'validated' %}
+												<span class="badge badge-success">Validé</span>
+											{% elseif document.status == 'rejected' %}
+												<span class="badge badge-danger">Rejeté</span>
+											{% else %}
+												<span class="badge badge-warning">En attente</span>
+											{% endif %}
+											<a href="{{ path('app_admin_documents_view', {id: document.id}) }}" class="text-blue-600 hover:text-blue-800" title="Voir le détail du document">
+												<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+												</svg>
+											</a>
+										</div>
+									</div>
+								{% endfor %}
+							</div>
+						{% endif %}
+					</div>
+				</div>
 
-            </div>
+			</div>
 
-            {# Colonne latérale : Actions #}
-            <div class="space-y-6">
+			{# Colonne latérale : Actions #}
+			<div
+				class="space-y-6">
 
-                {# Statut de complétion #}
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📊 Complétion</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="space-y-3">
-                            <div>
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span class="text-gray-600">Documents requis</span>
-                                    <span class="font-semibold text-gray-900">{{ completionStatus.uploaded }} / {{ completionStatus.required }}</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style="width: {{ completionStatus.percentage }}%"></div>
-                                </div>
-                            </div>
+				{# Statut de complétion #}
+				<div class="card">
+					<div class="card-header">
+						<h2 class="card-title">📊 Complétion</h2>
+					</div>
+					<div class="card-body">
+						<div class="space-y-3">
+							<div>
+								<div class="flex justify-between text-sm mb-1">
+									<span class="text-gray-600">Documents requis</span>
+									<span class="font-semibold text-gray-900">{{ completionStatus.uploaded }}
+										/
+										{{ completionStatus.required }}</span>
+								</div>
+								<div class="w-full bg-gray-200 rounded-full h-2">
+									<div class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style="width: {{ completionStatus.percentage }}%"></div>
+								</div>
+							</div>
 
-                            <div class="pt-3 border-t border-gray-200 space-y-2 text-sm">
-                                <div class="flex items-center gap-2">
-                                    <span class="{{ completionStatus.hasPhone ? 'text-green-600' : 'text-gray-400' }}">
-                                        {{ completionStatus.hasPhone ? '✓' : '○' }}
-                                    </span>
-                                    <span class="{{ completionStatus.hasPhone ? 'text-gray-900' : 'text-gray-500' }}">Téléphone</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="{{ completionStatus.hasAddress ? 'text-green-600' : 'text-gray-400' }}">
-                                        {{ completionStatus.hasAddress ? '✓' : '○' }}
-                                    </span>
-                                    <span class="{{ completionStatus.hasAddress ? 'text-gray-900' : 'text-gray-500' }}">Adresse</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="{{ completionStatus.hasIban ? 'text-green-600' : 'text-gray-400' }}">
-                                        {{ completionStatus.hasIban ? '✓' : '○' }}
-                                    </span>
-                                    <span class="{{ completionStatus.hasIban ? 'text-gray-900' : 'text-gray-500' }}">IBAN</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="{{ completionStatus.hasBic ? 'text-green-600' : 'text-gray-400' }}">
-                                        {{ completionStatus.hasBic ? '✓' : '○' }}
-                                    </span>
-                                    <span class="{{ completionStatus.hasBic ? 'text-gray-900' : 'text-gray-500' }}">BIC</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+							<div class="pt-3 border-t border-gray-200 space-y-2 text-sm">
+								<div class="flex items-center gap-2">
+									<span class="{{ completionStatus.hasPhone ? 'text-green-600' : 'text-gray-400' }}">
+										{{ completionStatus.hasPhone ? '✓' : '○' }}
+									</span>
+									<span class="{{ completionStatus.hasPhone ? 'text-gray-900' : 'text-gray-500' }}">Téléphone</span>
+								</div>
+								<div class="flex items-center gap-2">
+									<span class="{{ completionStatus.hasAddress ? 'text-green-600' : 'text-gray-400' }}">
+										{{ completionStatus.hasAddress ? '✓' : '○' }}
+									</span>
+									<span class="{{ completionStatus.hasAddress ? 'text-gray-900' : 'text-gray-500' }}">Adresse</span>
+								</div>
+								<div class="flex items-center gap-2">
+									<span class="{{ completionStatus.hasIban ? 'text-green-600' : 'text-gray-400' }}">
+										{{ completionStatus.hasIban ? '✓' : '○' }}
+									</span>
+									<span class="{{ completionStatus.hasIban ? 'text-gray-900' : 'text-gray-500' }}">IBAN</span>
+								</div>
+								<div class="flex items-center gap-2">
+									<span class="{{ completionStatus.hasBic ? 'text-green-600' : 'text-gray-400' }}">
+										{{ completionStatus.hasBic ? '✓' : '○' }}
+									</span>
+									<span class="{{ completionStatus.hasBic ? 'text-gray-900' : 'text-gray-500' }}">BIC</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
 
-                {# Actions de validation #}
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">⚡ Actions</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="space-y-3">
-                            <form method="post" action="{{ path('app_admin_validation_validate', {id: user.id}) }}">
-                                <button type="submit" class="btn btn-success w-full" {% if completionStatus.percentage < 100 %}disabled{% endif %}>
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    Valider l'onboarding
-                                </button>
-                            </form>
+				{# Actions de validation #}
+				<div class="card">
+					<div class="card-header">
+						<h2 class="card-title">⚡ Actions</h2>
+					</div>
+					<div class="card-body">
+						<div class="space-y-3">
+							<form method="post" action="{{ path('app_admin_validation_validate', {id: user.id}) }}">
+								<button type="submit" class="btn btn-success w-full" {% if completionStatus.percentage < 100 %}disabled{% endif %}>
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+									</svg>
+									Valider l'onboarding
+								</button>
+							</form>
 
-                            {% if completionStatus.percentage < 100 %}
-                                <p class="text-xs text-yellow-600 text-center">
-                                    Le dossier doit être complet pour être validé
-                                </p>
-                            {% endif %}
+							{% if completionStatus.percentage < 100 %}
+								<p class="text-xs text-yellow-600 text-center">
+									Le dossier doit être complet pour être validé
+								</p>
+							{% endif %}
 
-                            <a href="mailto:{{ user.email }}" class="btn btn-secondary w-full">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                </svg>
-                                Contacter par email
-                            </a>
+							<a href="mailto:{{ user.email }}" class="btn btn-secondary w-full">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+								</svg>
+								Contacter par email
+							</a>
 
-                            <form method="post" action="{{ path('app_admin_validation_reject', {id: user.id}) }}" onsubmit="return confirm('Rejeter ce dossier ? Le salarié devra le recommencer.')">
-                                <button type="submit" class="btn btn-danger w-full">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                    Rejeter le dossier
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+							<form method="post" action="{{ path('app_admin_validation_reject', {id: user.id}) }}" onsubmit="return confirm('Rejeter ce dossier ? Le salarié devra le recommencer.')">
+								<button type="submit" class="btn btn-danger w-full">
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+									</svg>
+									Rejeter le dossier
+								</button>
+							</form>
+						</div>
+					</div>
+				</div>
 
-                {# Informations système #}
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">ℹ️ Informations</h2>
-                    </div>
-                    <div class="card-body text-sm space-y-2">
-                        <div>
-                            <span class="text-gray-600">Statut</span>
-                            <p class="font-semibold text-gray-900">{{ user.status|upper }}</p>
-                        </div>
-                        <div>
-                            <span class="text-gray-600">Compte créé le</span>
-                            <p class="font-semibold text-gray-900">{{ user.createdAt|date('d/m/Y à H:i') }}</p>
-                        </div>
-                        <div>
-                            <span class="text-gray-600">Dernière mise à jour</span>
-                            <p class="font-semibold text-gray-900">{{ user.updatedAt|date('d/m/Y à H:i') }}</p>
-                        </div>
-                        {% if user.cguAcceptedAt %}
-                            <div>
-                                <span class="text-gray-600">CGU acceptées le</span>
-                                <p class="font-semibold text-gray-900">{{ user.cguAcceptedAt|date('d/m/Y à H:i') }}</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+				{# Informations système #}
+				<div class="card">
+					<div class="card-header">
+						<h2 class="card-title">ℹ️ Informations</h2>
+					</div>
+					<div class="card-body text-sm space-y-2">
+						<div>
+							<span class="text-gray-600">Statut</span>
+							<p class="font-semibold text-gray-900">{{ user.status|upper }}</p>
+						</div>
+						<div>
+							<span class="text-gray-600">Compte créé le</span>
+							<p class="font-semibold text-gray-900">{{ user.createdAt|date('d/m/Y à H:i') }}</p>
+						</div>
+						<div>
+							<span class="text-gray-600">Dernière mise à jour</span>
+							<p class="font-semibold text-gray-900">{{ user.updatedAt|date('d/m/Y à H:i') }}</p>
+						</div>
+						{% if user.cguAcceptedAt %}
+							<div>
+								<span class="text-gray-600">CGU acceptées le</span>
+								<p class="font-semibold text-gray-900">{{ user.cguAcceptedAt|date('d/m/Y à H:i') }}</p>
+							</div>
+						{% endif %}
+					</div>
+				</div>
 
-            </div>
+			</div>
 
-        </div>
+		</div>
 
-        {# Retour #}
-        <div class="mt-6">
-            <a href="{{ path('app_admin_validation_list') }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Retour à la liste
-            </a>
-        </div>
+		{# Retour #}
+		<div class="mt-6">
+			<a href="{{ path('app_admin_onboarding_list') }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+				</svg>
+				Retour à la liste
+			</a>
+		</div>
 
-    </div>
+	</div>
 </div>
 {% endblock %}
