@@ -22,34 +22,26 @@ class InvitationController extends AbstractController
     }
 
     /**
-     * Liste des invitations
+     * Liste des invitations - Redirige vers la nouvelle page unifiée
      */
     #[Route('', name: 'app_admin_invitations_list', methods: ['GET'])]
     public function list(Request $request): Response
     {
+        // Conversion des anciens paramètres vers les nouveaux
         $status = $request->query->get('status');
         $search = $request->query->get('search');
 
-        $queryBuilder = $this->invitationRepository->createQueryBuilder('i')
-            ->orderBy('i.createdAt', 'DESC');
+        $filterMapping = [
+            'pending' => 'en_attente_activation',
+            'used' => null, // Sera affiché dans le filtre par défaut
+            'expired' => 'expires',
+            'error' => 'erreur',
+        ];
 
-        if ($status) {
-            $queryBuilder
-                ->andWhere('i.status = :status')
-                ->setParameter('status', $status);
-        }
+        $filter = $status && isset($filterMapping[$status]) ? $filterMapping[$status] : null;
 
-        if ($search) {
-            $queryBuilder
-                ->andWhere('i.email LIKE :search OR i.firstName LIKE :search OR i.lastName LIKE :search')
-                ->setParameter('search', '%' . $search . '%');
-        }
-
-        $invitations = $queryBuilder->getQuery()->getResult();
-
-        return $this->render('admin/invitations/list.html.twig', [
-            'invitations' => $invitations,
-            'currentStatus' => $status,
+        return $this->redirectToRoute('app_admin_onboarding_list', [
+            'filter' => $filter,
             'search' => $search,
         ]);
     }
@@ -91,7 +83,7 @@ class InvitationController extends AbstractController
                     );
 
                     $this->addFlash('success', 'Invitation envoyée à ' . $email);
-                    return $this->redirectToRoute('app_admin_invitations_list');
+                    return $this->redirectToRoute('app_admin_onboarding_list');
                 } catch (\Exception $e) {
                     $errors[] = 'Erreur : ' . $e->getMessage();
                 }
@@ -124,7 +116,7 @@ class InvitationController extends AbstractController
             $this->addFlash('error', 'Erreur : ' . $e->getMessage());
         }
 
-        return $this->redirectToRoute('app_admin_invitations_list');
+        return $this->redirectToRoute('app_admin_onboarding_list');
     }
 
     /**
@@ -145,7 +137,7 @@ class InvitationController extends AbstractController
             $this->addFlash('error', 'Erreur lors de la suppression.');
         }
 
-        return $this->redirectToRoute('app_admin_invitations_list');
+        return $this->redirectToRoute('app_admin_onboarding_list');
     }
 
     /**

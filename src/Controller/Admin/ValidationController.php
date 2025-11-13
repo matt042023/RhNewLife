@@ -26,18 +26,14 @@ class ValidationController extends AbstractController
     }
 
     /**
-     * Liste des dossiers en attente de validation
+     * Liste des dossiers en attente de validation - Redirige vers la nouvelle page unifiée
      */
     #[Route('', name: 'app_admin_validation_list', methods: ['GET'])]
     public function list(): Response
     {
-        $users = $this->userRepository->findBy(
-            ['status' => User::STATUS_ONBOARDING],
-            ['createdAt' => 'DESC']
-        );
-
-        return $this->render('admin/validation/list.html.twig', [
-            'users' => $users,
+        // Redirection vers la nouvelle page unifiée avec le filtre "à valider"
+        return $this->redirectToRoute('app_admin_onboarding_list', [
+            'filter' => 'a_valider',
         ]);
     }
 
@@ -93,7 +89,7 @@ class ValidationController extends AbstractController
         try {
             $this->onboardingManager->validateOnboarding($user);
             $this->addFlash('success', 'Dossier validé ! L\'utilisateur a été activé.');
-            return $this->redirectToRoute('app_admin_validation_list');
+            return $this->redirectToRoute('app_admin_onboarding_list');
         } catch (\Exception $e) {
             $this->addFlash('error', 'Erreur : ' . $e->getMessage());
             return $this->redirectToRoute('app_admin_validation_review', ['id' => $user->getId()]);
