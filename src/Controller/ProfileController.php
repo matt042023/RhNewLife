@@ -202,7 +202,19 @@ class ProfileController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
 
-        $this->denyAccessUnlessGranted(DocumentVoter::REPLACE, $document);
+        // Check permissions with detailed error message
+        if (!$this->isGranted(DocumentVoter::REPLACE, $document)) {
+            return $this->json([
+                'success' => false,
+                'message' => sprintf(
+                    'Vous n\'êtes pas autorisé à remplacer ce document. Type: %s, Statut: %s, Archivé: %s, Propriétaire: %s',
+                    $document->getType(),
+                    $document->getStatus(),
+                    $document->isArchived() ? 'Oui' : 'Non',
+                    $document->getUser()->getId() === $user->getId() ? 'Oui' : 'Non'
+                ),
+            ], Response::HTTP_FORBIDDEN);
+        }
 
         /** @var UploadedFile|null $file */
         $file = $request->files->get('file');
@@ -263,6 +275,22 @@ class ProfileController extends AbstractController
             'success' => true,
             'message' => 'Document supprimé avec succès',
             'completion' => $this->serializeCompletionStatus($completion),
+        ]);
+    }
+
+    #[Route('/documents/{id}', name: 'app_profile_documents_detail', methods: ['GET'])]
+    public function documentDetail(Document $document): Response
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::VIEW, $document);
+
+        $history = $this->documentManager->getDocumentHistory($document);
+
+        return $this->render('profile/document_detail.html.twig', [
+            'document' => $document,
+            'history' => $history,
+            'canReplace' => $this->isGranted(DocumentVoter::REPLACE, $document),
+            'canDelete' => $this->isGranted(DocumentVoter::DELETE, $document),
+            'downloadRoute' => $this->generateUrl('app_profile_documents_download', ['id' => $document->getId()]),
         ]);
     }
 

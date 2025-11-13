@@ -139,8 +139,13 @@ export default class extends Controller {
             return;
         }
 
-        // Redirect to document detail page
-        window.location.href = `/admin/documents/${documentId}`;
+        // Redirect to document detail page based on context
+        const isProfilePage = window.location.pathname.includes('/profile/');
+        const detailUrl = isProfilePage
+            ? `/profile/documents/${documentId}`
+            : `/admin/documents/${documentId}`;
+
+        window.location.href = detailUrl;
     }
 
     /**

@@ -145,7 +145,23 @@ class DocumentVoter extends Voter
             return false;
         }
 
-        return $document->getStatus() !== Document::STATUS_VALIDATED;
+        // Allow replacement of pending or rejected documents
+        if ($document->getStatus() !== Document::STATUS_VALIDATED) {
+            return true;
+        }
+
+        // Allow employees to replace validated onboarding documents
+        // (CNI, RIB, domicile, honorabilité can change over time)
+        // Contracts follow a different workflow (admin modifies, employee signs)
+        $onboardingDocumentTypes = [
+            Document::TYPE_CNI,
+            Document::TYPE_RIB,
+            Document::TYPE_DOMICILE,
+            Document::TYPE_HONORABILITE,
+            Document::TYPE_DIPLOME,
+        ];
+
+        return in_array($document->getType(), $onboardingDocumentTypes, true);
     }
 
     private function canAccessAsManager(User $currentUser, Document $document): bool

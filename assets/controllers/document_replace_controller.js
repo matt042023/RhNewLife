@@ -50,9 +50,13 @@ export default class extends Controller {
                 // Show success message
                 this.showNotification('success', data.message || 'Document remplacé avec succès');
 
-                // Reload page to show updated document
+                // Redirect based on context
                 setTimeout(() => {
-                    window.location.reload();
+                    const isProfilePage = window.location.pathname.includes('/profile/');
+                    const redirectUrl = isProfilePage
+                        ? '/profile/documents'
+                        : '/admin/documents';
+                    window.location.href = redirectUrl;
                 }, 1000);
             } else {
                 this.showError(data.message || 'Erreur lors du remplacement');
