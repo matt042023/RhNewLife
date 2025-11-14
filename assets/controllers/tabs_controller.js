@@ -49,8 +49,10 @@ export default class extends Controller {
 
         // Deactivate all tabs
         this.tabTargets.forEach(tab => {
-            tab.classList.remove('active', 'border-b-2', 'border-blue-600', 'text-blue-600');
-            tab.classList.add('text-gray-600', 'hover:text-gray-800');
+            tab.classList.remove('border-blue-600', 'text-blue-600', 'bg-blue-50', 'active');
+            tab.classList.remove('dark:bg-blue-900/20', 'dark:text-blue-400', 'dark:border-blue-400');
+            tab.classList.add('border-transparent', 'text-gray-600', 'hover:text-gray-900', 'hover:border-gray-300');
+            tab.classList.add('dark:text-gray-400', 'dark:hover:text-gray-300');
             tab.setAttribute('aria-selected', 'false');
             tab.setAttribute('tabindex', '-1');
         });
@@ -61,11 +63,12 @@ export default class extends Controller {
         );
 
         if (selectedTab) {
-            selectedTab.classList.add('active', 'border-b-2', 'border-blue-600', 'text-blue-600');
-            selectedTab.classList.remove('text-gray-600', 'hover:text-gray-800');
+            selectedTab.classList.remove('border-transparent', 'text-gray-600', 'hover:text-gray-900', 'hover:border-gray-300');
+            selectedTab.classList.remove('dark:text-gray-400', 'dark:hover:text-gray-300');
+            selectedTab.classList.add('border-blue-600', 'text-blue-600', 'bg-blue-50', 'active');
+            selectedTab.classList.add('dark:bg-blue-900/20', 'dark:text-blue-400', 'dark:border-blue-400');
             selectedTab.setAttribute('aria-selected', 'true');
             selectedTab.setAttribute('tabindex', '0');
-            selectedTab.focus();
         }
 
         // Show selected panel

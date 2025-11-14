@@ -97,13 +97,17 @@
 
 			{# Onglets #}
 			<div
-				class="bg-white rounded-2xl shadow-lg overflow-hidden">
+				class="bg-white rounded-2xl shadow-lg overflow-hidden"
+				data-controller="tabs"
+				data-tabs-default-tab-value="infos">
 				{# Navigation tabs - Style Flowbite moderne #}
 				<div class="border-b border-gray-200 dark:border-gray-700">
 					<nav class="flex flex-wrap -mb-px" role="tablist">
 						<button
 							class="inline-flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-400 rounded-t-lg active group"
 							data-tab="infos"
+							data-tabs-target="tab"
+							data-action="click->tabs#selectTab"
 							type="button"
 							role="tab"
 							aria-selected="true">
@@ -115,6 +119,8 @@
 						<button
 							class="inline-flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 rounded-t-lg group"
 							data-tab="contracts"
+							data-tabs-target="tab"
+							data-action="click->tabs#selectTab"
 							type="button"
 							role="tab"
 							aria-selected="false">
@@ -129,6 +135,8 @@
 						<button
 							class="inline-flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 rounded-t-lg group"
 							data-tab="documents"
+							data-tabs-target="tab"
+							data-action="click->tabs#selectTab"
 							type="button"
 							role="tab"
 							aria-selected="false">
@@ -144,7 +152,7 @@
 				</div>
 
 				{# Tab content: Informations #}
-				<div id="tab-infos" class="tab-content active p-8">
+				<div id="tab-infos" class="tab-content active p-8" data-tabs-target="panel">
 					<div class="grid grid-cols-2 gap-8">
 						<div>
 							<h3 class="text-lg font-bold text-gray-900 mb-4">Informations personnelles</h3>
@@ -222,7 +230,7 @@
 				</div>
 
 				{# Tab content: Contrats #}
-				<div id="tab-contracts" class="tab-content p-8 hidden">
+				<div id="tab-contracts" class="tab-content p-8 hidden" data-tabs-target="panel">
 					<div class="flex justify-between items-center mb-6">
 						<h3 class="text-lg font-bold text-gray-900">Contrats</h3>
 						<a href="{{ path('app_admin_contracts_create', {userId: user.id}) }}" class="btn btn-primary">
@@ -288,7 +296,7 @@
 				</div>
 
 				{# Tab content: Documents #}
-				<div id="tab-documents" class="tab-content p-8 hidden" data-controller="document">
+				<div id="tab-documents" class="tab-content p-8 hidden" data-tabs-target="panel" data-controller="document">
 					<div class="flex justify-between items-center mb-6">
 						<h3 class="text-lg font-bold text-gray-900">Documents</h3>
 					</div>
@@ -412,40 +420,4 @@
 	{# Document Modals - For document actions in the Documents tab #}
 	{% include 'components/modals/document_replace.html.twig' %}
 	{% include 'components/modals/document_delete.html.twig' %}
-
-	<script>
-		// Tabs functionality
-		document.addEventListener('DOMContentLoaded', function () {
-			const tabButtons = document.querySelectorAll('[role="tab"]');
-			const tabContents = document.querySelectorAll('.tab-content');
-
-			tabButtons.forEach(button => {
-				button.addEventListener('click', () => {
-					const tabId = button.getAttribute('data-tab');
-
-					// Remove active state from all buttons
-					tabButtons.forEach(btn => {
-						btn.classList.remove('border-blue-600', 'text-blue-600', 'bg-blue-50', 'active');
-						btn.classList.remove('dark:bg-blue-900/20', 'dark:text-blue-400', 'dark:border-blue-400');
-						btn.classList.add('border-transparent', 'text-gray-600', 'hover:text-gray-900', 'hover:border-gray-300');
-						btn.classList.add('dark:text-gray-400', 'dark:hover:text-gray-300', 'dark:hover:border-gray-600');
-						btn.setAttribute('aria-selected', 'false');
-					});
-
-					// Hide all tab contents
-					tabContents.forEach(content => content.classList.add('hidden'));
-
-					// Add active state to clicked button
-					button.classList.remove('border-transparent', 'text-gray-600', 'hover:text-gray-900', 'hover:border-gray-300');
-					button.classList.remove('dark:text-gray-400', 'dark:hover:text-gray-300', 'dark:hover:border-gray-600');
-					button.classList.add('border-blue-600', 'text-blue-600', 'bg-blue-50', 'active');
-					button.classList.add('dark:bg-blue-900/20', 'dark:text-blue-400', 'dark:border-blue-400');
-					button.setAttribute('aria-selected', 'true');
-
-					// Show corresponding tab content
-					document.getElementById('tab-' + tabId).classList.remove('hidden');
-				});
-			});
-		});
-	</script>
 {% endblock %}
