@@ -287,55 +287,52 @@
 					</h3>
 				</div>
 				<div class="px-6 py-4 space-y-2">
-					{% if canValidate %}
-						<button type="button" data-action="click->document#openModal" data-document-modal-id-param="validateModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
-							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-							</svg>
-							Valider
-						</button>
-						<button type="button" data-action="click->document#openModal" data-document-modal-id-param="rejectModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-							</svg>
-							Rejeter
-						</button>
-					{% endif %}
-
-					{% if canArchive %}
-						<button type="button" data-action="click->document#openModal" data-document-modal-id-param="archiveModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors">
-							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-							</svg>
-							Archiver
-						</button>
-					{% elseif canRestore %}
-						<form method="post" action="{{ path('app_admin_documents_restore', {id: document.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir restaurer ce document ?');">
-							<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+					{# Status: pending - Show Validate and Reject buttons #}
+					{% if document.status == 'pending' %}
+						{% if canValidate %}
+							<button type="button" data-action="click->document#openModal" data-document-modal-id-param="validateModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
 								<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
 								</svg>
-								Restaurer
+								Valider
 							</button>
-						</form>
-					{% endif %}
+							<button type="button" data-action="click->document#openModal" data-document-modal-id-param="rejectModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+								<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+								</svg>
+								Rejeter
+							</button>
+						{% endif %}
 
-					{% if canReplace %}
-						<button type="button" data-action="click->document#openModal" data-document-modal-id-param="replaceModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
-							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-							</svg>
-							Remplacer le fichier
-						</button>
-					{% endif %}
-
-					{% if canDelete %}
-						<button type="button" data-action="click->document#openModal" data-document-modal-id-param="deleteModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-300 dark:border-red-600 rounded-lg transition-colors">
-							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-							</svg>
-							Supprimer définitivement
-						</button>
+					{# Status: validated or rejected - Show Replace and Archive buttons #}
+					{% elseif document.status == 'validated' or document.status == 'rejected' %}
+						{% if canReplace %}
+							<button type="button" data-action="click->document#openModal" data-document-modal-id-param="replaceModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+								<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+								</svg>
+								Remplacer le fichier
+							</button>
+						{% endif %}
+						
+						{% if canRestore %}
+							<form method="post" action="{{ path('app_admin_documents_restore', {id: document.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir restaurer ce document ?');">
+								<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+									<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+									</svg>
+									Restaurer
+								</button>
+							</form>
+						{% endif %}
+						{% if canDelete %}
+							<button type="button" data-action="click->document#openModal" data-document-modal-id-param="deleteModal" class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-300 dark:border-red-600 rounded-lg transition-colors">
+								<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+								</svg>
+								Supprimer définitivement
+							</button>
+						{% endif %}
 					{% endif %}
 				</div>
 			</div>
