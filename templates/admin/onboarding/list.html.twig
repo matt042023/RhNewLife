@@ -1,136 +1,135 @@
-{% extends 'base.html.twig' %}
+{% extends 'layout/dashboard_base.html.twig' %}
 
 {% block title %}Gestion des Onboardings - RH NewLife{% endblock %}
 
-{% block body %}
-<div class="min-h-screen bg-gray-50 p-8">
-	<div class="max-w-7xl mx-auto">
+{% block breadcrumb_items %}
+	<li>
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<a href="{{ path('app_dashboard') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">Administration</a>
+		</div>
+	</li>
+	<li aria-current="page">
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Onboarding</span>
+		</div>
+	</li>
+{% endblock %}
 
-		{# Header #}
-		<div class="flex items-center justify-between mb-8">
-			<div>
-				<h1 class="text-3xl font-bold text-gray-900">Gestion des Onboardings</h1>
-				<p class="text-gray-600 mt-1">Suivez l'ensemble du processus d'intégration de vos nouveaux salariés</p>
+{% block page_header %}
+	<div class="px-4 py-6 lg:px-6">
+		<div class="flex flex-col md:flex-row md:items-center md:justify-between">
+			<div class="flex-1 min-w-0">
+				<h1 class="text-2xl md:text-3xl font-bold text-white mb-2">
+					Gestion des Onboardings
+				</h1>
+				<p class="text-blue-100 text-sm md:text-base">
+					Suivez l'ensemble du processus d'intégration de vos nouveaux salariés
+				</p>
 			</div>
-			<a href="{{ path('app_admin_invitations_create') }}" class="btn btn-primary">
-				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-				</svg>
-				Nouvelle invitation
-			</a>
-		</div>
-
-		{# Flash messages #}
-		{% for label, messages in app.flashes %}
-			{% for message in messages %}
-				<div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-4">
-					{{ message }}
-				</div>
-			{% endfor %}
-		{% endfor %}
-
-		{# Statistiques #}
-		<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-			<a href="{{ path('app_admin_onboarding_list') }}" class="card hover:shadow-lg transition {{ currentFilter is null ? 'ring-2 ring-blue-500' : '' }}">
-				<div class="text-center">
-					<p class="text-sm text-gray-600 mb-1">Total</p>
-					<p class="text-3xl font-bold text-gray-900">{{ stats.total }}</p>
-				</div>
-			</a>
-
-			<a href="{{ path('app_admin_onboarding_list', {filter: 'en_attente_activation'}) }}" class="card hover:shadow-lg transition {{ currentFilter == 'en_attente_activation' ? 'ring-2 ring-yellow-500' : '' }}">
-				<div class="text-center">
-					<p class="text-sm text-gray-600 mb-1">En attente</p>
-					<p class="text-3xl font-bold text-yellow-600">{{ stats.en_attente_activation }}</p>
-				</div>
-			</a>
-
-			<a href="{{ path('app_admin_onboarding_list', {filter: 'en_cours_onboarding'}) }}" class="card hover:shadow-lg transition {{ currentFilter == 'en_cours_onboarding' ? 'ring-2 ring-blue-500' : '' }}">
-				<div class="text-center">
-					<p class="text-sm text-gray-600 mb-1">En cours</p>
-					<p class="text-3xl font-bold text-blue-600">{{ stats.en_cours_onboarding }}</p>
-				</div>
-			</a>
-
-			<a href="{{ path('app_admin_onboarding_list', {filter: 'a_valider'}) }}" class="card hover:shadow-lg transition {{ currentFilter == 'a_valider' ? 'ring-2 ring-purple-500' : '' }}">
-				<div class="text-center">
-					<p class="text-sm text-gray-600 mb-1">À valider</p>
-					<p class="text-3xl font-bold text-purple-600">{{ stats.a_valider }}</p>
-				</div>
-			</a>
-
-			<a href="{{ path('app_admin_onboarding_list', {filter: 'valides'}) }}" class="card hover:shadow-lg transition {{ currentFilter == 'valides' ? 'ring-2 ring-green-500' : '' }}">
-				<div class="text-center">
-					<p class="text-sm text-gray-600 mb-1">Validés</p>
-					<p class="text-3xl font-bold text-green-600">{{ stats.valides }}</p>
-				</div>
-			</a>
-
-			<a href="{{ path('app_admin_onboarding_list', {filter: 'expires'}) }}" class="card hover:shadow-lg transition {{ currentFilter == 'expires' ? 'ring-2 ring-gray-500' : '' }}">
-				<div class="text-center">
-					<p class="text-sm text-gray-600 mb-1">Expirés</p>
-					<p class="text-3xl font-bold text-gray-500">{{ stats.expires }}</p>
-				</div>
-			</a>
-		</div>
-
-		{# Filtres #}
-		<div class="bg-white rounded-2xl p-6 shadow-lg mb-6">
-			<form method="get" class="flex gap-4">
-				<div class="flex-1">
-					<input type="text" name="search" value="{{ search ?? '' }}" placeholder="Rechercher par nom ou email..." class="form-input">
-				</div>
-				<div>
-					<select name="filter" class="form-select">
-						<option value="">Tous les statuts</option>
-						<option value="en_attente_activation" {{ currentFilter == 'en_attente_activation' ? 'selected' : '' }}>En attente d'activation</option>
-						<option value="en_cours_onboarding" {{ currentFilter == 'en_cours_onboarding' ? 'selected' : '' }}>En cours d'onboarding</option>
-						<option value="a_valider" {{ currentFilter == 'a_valider' ? 'selected' : '' }}>À valider</option>
-						<option value="valides" {{ currentFilter == 'valides' ? 'selected' : '' }}>Validés</option>
-						<option value="expires" {{ currentFilter == 'expires' ? 'selected' : '' }}>Expirés</option>
-						<option value="erreur" {{ currentFilter == 'erreur' ? 'selected' : '' }}>Erreur</option>
-					</select>
-				</div>
-				<button type="submit" class="btn btn-secondary">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"/>
-					</svg>
-					Filtrer
-				</button>
-			</form>
-		</div>
-
-		{# Liste des onboardings #}
-		{% if invitations is empty %}
-			<div class="bg-white rounded-2xl p-12 shadow-lg text-center">
-				<svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 0 0 2.22 0L21 8M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/>
-				</svg>
-				<h3 class="text-xl font-semibold text-gray-900 mb-2">Aucune invitation</h3>
-				<p class="text-gray-600 mb-6">Créez votre première invitation pour commencer</p>
-				<a href="{{ path('app_admin_invitations_create') }}" class="btn btn-primary inline-flex">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<div class="mt-4 md:mt-0 md:ml-4">
+				<a href="{{ path('app_admin_invitations_create') }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-white hover:bg-gray-50 rounded-lg transition focus:ring-4 focus:ring-blue-300">
+					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
 					</svg>
-					Créer une invitation
+					Nouvelle invitation
 				</a>
 			</div>
-		{% else %}
-			<div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-				<table class="w-full">
-					<thead class="bg-gray-50 border-b border-gray-200">
-						<tr>
-							<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Salarié</th>
-							<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
-							<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Poste</th>
-							<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Statut Invitation</th>
-							<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Progression</th>
-							<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-							<th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-gray-200">
-						{% for item in invitations %}
+		</div>
+
+		{# Quick stats #}
+		<div class="mt-6 grid grid-cols-3 lg:grid-cols-6 gap-3">
+			<a href="{{ path('app_admin_onboarding_list') }}" class="bg-white/10 backdrop-blur-sm rounded-lg p-3 hover:bg-white/20 transition {{ currentFilter is null ? 'ring-2 ring-white' : '' }}">
+				<div class="text-white/80 text-xs font-medium mb-1">Total</div>
+				<div class="text-white text-2xl font-bold">{{ stats.total }}</div>
+			</a>
+			<a href="{{ path('app_admin_onboarding_list', {filter: 'en_attente_activation'}) }}" class="bg-white/10 backdrop-blur-sm rounded-lg p-3 hover:bg-white/20 transition {{ currentFilter == 'en_attente_activation' ? 'ring-2 ring-yellow-400' : '' }}">
+				<div class="text-white/80 text-xs font-medium mb-1">En attente</div>
+				<div class="text-yellow-300 text-2xl font-bold">{{ stats.en_attente_activation }}</div>
+			</a>
+			<a href="{{ path('app_admin_onboarding_list', {filter: 'en_cours_onboarding'}) }}" class="bg-white/10 backdrop-blur-sm rounded-lg p-3 hover:bg-white/20 transition {{ currentFilter == 'en_cours_onboarding' ? 'ring-2 ring-blue-400' : '' }}">
+				<div class="text-white/80 text-xs font-medium mb-1">En cours</div>
+				<div class="text-blue-300 text-2xl font-bold">{{ stats.en_cours_onboarding }}</div>
+			</a>
+			<a href="{{ path('app_admin_onboarding_list', {filter: 'a_valider'}) }}" class="bg-white/10 backdrop-blur-sm rounded-lg p-3 hover:bg-white/20 transition {{ currentFilter == 'a_valider' ? 'ring-2 ring-purple-400' : '' }}">
+				<div class="text-white/80 text-xs font-medium mb-1">À valider</div>
+				<div class="text-purple-300 text-2xl font-bold">{{ stats.a_valider }}</div>
+			</a>
+			<a href="{{ path('app_admin_onboarding_list', {filter: 'valides'}) }}" class="bg-white/10 backdrop-blur-sm rounded-lg p-3 hover:bg-white/20 transition {{ currentFilter == 'valides' ? 'ring-2 ring-green-400' : '' }}">
+				<div class="text-white/80 text-xs font-medium mb-1">Validés</div>
+				<div class="text-green-300 text-2xl font-bold">{{ stats.valides }}</div>
+			</a>
+			<a href="{{ path('app_admin_onboarding_list', {filter: 'expires'}) }}" class="bg-white/10 backdrop-blur-sm rounded-lg p-3 hover:bg-white/20 transition {{ currentFilter == 'expires' ? 'ring-2 ring-gray-400' : '' }}">
+				<div class="text-white/80 text-xs font-medium mb-1">Expirés</div>
+				<div class="text-gray-300 text-2xl font-bold">{{ stats.expires }}</div>
+			</a>
+		</div>
+	</div>
+{% endblock %}
+
+{% block dashboard_content %}
+	{# Filtres #}
+	<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+		<form method="get" class="flex gap-4">
+			<div class="flex-1">
+				<input type="text" name="search" value="{{ search ?? '' }}" placeholder="Rechercher par nom ou email..." class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+			</div>
+			<div>
+				<select name="filter" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+					<option value="">Tous les statuts</option>
+					<option value="en_attente_activation" {{ currentFilter == 'en_attente_activation' ? 'selected' : '' }}>En attente d'activation</option>
+					<option value="en_cours_onboarding" {{ currentFilter == 'en_cours_onboarding' ? 'selected' : '' }}>En cours d'onboarding</option>
+					<option value="a_valider" {{ currentFilter == 'a_valider' ? 'selected' : '' }}>À valider</option>
+					<option value="valides" {{ currentFilter == 'valides' ? 'selected' : '' }}>Validés</option>
+					<option value="expires" {{ currentFilter == 'expires' ? 'selected' : '' }}>Expirés</option>
+					<option value="erreur" {{ currentFilter == 'erreur' ? 'selected' : '' }}>Erreur</option>
+				</select>
+			</div>
+			<button type="submit" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600">
+				<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"/>
+				</svg>
+				Filtrer
+			</button>
+		</form>
+	</div>
+
+	{# Liste des onboardings #}
+	{% if invitations is empty %}
+		<div class="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-sm text-center">
+			<svg class="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 0 0 2.22 0L21 8M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/>
+			</svg>
+			<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Aucune invitation</h3>
+			<p class="text-gray-600 dark:text-gray-400 mb-6">Créez votre première invitation pour commencer</p>
+			<a href="{{ path('app_admin_invitations_create') }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition">
+				<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+				</svg>
+				Créer une invitation
+			</a>
+		</div>
+	{% else %}
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+			<table class="w-full">
+				<thead class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+					<tr>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Salarié</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Email</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Poste</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Statut Invitation</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Progression</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Date</th>
+						<th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Actions</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+					{% for item in invitations %}
 							{% set invitation = item.invitation %}
 							{% set user = invitation.user %}
 							{% set completionStatus = item.completionStatus %}
@@ -237,20 +236,7 @@
 							</tr>
 						{% endfor %}
 					</tbody>
-				</table>
-			</div>
-		{% endif %}
-
-		{# Retour dashboard #}
-		<div class="mt-6">
-			<a href="{{ path('app_dashboard') }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
-				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-				</svg>
-				Retour au dashboard
-			</a>
+			</table>
 		</div>
-
-	</div>
-</div>
+	{% endif %}
 {% endblock %}

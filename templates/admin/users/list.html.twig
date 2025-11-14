@@ -1,96 +1,112 @@
-{% extends 'base.html.twig' %}
+{% extends 'layout/dashboard_base.html.twig' %}
 
 {% block title %}Salariés - RH NewLife{% endblock %}
 
-{% block body %}
-<div class="min-h-screen bg-gray-50 p-8">
-    <div class="max-w-7xl mx-auto">
+{% block breadcrumb_items %}
+	<li>
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<a href="{{ path('app_dashboard') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">Administration</a>
+		</div>
+	</li>
+	<li aria-current="page">
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Salariés</span>
+		</div>
+	</li>
+{% endblock %}
 
-        {# Header #}
-        <div class="flex items-center justify-between mb-8">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900">Salariés</h1>
-                <p class="text-gray-600 mt-1">Gérez les employés et leurs contrats</p>
-            </div>
-            <a href="{{ path('app_admin_users_create') }}" class="btn btn-primary">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Créer un salarié
-            </a>
-        </div>
+{% block page_header %}
+	<div class="px-4 py-6 lg:px-6">
+		<div class="flex flex-col md:flex-row md:items-center md:justify-between">
+			<div class="flex-1 min-w-0">
+				<h1 class="text-2xl md:text-3xl font-bold text-white mb-2">
+					Salariés
+				</h1>
+				<p class="text-blue-100 text-sm md:text-base">
+					Gérez les employés et leurs contrats
+				</p>
+			</div>
+			<div class="mt-4 md:mt-0 md:ml-4">
+				<a href="{{ path('app_admin_users_create') }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-white hover:bg-gray-50 rounded-lg transition focus:ring-4 focus:ring-blue-300">
+					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+					</svg>
+					Créer un salarié
+				</a>
+			</div>
+		</div>
+	</div>
+{% endblock %}
 
-        {# Flash messages #}
-        {% for label, messages in app.flashes %}
-            {% for message in messages %}
-                <div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-4">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endfor %}
+{% block dashboard_content %}
+	{# Filtres #}
+	<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+		<form method="get" class="flex gap-4">
+			<div class="flex-1">
+				<input
+					type="text"
+					name="search"
+					value="{{ search ?? '' }}"
+					placeholder="Rechercher par nom, email ou matricule..."
+					class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+				>
+			</div>
+			<div>
+				<select name="status" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+					<option value="">Tous les statuts</option>
+					<option value="invited" {{ currentStatus == 'invited' ? 'selected' : '' }}>Invité</option>
+					<option value="onboarding" {{ currentStatus == 'onboarding' ? 'selected' : '' }}>Onboarding</option>
+					<option value="active" {{ currentStatus == 'active' ? 'selected' : '' }}>Actif</option>
+					<option value="archived" {{ currentStatus == 'archived' ? 'selected' : '' }}>Archivé</option>
+				</select>
+			</div>
+			<button type="submit" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600">
+				<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+				</svg>
+				Filtrer
+			</button>
+		</form>
+	</div>
 
-        {# Filtres #}
-        <div class="bg-white rounded-2xl p-6 shadow-lg mb-6">
-            <form method="get" class="flex gap-4">
-                <div class="flex-1">
-                    <input
-                        type="text"
-                        name="search"
-                        value="{{ search ?? '' }}"
-                        placeholder="Rechercher par nom, email ou matricule..."
-                        class="form-input"
-                    >
-                </div>
-                <div>
-                    <select name="status" class="form-select">
-                        <option value="">Tous les statuts</option>
-                        <option value="invited" {{ currentStatus == 'invited' ? 'selected' : '' }}>Invité</option>
-                        <option value="onboarding" {{ currentStatus == 'onboarding' ? 'selected' : '' }}>Onboarding</option>
-                        <option value="active" {{ currentStatus == 'active' ? 'selected' : '' }}>Actif</option>
-                        <option value="archived" {{ currentStatus == 'archived' ? 'selected' : '' }}>Archivé</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-secondary">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    Filtrer
-                </button>
-            </form>
-        </div>
-
-        {# Liste des salariés #}
-        {% if users is empty %}
-            <div class="bg-white rounded-2xl p-12 shadow-lg text-center">
-                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <h3 class="text-xl font-semibold text-gray-900 mb-2">Aucun salarié</h3>
-                <p class="text-gray-600 mb-6">Créez votre premier employé pour commencer</p>
-                <a href="{{ path('app_admin_users_create') }}" class="btn btn-primary inline-flex">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Créer un salarié
-                </a>
-            </div>
-        {% else %}
-            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <table class="w-full">
-                    <thead class="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Salarié</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Matricule</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Poste</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Structure</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Embauche</th>
-                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        {% for user in users %}
-                            <tr class="hover:bg-gray-50 transition">
+	{# Liste des salariés #}
+	{% if users is empty %}
+		<div class="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-sm text-center">
+			<svg class="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+			</svg>
+			<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Aucun salarié</h3>
+			<p class="text-gray-600 dark:text-gray-400 mb-6">Créez votre premier employé pour commencer</p>
+			<a href="{{ path('app_admin_users_create') }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition">
+				<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+				</svg>
+				Créer un salarié
+			</a>
+		</div>
+	{% else %}
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+			<table class="w-full">
+				<thead class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+					<tr>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Salarié</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Matricule</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Poste</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Structure</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Statut</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Embauche</th>
+						<th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Actions</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+					{% for user in users %}
+						<tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
@@ -131,22 +147,9 @@
                                     </a>
                                 </td>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% endif %}
-
-        {# Retour dashboard #}
-        <div class="mt-6">
-            <a href="{{ path('app_dashboard') }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Retour au dashboard
-            </a>
-        </div>
-
-    </div>
-</div>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	{% endif %}
 {% endblock %}
