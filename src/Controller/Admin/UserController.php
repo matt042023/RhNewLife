@@ -3,7 +3,9 @@
 namespace App\Controller\Admin;
 
 use App\Entity\User;
+use App\Repository\DocumentRepository;
 use App\Repository\UserRepository;
+use App\Service\DocumentManager;
 use App\Service\UserManager;
 use App\Service\MatriculeGenerator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,7 +21,9 @@ class UserController extends AbstractController
     public function __construct(
         private UserManager $userManager,
         private UserRepository $userRepository,
-        private MatriculeGenerator $matriculeGenerator
+        private MatriculeGenerator $matriculeGenerator,
+        private DocumentRepository $documentRepository,
+        private DocumentManager $documentManager
     ) {
     }
 
@@ -155,14 +159,26 @@ class UserController extends AbstractController
         // Récupérer les contrats
         $contracts = $user->getContracts();
 
-        // Récupérer les documents
-        $documents = $user->getDocuments();
+        // Récupérer les documents actifs (non archivés)
+        $documents = $this->documentRepository->findActiveByUser($user);
+
+        // Préparer les documents par type pour l'affichage en grille
+        $documentsByType = [];
+        foreach ($documents as $document) {
+            $documentsByType[$document->getType()][] = $document;
+        }
+
+        // Récupérer la complétion des documents avec catégories
+        $completion = $this->documentManager->getCompletionStatus($user);
 
         return $this->render('admin/users/view.html.twig', [
             'user' => $user,
             'completionStatus' => $completionStatus,
             'contracts' => $contracts,
             'documents' => $documents,
+            'documentsByType' => $documentsByType,
+            'completion' => $completion,
+            'categories' => $completion['categories'] ?? [],
         ]);
     }
 

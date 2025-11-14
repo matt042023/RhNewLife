@@ -161,6 +161,13 @@ class DocumentManager
 
         $document = $this->createDocumentFromUpload($file, $user, $type, $comment, 1, $uploadedBy);
 
+        // Si un admin upload le document, le valider automatiquement
+        if ($uploadedBy && in_array('ROLE_ADMIN', $uploadedBy->getRoles(), true)) {
+            $document->setStatus(Document::STATUS_VALIDATED);
+            $document->setValidatedBy($uploadedBy);
+            $document->setValidatedAt(new \DateTimeImmutable());
+        }
+
         $this->entityManager->persist($document);
         $this->entityManager->flush();
 
@@ -176,6 +183,7 @@ class DocumentManager
             'original_filename' => $document->getOriginalName(),
             'version' => $document->getVersion(),
             'size' => $document->getFileSize(),
+            'auto_validated' => $uploadedBy && in_array('ROLE_ADMIN', $uploadedBy->getRoles(), true),
         ]);
 
         return $document;
@@ -211,6 +219,13 @@ class DocumentManager
             ->setFormation($oldDocument->getFormation())
             ->setElementVariable($oldDocument->getElementVariable());
 
+        // Si un admin remplace le document, le valider automatiquement
+        if ($uploadedBy && in_array('ROLE_ADMIN', $uploadedBy->getRoles(), true)) {
+            $document->setStatus(Document::STATUS_VALIDATED);
+            $document->setValidatedBy($uploadedBy);
+            $document->setValidatedAt(new \DateTimeImmutable());
+        }
+
         $this->entityManager->persist($document);
         $this->entityManager->flush();
 
@@ -226,6 +241,7 @@ class DocumentManager
             'original_filename' => $document->getOriginalName(),
             'version' => $document->getVersion(),
             'old_version' => $oldDocument->getVersion(),
+            'auto_validated' => $uploadedBy && in_array('ROLE_ADMIN', $uploadedBy->getRoles(), true),
         ]);
 
         return $document;

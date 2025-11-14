@@ -278,6 +278,14 @@ class DocumentController extends AbstractController
         $comment = $request->request->get('commentaire');
 
         if (!$file) {
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Veuillez sélectionner un fichier.',
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
             $this->addFlash('error', 'Veuillez sélectionner un fichier.');
             return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
         }
@@ -288,15 +296,49 @@ class DocumentController extends AbstractController
 
             // L'admin remplace le document, donc uploadedBy = admin
             $newDocument = $this->documentManager->replaceDocument($document, $file, $comment, $currentAdmin);
+
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => true,
+                    'message' => 'Le document a été remplacé avec succès.',
+                    'document' => [
+                        'id' => $newDocument->getId(),
+                        'type' => $newDocument->getType(),
+                        'typeLabel' => $newDocument->getTypeLabel(),
+                        'status' => $newDocument->getStatus(),
+                        'uploadedAt' => $newDocument->getUploadedAt()?->format('Y-m-d H:i:s'),
+                        'uploadedBy' => $newDocument->getUploadedBy()?->getFullName(),
+                    ],
+                ], Response::HTTP_OK);
+            }
+
             $this->addFlash('success', 'Le document a été remplacé avec succès.');
             return $this->redirectToRoute('app_admin_documents_view', ['id' => $newDocument->getId()]);
         } catch (\InvalidArgumentException $exception) {
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => $exception->getMessage(),
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
             $this->addFlash('error', $exception->getMessage());
         } catch (\Throwable $exception) {
             $this->logger->error('Error replacing document', [
                 'document_id' => $document->getId(),
                 'error' => $exception->getMessage(),
             ]);
+
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Erreur lors du remplacement du document.',
+                ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
             $this->addFlash('error', 'Erreur lors du remplacement du document.');
         }
 

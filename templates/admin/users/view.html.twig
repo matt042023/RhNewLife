@@ -288,8 +288,10 @@
 				</div>
 
 				{# Tab content: Documents #}
-				<div id="tab-documents" class="tab-content p-8 hidden">
-					<h3 class="text-lg font-bold text-gray-900 mb-6">Documents</h3>
+				<div id="tab-documents" class="tab-content p-8 hidden" data-controller="document">
+					<div class="flex justify-between items-center mb-6">
+						<h3 class="text-lg font-bold text-gray-900">Documents</h3>
+					</div>
 
 					{% if documents is empty %}
 						<div class="text-center py-12">
@@ -299,22 +301,97 @@
 							<p class="text-gray-600">Aucun document uploadé</p>
 						</div>
 					{% else %}
-						<div class="grid grid-cols-2 gap-4">
-							{% for document in documents %}
-								<div class="border border-gray-200 rounded-lg p-4">
-									<div class="flex items-start gap-3">
-										<svg class="w-10 h-10 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-										</svg>
-										<div class="flex-1 min-w-0">
-											<h4 class="font-semibold text-gray-900 truncate">{{ document.originalName }}</h4>
-											<p class="text-sm text-gray-500 mt-1">{{ document.type }}</p>
-											<p class="text-xs text-gray-400 mt-1">{{ document.uploadedAt|date('d/m/Y H:i') }}</p>
-										</div>
+						{# Progression globale #}
+						{% set completionPercent = completion.percentage ?? 0 %}
+						<div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 rounded-lg p-6 mb-6">
+							<div class="flex items-center justify-between mb-3">
+								<div>
+									<p class="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Progression globale</p>
+									<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+										{{ completion.completed_required ?? 0 }}/{{ completion.total_required ?? 0 }} documents requis
+									</p>
+								</div>
+								<p class="text-3xl font-bold text-gray-900 dark:text-white">{{ completionPercent }}%</p>
+							</div>
+							<div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3 overflow-hidden">
+								<div class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500" style="width: {{ completionPercent }}%"></div>
+							</div>
+						</div>
+
+						{# Catégories avec cartes de documents #}
+						{% for category in categories %}
+							{% set requiredTotal = category.completion.required_total ?? 0 %}
+							{% set requiredDone = category.completion.required_completed ?? 0 %}
+							{% set categoryPercent = category.completion.percentage ?? 0 %}
+
+							<div class="mb-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+								{# En-tête de catégorie #}
+								<div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700">
+									<div class="flex items-center justify-between mb-2">
+										<h4 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+											<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+											</svg>
+											{{ category.label }}
+										</h4>
+										<span class="text-sm text-gray-600 dark:text-gray-400">{{ requiredDone }}/{{ requiredTotal }} documents requis complétés</span>
+									</div>
+									<div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 overflow-hidden">
+										<div class="bg-gradient-to-r from-emerald-500 to-green-600 h-2 rounded-full transition-all duration-500" style="width: {{ categoryPercent }}%"></div>
 									</div>
 								</div>
-							{% endfor %}
-						</div>
+
+								<div class="p-6 space-y-6">
+									{# Documents requis #}
+									{% if category.required is not empty %}
+										<div>
+											<h5 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
+												<span class="w-2 h-2 bg-red-500 rounded-full"></span>
+												Documents requis
+											</h5>
+											<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+												{% for item in category.required %}
+													{% set docs = documentsByType[item.type] ?? [] %}
+													{% set firstDoc = docs|first %}
+													{% include 'components/documents/_document_card.html.twig' with {
+														'document': firstDoc,
+														'item': item,
+														'layout': 'grid',
+														'context': 'admin',
+														'showActions': true,
+														'isRequired': true
+													} %}
+												{% endfor %}
+											</div>
+										</div>
+									{% endif %}
+
+									{# Documents optionnels #}
+									{% if category.optional is not empty %}
+										<div>
+											<h5 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
+												<span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+												Documents optionnels
+											</h5>
+											<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+												{% for item in category.optional %}
+													{% set docs = documentsByType[item.type] ?? [] %}
+													{% set firstDoc = docs|first %}
+													{% include 'components/documents/_document_card.html.twig' with {
+														'document': firstDoc,
+														'item': item,
+														'layout': 'grid',
+														'context': 'admin',
+														'showActions': true,
+														'isRequired': false
+													} %}
+												{% endfor %}
+											</div>
+										</div>
+									{% endif %}
+								</div>
+							</div>
+						{% endfor %}
 					{% endif %}
 				</div>
 			</div>
@@ -331,6 +408,10 @@
 
 		</div>
 	</div>
+
+	{# Document Modals - For document actions in the Documents tab #}
+	{% include 'components/modals/document_replace.html.twig' %}
+	{% include 'components/modals/document_delete.html.twig' %}
 
 	<script>
 		// Tabs functionality
