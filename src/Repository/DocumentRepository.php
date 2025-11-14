@@ -28,9 +28,10 @@ class DocumentRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('d')
             ->andWhere('d.user = :user')
             ->andWhere('d.type = :type')
-            ->andWhere('d.archived = false')
+            ->andWhere('d.status != :archived')
             ->setParameter('user', $user)
             ->setParameter('type', $type)
+            ->setParameter('archived', Document::STATUS_ARCHIVED)
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
@@ -40,8 +41,9 @@ class DocumentRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('d')
             ->andWhere('d.user = :user')
-            ->andWhere('d.archived = false')
+            ->andWhere('d.status != :archived')
             ->setParameter('user', $user)
+            ->setParameter('archived', Document::STATUS_ARCHIVED)
             ->orderBy('d.uploadedAt', 'DESC')
             ->getQuery()
             ->getResult();
@@ -51,8 +53,9 @@ class DocumentRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('d')
             ->andWhere('d.user = :user')
-            ->andWhere('d.archived = true')
+            ->andWhere('d.status = :archived')
             ->setParameter('user', $user)
+            ->setParameter('archived', Document::STATUS_ARCHIVED)
             ->orderBy('d.archivedAt', 'DESC')
             ->getQuery()
             ->getResult();
@@ -61,10 +64,11 @@ class DocumentRepository extends ServiceEntityRepository
     public function findExpiredArchives(\DateTimeImmutable $referenceDate): array
     {
         return $this->createQueryBuilder('d')
-            ->andWhere('d.archived = true')
+            ->andWhere('d.status = :archived')
             ->andWhere('d.archivedAt IS NOT NULL')
             ->andWhere('d.retentionYears IS NOT NULL')
             ->andWhere('DATE_ADD(d.archivedAt, d.retentionYears, \'year\') <= :now')
+            ->setParameter('archived', Document::STATUS_ARCHIVED)
             ->setParameter('now', $referenceDate)
             ->getQuery()
             ->getResult();
@@ -106,8 +110,13 @@ class DocumentRepository extends ServiceEntityRepository
         }
 
         if (array_key_exists('archived', $filters) && $filters['archived'] !== null) {
-            $qb->andWhere('d.archived = :archived')
-               ->setParameter('archived', (bool) $filters['archived']);
+            if ($filters['archived']) {
+                $qb->andWhere('d.status = :archived')
+                   ->setParameter('archived', Document::STATUS_ARCHIVED);
+            } else {
+                $qb->andWhere('d.status != :archived')
+                   ->setParameter('archived', Document::STATUS_ARCHIVED);
+            }
         }
 
         if (!empty($filters['user'])) {

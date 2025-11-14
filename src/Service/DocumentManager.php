@@ -255,7 +255,7 @@ class DocumentManager
             ]);
         }
 
-        $document->markAsArchived($reason, $retentionYears);
+        $document->setStatusArchived($reason, $retentionYears);
 
         if ($flush) {
             $this->entityManager->flush();

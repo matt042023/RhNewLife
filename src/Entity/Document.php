@@ -29,6 +29,7 @@ class Document
     public const STATUS_PENDING = 'pending';
     public const STATUS_VALIDATED = 'validated';
     public const STATUS_REJECTED = 'rejected';
+    public const STATUS_ARCHIVED = 'archived';
 
     public const TYPES = [
         self::TYPE_CNI => 'Carte d\'identité',
@@ -97,9 +98,6 @@ class Document
 
     #[ORM\Column(options: ['default' => 1])]
     private int $version = 1;
-
-    #[ORM\Column(type: 'boolean', options: ['default' => false])]
-    private bool $archived = false;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $archivedAt = null;
@@ -346,12 +344,12 @@ class Document
 
     public function isArchived(): bool
     {
-        return $this->archived;
+        return $this->status === self::STATUS_ARCHIVED;
     }
 
-    public function markAsArchived(string $reason, int $retentionYears): static
+    public function setStatusArchived(string $reason, int $retentionYears): static
     {
-        $this->archived = true;
+        $this->status = self::STATUS_ARCHIVED;
         $this->archiveReason = $reason;
         $this->retentionYears = max(0, $retentionYears);
         $this->archivedAt = new \DateTimeImmutable();
@@ -361,7 +359,8 @@ class Document
 
     public function restoreFromArchive(): static
     {
-        $this->archived = false;
+        // Restored documents go back to pending status
+        $this->status = self::STATUS_PENDING;
         $this->archiveReason = null;
         $this->archivedAt = null;
         $this->retentionYears = null;
@@ -371,7 +370,7 @@ class Document
 
     public function canBeDeleted(): bool
     {
-        if (!$this->isArchived()) {
+        if ($this->status !== self::STATUS_ARCHIVED) {
             return false;
         }
 
