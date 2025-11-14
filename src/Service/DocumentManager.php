@@ -244,6 +244,11 @@ class DocumentManager
             'auto_validated' => $uploadedBy && in_array('ROLE_ADMIN', $uploadedBy->getRoles(), true),
         ]);
 
+        // Si un admin remplace le document, notifier l'employé
+        if ($uploadedBy && in_array('ROLE_ADMIN', $uploadedBy->getRoles(), true) && $uploadedBy->getId() !== $user->getId()) {
+            $this->sendDocumentReplacedByAdminNotification($document, $oldDocument, $uploadedBy);
+        }
+
         return $document;
     }
 
@@ -1010,6 +1015,64 @@ class DocumentManager
         } catch (\Exception $e) {
             $this->logger->error('Failed to send document rejection notification', [
                 'document_id' => $document->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send notification to employee when admin replaces their document
+     */
+    public function sendDocumentReplacedByAdminNotification(Document $newDocument, Document $oldDocument, User $replacedBy): void
+    {
+        try {
+            $user = $newDocument->getUser();
+
+            if (!$user || !$user->getEmail()) {
+                $this->logger->warning('Cannot send replacement notification: user or email missing', [
+                    'document_id' => $newDocument->getId(),
+                ]);
+                return;
+            }
+
+            $profileUrl = $this->urlGenerator->generate(
+                'app_profile_documents',
+                [],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+
+            // Calculate completion percentage
+            $completionData = $this->getCompletionStatus($user);
+            $completionPercent = $completionData['percentage'] ?? 0;
+
+            $email = (new TemplatedEmail())
+                ->from(new Address('noreply@rhnewlife.com', 'RH NewLife'))
+                ->to(new Address($user->getEmail(), $user->getFullName()))
+                ->replyTo(new Address('rh@rhnewlife.com', 'Service RH'))
+                ->subject('📝 Un de vos documents a été mis à jour')
+                ->htmlTemplate('emails/document_replaced_by_admin.html.twig')
+                ->context([
+                    'newDocument' => $newDocument,
+                    'oldDocument' => $oldDocument,
+                    'user' => $user,
+                    'replacedBy' => $replacedBy,
+                    'profileUrl' => $profileUrl,
+                    'completionPercent' => $completionPercent,
+                    'currentYear' => date('Y'),
+                ]);
+
+            $this->mailer->send($email);
+
+            $this->logger->info('Document replacement notification sent', [
+                'new_document_id' => $newDocument->getId(),
+                'old_document_id' => $oldDocument->getId(),
+                'user_id' => $user->getId(),
+                'replaced_by_id' => $replacedBy->getId(),
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to send document replacement notification', [
+                'new_document_id' => $newDocument->getId(),
+                'old_document_id' => $oldDocument->getId(),
                 'error' => $e->getMessage(),
             ]);
         }
