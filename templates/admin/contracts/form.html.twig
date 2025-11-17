@@ -26,6 +26,37 @@
         {# Form #}
         <form method="post" class="bg-white rounded-2xl shadow-lg p-8">
 
+            {# Template de contrat (WF09) #}
+            {% if not isEdit %}
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Modèle de contrat
+                </h2>
+
+                <div>
+                    <label class="form-label">Sélectionner un modèle de contrat *</label>
+                    <select name="template_id" class="form-select" required>
+                        <option value="">Choisir un modèle...</option>
+                        {% for template in activeTemplates %}
+                            <option value="{{ template.id }}" {{ (formData.template_id ?? '') == template.id ? 'selected' : '' }}>
+                                {{ template.name }}
+                                {% if template.description %}- {{ template.description }}{% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Le modèle sera utilisé pour générer le contrat avec les informations ci-dessous.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
             {# Type et dates #}
             <div class="mb-8">
                 <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">

@@ -1,0 +1,134 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Signature de contrat - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+	<div class="max-w-4xl w-full">
+
+		{# Header #}
+		<div class="text-center mb-8">
+			<h1 class="text-4xl font-bold text-gray-900 mb-2">Signature de votre contrat</h1>
+			<p class="text-gray-600">{{ employee.fullName }}</p>
+		</div>
+
+		{# Flash messages #}
+		{% for label, messages in app.flashes %}
+			{% for message in messages %}
+				<div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-6">
+					{{ message }}
+				</div>
+			{% endfor %}
+		{% endfor %}
+
+		{# Informations contrat #}
+		<div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+			<h2 class="text-xl font-bold mb-4">Informations du contrat</h2>
+			<dl class="grid grid-cols-2 gap-4">
+				<div>
+					<dt class="text-sm text-gray-600">Type de contrat</dt>
+					<dd class="font-semibold text-lg">{{ contract.typeLabel }}</dd>
+				</div>
+				<div>
+					<dt class="text-sm text-gray-600">Date de début</dt>
+					<dd class="font-semibold">{{ contract.startDate|date('d/m/Y') }}</dd>
+				</div>
+				{% if contract.endDate %}
+					<div>
+						<dt class="text-sm text-gray-600">Date de fin</dt>
+						<dd class="font-semibold">{{ contract.endDate|date('d/m/Y') }}</dd>
+					</div>
+				{% endif %}
+				<div>
+					<dt class="text-sm text-gray-600">Poste</dt>
+					<dd class="font-semibold">{{ employee.position }}</dd>
+				</div>
+			</dl>
+		</div>
+
+		{# Aperçu du contrat #}
+		<div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+			<h2 class="text-xl font-bold mb-4">Votre contrat de travail</h2>
+			<div class="bg-gray-50 p-6 rounded-lg max-h-96 overflow-y-auto border-2 border-gray-200">
+				{% if contract.draftFileUrl %}
+					<div class="prose max-w-none">
+						<p class="text-sm text-gray-600 mb-4">
+							📄 Votre contrat est disponible pour consultation.
+							Veuillez le lire attentivement avant de signer.
+						</p>
+						<p class="text-sm">
+							Fichier : <code>{{ contract.draftFileUrl }}</code>
+						</p>
+					</div>
+				{% else %}
+					<p class="text-gray-600">Le contrat est en cours de préparation.</p>
+				{% endif %}
+			</div>
+		</div>
+
+		{# Formulaire de signature #}
+		<div class="bg-white rounded-2xl shadow-xl p-8">
+			<form method="post" action="{{ path('app_contract_signature_submit', {token: token}) }}">
+				<div class="space-y-6">
+					{# Case à cocher #}
+					<div class="form-control">
+						<label class="label cursor-pointer justify-start gap-4 bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+							<input
+								type="checkbox"
+								name="accept_terms"
+								value="1"
+								class="checkbox checkbox-primary checkbox-lg"
+								required
+							/>
+							<span class="label-text text-base">
+								<strong>Je déclare avoir lu et accepté les termes et conditions</strong> de ce contrat de travail.
+								Je comprends que cette signature électronique a la même valeur juridique qu'une signature manuscrite.
+							</span>
+						</label>
+					</div>
+
+					{# Informations légales #}
+					<div class="bg-gray-50 p-4 rounded-lg text-sm text-gray-600">
+						<p class="mb-2"><strong>À propos de la signature électronique :</strong></p>
+						<ul class="list-disc list-inside space-y-1">
+							<li>Votre signature sera horodatée et tracée (adresse IP, date/heure)</li>
+							<li>Un PDF signé sera généré avec ces informations</li>
+							<li>La signature électronique est conforme au règlement eIDAS (UE)</li>
+							<li>Ce contrat sera ensuite validé par l'administration RH</li>
+						</ul>
+					</div>
+
+					{# Expiration token #}
+					<div class="alert alert-info">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+						</svg>
+						<span class="text-sm">
+							Ce lien de signature expire le <strong>{{ contract.tokenExpiresAt|date('d/m/Y à H:i') }}</strong>
+						</span>
+					</div>
+
+					{# Boutons #}
+					<div class="flex gap-4 pt-4">
+						<button type="submit" class="btn btn-primary btn-lg flex-1">
+							<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+							</svg>
+							Signer le contrat
+						</button>
+					</div>
+
+					<p class="text-xs text-center text-gray-500">
+						En signant, vous acceptez que les informations soient traitées conformément à notre politique de confidentialité.
+					</p>
+				</div>
+			</form>
+		</div>
+
+		{# Footer #}
+		<div class="text-center mt-8 text-sm text-gray-600">
+			<p>© {{ 'now'|date('Y') }} RH NewLife - Tous droits réservés</p>
+		</div>
+	</div>
+</div>
+{% endblock %}

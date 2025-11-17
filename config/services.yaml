@@ -37,3 +37,7 @@ services:
         arguments:
             $senderEmail: '%app.mailer.sender_email%'
             $senderName: '%app.mailer.sender_name%'
+
+    App\Service\ContractGeneratorService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'

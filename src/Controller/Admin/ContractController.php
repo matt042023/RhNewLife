@@ -7,7 +7,10 @@ use App\Entity\User;
 use App\Repository\ContractRepository;
 use App\Repository\UserRepository;
 use App\Repository\DocumentRepository;
+use App\Repository\TemplateContratRepository;
 use App\Service\ContractManager;
+use App\Service\ContractGeneratorService;
+use App\Service\ContractSignatureService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,7 +26,10 @@ class ContractController extends AbstractController
         private ContractManager $contractManager,
         private ContractRepository $contractRepository,
         private UserRepository $userRepository,
-        private DocumentRepository $documentRepository
+        private DocumentRepository $documentRepository,
+        private TemplateContratRepository $templateContratRepository,
+        private ContractGeneratorService $contractGenerator,
+        private ContractSignatureService $signatureService
     ) {
     }
 
@@ -36,10 +42,34 @@ class ContractController extends AbstractController
         $user = $this->getUserOrThrow($userId);
         $this->denyAccessUnlessGranted('CONTRACT_CREATE', $user);
 
+        // Récupérer les templates actifs
+        $activeTemplates = $this->templateContratRepository->findActiveTemplates();
+
+        // Si aucun template n'existe, rediriger vers la création de template
+        if (empty($activeTemplates) && !$request->isMethod('POST')) {
+            $this->addFlash('warning', 'Aucun modèle de contrat disponible. Veuillez d\'abord créer un modèle de contrat.');
+            return $this->redirectToRoute('app_admin_contract_templates_create');
+        }
+
         if ($request->isMethod('POST')) {
             $errors = [];
 
             try {
+                // Récupérer le template sélectionné
+                $templateId = $request->request->get('template_id');
+                if (!$templateId) {
+                    throw new \RuntimeException('Veuillez sélectionner un modèle de contrat.');
+                }
+
+                $template = $this->templateContratRepository->find($templateId);
+                if (!$template) {
+                    throw new \RuntimeException('Modèle de contrat introuvable.');
+                }
+
+                if (!$template->isActive()) {
+                    throw new \RuntimeException('Ce modèle de contrat n\'est pas actif.');
+                }
+
                 $data = [
                     'type' => $request->request->get('type'),
                     'startDate' => new \DateTime($request->request->get('start_date')),
@@ -66,9 +96,15 @@ class ContractController extends AbstractController
                     $data['workingDays'] = $workingDays;
                 }
 
-                $contract = $this->contractManager->createContract($user, $data);
+                // Utiliser la méthode WF09 qui génère le PDF automatiquement
+                $contract = $this->contractManager->createContractFromTemplate(
+                    $user,
+                    $template,
+                    $data,
+                    $this->contractGenerator
+                );
 
-                $this->addFlash('success', 'Contrat créé avec succès en mode brouillon.');
+                $this->addFlash('success', 'Contrat créé avec succès en mode brouillon. Le document a été généré depuis le modèle.');
                 return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
             } catch (\Exception $e) {
                 $errors[] = 'Erreur : ' . $e->getMessage();
@@ -78,6 +114,7 @@ class ContractController extends AbstractController
                 'admin/contracts/form.html.twig',
                 [
                     'user' => $user,
+                    'activeTemplates' => $activeTemplates,
                     'errors' => $errors,
                     'formData' => $request->request->all(),
                     'isEdit' => false,
@@ -89,6 +126,7 @@ class ContractController extends AbstractController
 
         return $this->render('admin/contracts/form.html.twig', [
             'user' => $user,
+            'activeTemplates' => $activeTemplates,
             'errors' => [],
             'formData' => [],
             'isEdit' => false,
@@ -472,6 +510,131 @@ class ContractController extends AbstractController
             'contract1' => $contract1,
             'contract2' => $contract2,
             'diff' => $diff,
+        ]);
+    }
+
+    /**
+     * Prévisualiser le PDF brouillon
+     */
+    #[Route('/{id}/preview', name: 'app_admin_contracts_preview', methods: ['GET'])]
+    public function preview(Contract $contract): Response
+    {
+        $this->denyAccessUnlessGranted('CONTRACT_VIEW', $contract);
+
+        if (!$contract->getDraftFileUrl()) {
+            $this->addFlash('error', 'Aucun brouillon disponible pour ce contrat.');
+            return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+        }
+
+        $basePath = $this->getParameter('kernel.project_dir') . '/var/uploads/';
+        $filePath = $basePath . $contract->getDraftFileUrl();
+
+        if (!is_file($filePath)) {
+            $this->addFlash('error', 'Le fichier du brouillon est introuvable.');
+            return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+        }
+
+        return $this->render('admin/contracts/preview.html.twig', [
+            'contract' => $contract,
+            'fileContent' => file_get_contents($filePath),
+        ]);
+    }
+
+    /**
+     * Envoyer pour signature employé
+     */
+    #[Route('/{id}/send-for-signature', name: 'app_admin_contracts_send_for_signature', methods: ['POST'])]
+    public function sendForSignature(Contract $contract): Response
+    {
+        $this->denyAccessUnlessGranted('CONTRACT_SEND_FOR_SIGNATURE', $contract);
+
+        try {
+            $this->signatureService->sendForSignature($contract);
+
+            $this->addFlash('success', 'Contrat envoyé pour signature à ' . $contract->getUser()->getFullName());
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Erreur : ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+    }
+
+    /**
+     * Valider un contrat signé
+     */
+    #[Route('/{id}/validate-signed', name: 'app_admin_contracts_validate_signed', methods: ['POST'])]
+    public function validateSigned(Contract $contract): Response
+    {
+        $this->denyAccessUnlessGranted('CONTRACT_VALIDATE_SIGNED', $contract);
+
+        try {
+            $this->contractManager->validateSignedContract($contract, $this->getUser());
+            $this->addFlash('success', 'Contrat validé et activé avec succès.');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Erreur : ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+    }
+
+    /**
+     * Annuler un contrat
+     */
+    #[Route('/{id}/cancel', name: 'app_admin_contracts_cancel', methods: ['GET', 'POST'])]
+    public function cancel(Contract $contract, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('CONTRACT_CANCEL', $contract);
+
+        if ($request->isMethod('POST')) {
+            $reason = $request->request->get('reason');
+
+            if (!$reason) {
+                $this->addFlash('error', 'La raison de l\'annulation est obligatoire.');
+            } else {
+                try {
+                    $this->contractManager->cancelContract($contract, $reason);
+                    $this->addFlash('success', 'Contrat annulé avec succès.');
+                    return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+                } catch (\Exception $e) {
+                    $this->addFlash('error', 'Erreur : ' . $e->getMessage());
+                }
+            }
+        }
+
+        return $this->render('admin/contracts/cancel_form.html.twig', [
+            'contract' => $contract,
+        ]);
+    }
+
+    /**
+     * Renvoyer email signature
+     */
+    #[Route('/{id}/resend-signature', name: 'app_admin_contracts_resend_signature', methods: ['POST'])]
+    public function resendSignature(Contract $contract): Response
+    {
+        $this->denyAccessUnlessGranted('CONTRACT_RESEND_SIGNATURE', $contract);
+
+        try {
+            $this->signatureService->resendSignatureEmail($contract);
+
+            $this->addFlash('success', 'Email de signature renvoyé avec succès.');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Erreur : ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+    }
+
+    /**
+     * Liste contrats en attente validation
+     */
+    #[Route('/pending-validation', name: 'app_admin_contracts_pending_validation', methods: ['GET'])]
+    public function pendingValidation(): Response
+    {
+        $contracts = $this->contractRepository->findPendingValidation();
+
+        return $this->render('admin/contracts/pending_validation.html.twig', [
+            'contracts' => $contracts,
         ]);
     }
 

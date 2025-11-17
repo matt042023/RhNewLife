@@ -33,19 +33,27 @@ class Contract
         self::TYPE_OTHER => 'Autre',
     ];
 
-    // Statuts du contrat
-    public const STATUS_DRAFT = 'draft';
-    public const STATUS_ACTIVE = 'active';
-    public const STATUS_SIGNED = 'signed';
-    public const STATUS_SUSPENDED = 'suspended';
-    public const STATUS_TERMINATED = 'terminated';
+    // Statuts du contrat (WF09)
+    public const STATUS_DRAFT = 'DRAFT';
+    public const STATUS_PENDING_SIGNATURE = 'PENDING_SIGNATURE';
+    public const STATUS_SIGNED_PENDING_VALIDATION = 'SIGNED_PENDING_VALIDATION';
+    public const STATUS_ACTIVE = 'ACTIVE';
+    public const STATUS_REPLACED = 'REPLACED';
+    public const STATUS_ARCHIVED = 'ARCHIVED';
+    public const STATUS_CANCELLED = 'CANCELLED';
+    public const STATUS_SUSPENDED = 'SUSPENDED';
+    public const STATUS_TERMINATED = 'TERMINATED';
 
     public const STATUSES = [
         self::STATUS_DRAFT => 'Brouillon',
+        self::STATUS_PENDING_SIGNATURE => 'En attente de signature',
+        self::STATUS_SIGNED_PENDING_VALIDATION => 'Signé - En attente de validation',
         self::STATUS_ACTIVE => 'Actif',
-        self::STATUS_SIGNED => 'Signé',
+        self::STATUS_REPLACED => 'Remplacé',
+        self::STATUS_ARCHIVED => 'Archivé',
+        self::STATUS_CANCELLED => 'Annulé',
         self::STATUS_SUSPENDED => 'Suspendu',
-        self::STATUS_TERMINATED => 'Terminé',
+        self::STATUS_TERMINATED => 'Résilié',
     ];
 
     #[ORM\Id]
@@ -96,7 +104,7 @@ class Contract
     #[ORM\Column(options: ['default' => false])]
     private bool $prevoyance = false;
 
-    #[ORM\Column(length: 20, options: ['default' => self::STATUS_DRAFT])]
+    #[ORM\Column(length: 30, options: ['default' => self::STATUS_DRAFT])]
     private string $status = self::STATUS_DRAFT;
 
     #[ORM\Column(options: ['default' => 1])]
@@ -121,6 +129,32 @@ class Contract
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $createdBy = null;
+
+    #[ORM\ManyToOne(targetEntity: TemplateContrat::class, inversedBy: 'contracts')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?TemplateContrat $template = null;
+
+    #[ORM\Column(type: Types::STRING, length: 500, nullable: true)]
+    private ?string $draftFileUrl = null;
+
+    #[ORM\Column(type: Types::STRING, length: 500, nullable: true)]
+    private ?string $signedFileUrl = null;
+
+    #[ORM\Column(type: Types::STRING, length: 100, nullable: true, unique: true)]
+    private ?string $signatureToken = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $tokenExpiresAt = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?User $validatedBy = null;
+
+    #[ORM\Column(type: Types::STRING, length: 45, nullable: true)]
+    private ?string $signatureIp = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $signatureUserAgent = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $validatedAt = null;
@@ -508,7 +542,10 @@ class Contract
 
     public function isSigned(): bool
     {
-        return $this->status === self::STATUS_SIGNED;
+        return in_array($this->status, [
+            self::STATUS_SIGNED_PENDING_VALIDATION,
+            self::STATUS_ACTIVE,
+        ]);
     }
 
     public function isTerminated(): bool
@@ -564,5 +601,193 @@ class Contract
         }
 
         return (string) round((float) $this->baseSalary * 0.78, 2);
+    }
+
+    // Nouveaux getters/setters pour WF09
+
+    public function getTemplate(): ?TemplateContrat
+    {
+        return $this->template;
+    }
+
+    public function setTemplate(?TemplateContrat $template): static
+    {
+        $this->template = $template;
+        return $this;
+    }
+
+    public function getDraftFileUrl(): ?string
+    {
+        return $this->draftFileUrl;
+    }
+
+    public function setDraftFileUrl(?string $draftFileUrl): static
+    {
+        $this->draftFileUrl = $draftFileUrl;
+        return $this;
+    }
+
+    public function getSignedFileUrl(): ?string
+    {
+        return $this->signedFileUrl;
+    }
+
+    public function setSignedFileUrl(?string $signedFileUrl): static
+    {
+        $this->signedFileUrl = $signedFileUrl;
+        return $this;
+    }
+
+    public function getSignatureToken(): ?string
+    {
+        return $this->signatureToken;
+    }
+
+    public function setSignatureToken(?string $signatureToken): static
+    {
+        $this->signatureToken = $signatureToken;
+        return $this;
+    }
+
+    public function getTokenExpiresAt(): ?\DateTimeInterface
+    {
+        return $this->tokenExpiresAt;
+    }
+
+    public function setTokenExpiresAt(?\DateTimeInterface $tokenExpiresAt): static
+    {
+        $this->tokenExpiresAt = $tokenExpiresAt;
+        return $this;
+    }
+
+    public function getValidatedBy(): ?User
+    {
+        return $this->validatedBy;
+    }
+
+    public function setValidatedBy(?User $validatedBy): static
+    {
+        $this->validatedBy = $validatedBy;
+        return $this;
+    }
+
+    public function getSignatureIp(): ?string
+    {
+        return $this->signatureIp;
+    }
+
+    public function setSignatureIp(?string $signatureIp): static
+    {
+        $this->signatureIp = $signatureIp;
+        return $this;
+    }
+
+    public function getSignatureUserAgent(): ?string
+    {
+        return $this->signatureUserAgent;
+    }
+
+    public function setSignatureUserAgent(?string $signatureUserAgent): static
+    {
+        $this->signatureUserAgent = $signatureUserAgent;
+        return $this;
+    }
+
+    // Nouvelles méthodes helper pour WF09
+
+    public function isPendingSignature(): bool
+    {
+        return $this->status === self::STATUS_PENDING_SIGNATURE;
+    }
+
+    public function isSignedPendingValidation(): bool
+    {
+        return $this->status === self::STATUS_SIGNED_PENDING_VALIDATION;
+    }
+
+    public function isReplaced(): bool
+    {
+        return $this->status === self::STATUS_REPLACED;
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->status === self::STATUS_ARCHIVED;
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === self::STATUS_CANCELLED;
+    }
+
+    /**
+     * Vérifie si le contrat peut être signé par l'employé
+     */
+    public function canBeSigned(): bool
+    {
+        return $this->status === self::STATUS_PENDING_SIGNATURE
+            && $this->signatureToken !== null
+            && $this->isSignatureTokenValid();
+    }
+
+    /**
+     * Vérifie si le contrat peut être validé par l'admin
+     */
+    public function canBeValidated(): bool
+    {
+        return $this->status === self::STATUS_SIGNED_PENDING_VALIDATION;
+    }
+
+    /**
+     * Vérifie si le contrat peut être annulé
+     */
+    public function canBeCancelled(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_DRAFT,
+            self::STATUS_PENDING_SIGNATURE,
+            self::STATUS_SIGNED_PENDING_VALIDATION,
+        ]);
+    }
+
+    /**
+     * Vérifie si le token de signature est valide (non expiré)
+     */
+    public function isSignatureTokenValid(): bool
+    {
+        if (!$this->signatureToken || !$this->tokenExpiresAt) {
+            return false;
+        }
+
+        return $this->tokenExpiresAt > new \DateTime();
+    }
+
+    /**
+     * Retourne les jours travaillés formatés pour affichage
+     */
+    public function getWorkingDaysFormatted(): string
+    {
+        if (!$this->workingDays || empty($this->workingDays)) {
+            return 'Non défini';
+        }
+
+        $days = [
+            'monday' => 'Lundi',
+            'tuesday' => 'Mardi',
+            'wednesday' => 'Mercredi',
+            'thursday' => 'Jeudi',
+            'friday' => 'Vendredi',
+            'saturday' => 'Samedi',
+            'sunday' => 'Dimanche',
+        ];
+
+        $formatted = [];
+        foreach ($this->workingDays as $day) {
+            if (isset($days[$day])) {
+                $formatted[] = $days[$day];
+            }
+        }
+
+        return implode(', ', $formatted);
     }
 }

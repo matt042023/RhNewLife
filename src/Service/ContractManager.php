@@ -81,7 +81,7 @@ class ContractManager
 
         // Si c'est un avenant, clôturer le contrat parent automatiquement
         $parentContract = $contract->getParentContract();
-        if ($parentContract && in_array($parentContract->getStatus(), [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED])) {
+        if ($parentContract && in_array($parentContract->getStatus(), [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED_PENDING_VALIDATION])) {
             $parentContract->setStatus(Contract::STATUS_TERMINATED);
             $parentContract->setTerminationReason('Remplacé par avenant version ' . $contract->getVersion());
             $parentContract->setTerminatedAt(new \DateTime());
@@ -158,7 +158,7 @@ class ContractManager
             ->setFileSize($fileSize);
 
         $contract->addDocument($document);
-        $contract->setStatus(Contract::STATUS_SIGNED);
+        $contract->setStatus(Contract::STATUS_SIGNED_PENDING_VALIDATION);
         $contract->setSignedAt(new \DateTime());
 
         $this->entityManager->persist($document);
@@ -178,7 +178,7 @@ class ContractManager
      */
     public function createAmendment(Contract $parentContract, array $data, ?string $reason = null): Contract
     {
-        if (!in_array($parentContract->getStatus(), [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED])) {
+        if (!in_array($parentContract->getStatus(), [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED_PENDING_VALIDATION])) {
             throw new \RuntimeException('Seuls les contrats actifs ou signés peuvent faire l\'objet d\'un avenant.');
         }
 
@@ -224,7 +224,7 @@ class ContractManager
         foreach ($user->getContracts() as $otherContract) {
             if (
                 $otherContract->getId() !== $contract->getId()
-                && in_array($otherContract->getStatus(), [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED])
+                && in_array($otherContract->getStatus(), [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED_PENDING_VALIDATION])
             ) {
                 $hasOtherActiveContracts = true;
                 break;
@@ -408,6 +408,131 @@ class ContractManager
             $user->getIban() ?? 'Non renseigné',
             $user->getBic() ?? 'Non renseigné'
         );
+    }
+
+    // ===== NOUVELLES MÉTHODES WF09 =====
+
+    /**
+     * Crée un contrat depuis un template
+     * Génère automatiquement le brouillon PDF
+     */
+    public function createContractFromTemplate(
+        User $user,
+        \App\Entity\TemplateContrat $template,
+        array $data,
+        \App\Service\ContractGeneratorService $generator
+    ): Contract {
+        // Vérifier qu'il n'y a pas déjà un contrat actif
+        if ($this->hasActiveContract($user)) {
+            throw new \RuntimeException('Cet utilisateur a déjà un contrat actif. Créez un avenant ou clôturez le contrat actuel.');
+        }
+
+        // Créer le contrat
+        $contract = new Contract();
+        $contract->setUser($user);
+        $contract->setTemplate($template);
+        $this->populateContract($contract, $data);
+        $contract->setVersion(1);
+        $contract->setStatus(Contract::STATUS_DRAFT);
+
+        $this->entityManager->persist($contract);
+        $this->entityManager->flush();
+
+        // Générer le brouillon PDF
+        try {
+            $draftUrl = $generator->generateDraftContract($contract, $template);
+            $contract->setDraftFileUrl($draftUrl);
+            $this->entityManager->flush();
+        } catch (\Exception $e) {
+            // Le contrat a été créé mais la génération du PDF a échoué
+            // On peut décider de supprimer le contrat ou de laisser sans PDF
+            throw new \RuntimeException('Erreur lors de la génération du brouillon: ' . $e->getMessage(), 0, $e);
+        }
+
+        // Dispatcher l'event
+        $this->eventDispatcher->dispatch(
+            new \App\Domain\Event\ContractCreatedEvent($contract),
+            \App\Domain\Event\ContractCreatedEvent::NAME
+        );
+
+        return $contract;
+    }
+
+    /**
+     * Valide un contrat signé par l'employé (action admin)
+     */
+    public function validateSignedContract(Contract $contract, User $admin): void
+    {
+        if ($contract->getStatus() !== Contract::STATUS_SIGNED_PENDING_VALIDATION) {
+            throw new \RuntimeException('Seuls les contrats signés en attente de validation peuvent être validés.');
+        }
+
+        // Passer le contrat à ACTIVE
+        $contract->setStatus(Contract::STATUS_ACTIVE);
+        $contract->setValidatedBy($admin);
+        $contract->setValidatedAt(new \DateTime());
+
+        // Si ce contrat remplace un autre (avenant), archiver l'ancien
+        $parentContract = $contract->getParentContract();
+        if ($parentContract && in_array($parentContract->getStatus(), [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED_PENDING_VALIDATION])) {
+            $parentContract->setStatus(Contract::STATUS_REPLACED);
+            $parentContract->setTerminationReason('Remplacé par avenant version ' . $contract->getVersion());
+            $parentContract->setTerminatedAt(new \DateTime());
+        }
+
+        // Définir la date d'embauche si elle n'existe pas
+        $user = $contract->getUser();
+        if ($user && $user->getHiringDate() === null) {
+            $user->setHiringDate($contract->getStartDate());
+        }
+
+        // Activer l'utilisateur si nécessaire
+        if ($user && $user->getStatus() === \App\Entity\User::STATUS_ONBOARDING) {
+            $user->setStatus(\App\Entity\User::STATUS_ACTIVE);
+        }
+
+        $this->entityManager->flush();
+
+        // TODO: Envoyer email de notification à l'employé
+    }
+
+    /**
+     * Annule un contrat
+     */
+    public function cancelContract(Contract $contract, string $reason): void
+    {
+        if (!$contract->canBeCancelled()) {
+            throw new \RuntimeException('Ce contrat ne peut pas être annulé dans son état actuel.');
+        }
+
+        $contract->setStatus(Contract::STATUS_CANCELLED);
+        $contract->setTerminationReason($reason);
+        $contract->setTerminatedAt(new \DateTime());
+
+        // Invalider le token de signature si existant
+        if ($contract->getSignatureToken()) {
+            $contract->setSignatureToken(null);
+            $contract->setTokenExpiresAt(null);
+        }
+
+        $this->entityManager->flush();
+
+        // TODO: Envoyer email de notification si nécessaire
+    }
+
+    /**
+     * Archive un contrat
+     */
+    public function archiveContract(Contract $contract): void
+    {
+        if ($contract->getStatus() === Contract::STATUS_ARCHIVED) {
+            throw new \RuntimeException('Ce contrat est déjà archivé.');
+        }
+
+        $contract->setStatus(Contract::STATUS_ARCHIVED);
+        $contract->setTerminatedAt(new \DateTime());
+
+        $this->entityManager->flush();
     }
 }
 

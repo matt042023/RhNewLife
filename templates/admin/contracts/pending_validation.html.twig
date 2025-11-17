@@ -1,0 +1,98 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Contrats en attente de validation - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gray-50 p-8">
+	<div class="max-w-7xl mx-auto">
+
+		{# Header #}
+		<div class="mb-8">
+			<h1 class="text-3xl font-bold text-gray-900">Contrats en attente de validation</h1>
+			<p class="text-gray-600 mt-1">Contrats signés par les employés nécessitant votre validation</p>
+		</div>
+
+		{# Flash messages #}
+		{% for label, messages in app.flashes %}
+			{% for message in messages %}
+				<div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-6">
+					{{ message }}
+				</div>
+			{% endfor %}
+		{% endfor %}
+
+		{# Liste des contrats #}
+		<div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+			{% if contracts is empty %}
+				<div class="p-12 text-center text-gray-500">
+					<svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+					</svg>
+					<p class="text-lg font-medium">Aucun contrat en attente</p>
+					<p class="mt-2">Tous les contrats signés ont été validés</p>
+				</div>
+			{% else %}
+				<table class="table w-full">
+					<thead>
+						<tr>
+							<th>Employé</th>
+							<th>Type</th>
+							<th>Date signature</th>
+							<th>Détails signature</th>
+							<th class="text-right">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for contract in contracts %}
+							<tr>
+								<td>
+									<div>
+										<div class="font-semibold">{{ contract.user.fullName }}</div>
+										<div class="text-sm text-gray-600">{{ contract.user.matricule }}</div>
+									</div>
+								</td>
+								<td>
+									<span class="badge badge-neutral">{{ contract.typeLabel }}</span>
+									{% if contract.isAmendment %}
+										<span class="badge badge-info ml-1">v{{ contract.version }}</span>
+									{% endif %}
+								</td>
+								<td>
+									<div class="text-sm">
+										{{ contract.signedAt|date('d/m/Y à H:i') }}
+									</div>
+								</td>
+								<td class="text-sm text-gray-600">
+									<div>IP: {{ contract.signatureIp }}</div>
+									<div class="truncate max-w-xs" title="{{ contract.signatureUserAgent }}">
+										{{ contract.signatureUserAgent|slice(0, 50) }}...
+									</div>
+								</td>
+								<td>
+									<div class="flex gap-2 justify-end">
+										<a href="{{ path('app_admin_contracts_view', {id: contract.id}) }}"
+										   class="btn btn-sm btn-ghost" title="Voir">
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+											</svg>
+										</a>
+										<form method="post" action="{{ path('app_admin_contracts_validate_signed', {id: contract.id}) }}" class="inline">
+											<button type="submit" class="btn btn-sm btn-success" title="Valider">
+												<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+												</svg>
+												Valider
+											</button>
+										</form>
+									</div>
+								</td>
+							</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			{% endif %}
+		</div>
+	</div>
+</div>
+{% endblock %}

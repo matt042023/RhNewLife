@@ -72,7 +72,7 @@ class ContractRepository extends ServiceEntityRepository
             ->andWhere('c.endDate IS NOT NULL')
             ->andWhere('c.endDate <= :targetDate')
             ->andWhere('c.endDate >= :now')
-            ->setParameter('statuses', [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED])
+            ->setParameter('statuses', [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED_PENDING_VALIDATION])
             ->setParameter('targetDate', $targetDate)
             ->setParameter('now', new \DateTime())
             ->orderBy('c.endDate', 'ASC')
@@ -92,7 +92,7 @@ class ContractRepository extends ServiceEntityRepository
             ->andWhere('c.essaiEndDate IS NOT NULL')
             ->andWhere('c.essaiEndDate <= :targetDate')
             ->andWhere('c.essaiEndDate >= :now')
-            ->setParameter('statuses', [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED])
+            ->setParameter('statuses', [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED_PENDING_VALIDATION])
             ->setParameter('targetDate', $targetDate)
             ->setParameter('now', new \DateTime())
             ->orderBy('c.essaiEndDate', 'ASC')
@@ -108,7 +108,7 @@ class ContractRepository extends ServiceEntityRepository
         $results = $this->createQueryBuilder('c')
             ->select('c.type', 'COUNT(c.id) as count')
             ->where('c.status IN (:statuses)')
-            ->setParameter('statuses', [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED])
+            ->setParameter('statuses', [Contract::STATUS_ACTIVE, Contract::STATUS_SIGNED_PENDING_VALIDATION])
             ->groupBy('c.type')
             ->getQuery()
             ->getResult();
@@ -136,5 +136,85 @@ class ContractRepository extends ServiceEntityRepository
             ->orderBy('c.createdAt', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Trouve contrats en attente de signature
+     */
+    public function findPendingSignature(): array
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.status = :status')
+            ->setParameter('status', Contract::STATUS_PENDING_SIGNATURE)
+            ->orderBy('c.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Trouve contrats signés en attente validation admin
+     */
+    public function findPendingValidation(): array
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.status = :status')
+            ->setParameter('status', Contract::STATUS_SIGNED_PENDING_VALIDATION)
+            ->orderBy('c.signedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Trouve contrat par token signature
+     */
+    public function findBySignatureToken(string $token): ?Contract
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.signatureToken = :token')
+            ->setParameter('token', $token)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Trouve contrats remplacés d'un utilisateur
+     */
+    public function findReplacedContracts(User $user): array
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.user = :user')
+            ->andWhere('c.status = :status')
+            ->setParameter('user', $user)
+            ->setParameter('status', Contract::STATUS_REPLACED)
+            ->orderBy('c.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Trouve tokens expirés à nettoyer
+     */
+    public function findExpiredTokens(): array
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.signatureToken IS NOT NULL')
+            ->andWhere('c.tokenExpiresAt < :now')
+            ->andWhere('c.status = :status')
+            ->setParameter('now', new \DateTime())
+            ->setParameter('status', Contract::STATUS_PENDING_SIGNATURE)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Sauvegarde un contrat
+     */
+    public function save(Contract $contract, bool $flush = false): void
+    {
+        $this->getEntityManager()->persist($contract);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
     }
 }

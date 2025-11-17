@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Contrat à signer</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			line-height: 1.6;
+			color: #333;
+			max-width: 600px;
+			margin: 0 auto;
+			padding: 20px;
+			background-color: #f5f5f5;
+		}
+		.email-container {
+			background-color: #ffffff;
+			border-radius: 8px;
+			padding: 30px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		}
+		.header {
+			text-align: center;
+			margin-bottom: 30px;
+			padding-bottom: 20px;
+			border-bottom: 3px solid #3b82f6;
+		}
+		.header h1 {
+			color: #1e40af;
+			margin: 0 0 10px 0;
+			font-size: 24px;
+		}
+		.content {
+			margin-bottom: 30px;
+		}
+		.contract-details {
+			background-color: #eff6ff;
+			border-left: 4px solid #3b82f6;
+			padding: 15px;
+			margin: 20px 0;
+		}
+		.contract-details h3 {
+			margin-top: 0;
+			color: #1e40af;
+		}
+		.contract-details p {
+			margin: 8px 0;
+		}
+		.btn {
+			display: inline-block;
+			padding: 15px 30px;
+			background-color: #3b82f6;
+			color: #ffffff;
+			text-decoration: none;
+			border-radius: 6px;
+			font-weight: bold;
+			text-align: center;
+			margin: 20px 0;
+		}
+		.btn:hover {
+			background-color: #2563eb;
+		}
+		.warning {
+			background-color: #fef3c7;
+			border-left: 4px solid #f59e0b;
+			padding: 15px;
+			margin: 20px 0;
+		}
+		.footer {
+			margin-top: 30px;
+			padding-top: 20px;
+			border-top: 1px solid #e5e7eb;
+			font-size: 12px;
+			color: #6b7280;
+			text-align: center;
+		}
+	</style>
+</head>
+<body>
+	<div class="email-container">
+		<div class="header">
+			<h1>📝 Contrat de travail à signer</h1>
+			<p>RH NewLife</p>
+		</div>
+
+		<div class="content">
+			<p>Bonjour {{ employee.firstName }},</p>
+
+			<p>Votre contrat de travail est prêt et nécessite votre signature électronique.</p>
+
+			<div class="contract-details">
+				<h3>Détails du contrat</h3>
+				<p><strong>Type :</strong> {{ contract.type }}</p>
+				<p><strong>Date de début :</strong> {{ contract.startDate|date('d/m/Y') }}</p>
+				{% if contract.endDate %}
+					<p><strong>Date de fin :</strong> {{ contract.endDate|date('d/m/Y') }}</p>
+				{% endif %}
+				<p><strong>Poste :</strong> {{ employee.position }}</p>
+			</p>
+			</div>
+
+			<p style="text-align: center;">
+				<a href="{{ signatureUrl }}" class="btn">
+					📋 Consulter et signer mon contrat
+				</a>
+			</p>
+
+			<div class="warning">
+				<p><strong>⚠️ Important :</strong></p>
+				<p>Ce lien de signature est valide jusqu'au <strong>{{ tokenExpiresAt|date('d/m/Y à H:i') }}</strong>.</p>
+				<p>Après cette date, vous devrez demander un nouveau lien au service RH.</p>
+			</div>
+
+			<p>Si vous avez des questions concernant votre contrat, n'hésitez pas à contacter le service RH.</p>
+
+			<p>
+				Cordialement,<br>
+				<strong>L'équipe RH NewLife</strong>
+			</p>
+		</div>
+
+		<div class="footer">
+			<p>Cet email a été envoyé automatiquement. Merci de ne pas répondre directement à ce message.</p>
+			<p>© {{ 'now'|date('Y') }} RH NewLife - Tous droits réservés</p>
+		</div>
+	</div>
+</body>
+</html>

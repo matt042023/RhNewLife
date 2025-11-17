@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Contrat annulé</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			line-height: 1.6;
+			color: #333;
+			max-width: 600px;
+			margin: 0 auto;
+			padding: 20px;
+			background-color: #f5f5f5;
+		}
+		.email-container {
+			background-color: #ffffff;
+			border-radius: 8px;
+			padding: 30px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		}
+		.header {
+			text-align: center;
+			margin-bottom: 30px;
+			padding-bottom: 20px;
+			border-bottom: 3px solid #ef4444;
+		}
+		.header h1 {
+			color: #dc2626;
+			margin: 0 0 10px 0;
+			font-size: 24px;
+		}
+		.content {
+			margin-bottom: 30px;
+		}
+		.contract-details {
+			background-color: #fee2e2;
+			border-left: 4px solid #ef4444;
+			padding: 15px;
+			margin: 20px 0;
+		}
+		.contract-details h3 {
+			margin-top: 0;
+			color: #dc2626;
+		}
+		.contract-details p {
+			margin: 8px 0;
+		}
+		.reason-box {
+			background-color: #f3f4f6;
+			padding: 15px;
+			border-radius: 6px;
+			margin: 20px 0;
+			border-left: 4px solid #6b7280;
+		}
+		.reason-box h4 {
+			margin-top: 0;
+		}
+		.contact-info {
+			background-color: #eff6ff;
+			border-left: 4px solid #3b82f6;
+			padding: 15px;
+			margin: 20px 0;
+		}
+		.footer {
+			margin-top: 30px;
+			padding-top: 20px;
+			border-top: 1px solid #e5e7eb;
+			font-size: 12px;
+			color: #6b7280;
+			text-align: center;
+		}
+	</style>
+</head>
+<body>
+	<div class="email-container">
+		<div class="header">
+			<h1>Contrat annulé</h1>
+			<p>Information importante</p>
+		</div>
+
+		<div class="content">
+			<p>Bonjour {{ employee.firstName }},</p>
+
+			<p>Nous vous informons que le contrat de travail suivant a été <strong>annulé</strong>.</p>
+
+			<div class="contract-details">
+				<h3>Informations du contrat</h3>
+				<p><strong>Type :</strong> {{ contract.type }}</p>
+				<p><strong>Date de début prévue :</strong> {{ contract.startDate|date('d/m/Y') }}</p>
+				{% if contract.endDate %}
+					<p><strong>Date de fin prévue :</strong> {{ contract.endDate|date('d/m/Y') }}</p>
+				{% endif %}
+				<p><strong>Statut :</strong> <span style="color: #dc2626; font-weight: bold;">✗ Annulé</span></p>
+			</div>
+
+			{% if reason %}
+				<div class="reason-box">
+					<h4>Raison de l'annulation</h4>
+					<p>{{ reason }}</p>
+				</div>
+			{% endif %}
+
+			<div class="contact-info">
+				<p><strong>ℹ️ Besoin d'informations ?</strong></p>
+				<p>Si vous avez des questions concernant cette annulation, nous vous invitons à contacter le service RH dans les plus brefs délais.</p>
+			</div>
+
+			<p>
+				Cordialement,<br>
+				<strong>L'équipe RH NewLife</strong>
+			</p>
+		</div>
+
+		<div class="footer">
+			<p>Cet email a été envoyé automatiquement.</p>
+			<p>© {{ 'now'|date('Y') }} RH NewLife - Tous droits réservés</p>
+		</div>
+	</div>
+</body>
+</html>

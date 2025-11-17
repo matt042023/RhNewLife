@@ -13,10 +13,14 @@ class ContractVoter extends Voter
     public const VIEW = 'CONTRACT_VIEW';
     public const EDIT = 'CONTRACT_EDIT';
     public const VALIDATE = 'CONTRACT_VALIDATE';
+    public const SEND_FOR_SIGNATURE = 'CONTRACT_SEND_FOR_SIGNATURE';
+    public const RESEND_SIGNATURE = 'CONTRACT_RESEND_SIGNATURE';
+    public const VALIDATE_SIGNED = 'CONTRACT_VALIDATE_SIGNED';
     public const SEND_TO_ACCOUNTING = 'CONTRACT_SEND_TO_ACCOUNTING';
     public const UPLOAD_SIGNED = 'CONTRACT_UPLOAD_SIGNED';
     public const CREATE_AMENDMENT = 'CONTRACT_CREATE_AMENDMENT';
     public const CLOSE = 'CONTRACT_CLOSE';
+    public const CANCEL = 'CONTRACT_CANCEL';
 
     protected function supports(string $attribute, mixed $subject): bool
     {
@@ -30,10 +34,14 @@ class ContractVoter extends Voter
             self::VIEW,
             self::EDIT,
             self::VALIDATE,
+            self::SEND_FOR_SIGNATURE,
+            self::RESEND_SIGNATURE,
+            self::VALIDATE_SIGNED,
             self::SEND_TO_ACCOUNTING,
             self::UPLOAD_SIGNED,
             self::CREATE_AMENDMENT,
             self::CLOSE,
+            self::CANCEL,
         ]) && $subject instanceof Contract;
     }
 
@@ -50,10 +58,14 @@ class ContractVoter extends Voter
             self::VIEW => $this->canView($currentUser, $subject),
             self::EDIT => $this->canEdit($currentUser, $subject),
             self::VALIDATE => $this->canValidate($currentUser, $subject),
+            self::SEND_FOR_SIGNATURE => $this->canSendForSignature($currentUser, $subject),
+            self::RESEND_SIGNATURE => $this->canResendSignature($currentUser, $subject),
+            self::VALIDATE_SIGNED => $this->canValidateSigned($currentUser, $subject),
             self::SEND_TO_ACCOUNTING => $this->canSendToAccounting($currentUser, $subject),
             self::UPLOAD_SIGNED => $this->canUploadSigned($currentUser, $subject),
             self::CREATE_AMENDMENT => $this->canCreateAmendment($currentUser, $subject),
             self::CLOSE => $this->canClose($currentUser, $subject),
+            self::CANCEL => $this->canCancel($currentUser, $subject),
             default => false,
         };
     }
@@ -113,10 +125,10 @@ class ContractVoter extends Voter
             return false;
         }
 
-        // Le contrat doit être validé (active ou signed)
+        // Le contrat doit être validé (active ou signé en attente de validation)
         return in_array($contract->getStatus(), [
             Contract::STATUS_ACTIVE,
-            Contract::STATUS_SIGNED,
+            Contract::STATUS_SIGNED_PENDING_VALIDATION,
         ]);
     }
 
@@ -138,10 +150,10 @@ class ContractVoter extends Voter
             return false;
         }
 
-        // Le contrat doit être actif ou signé
+        // Le contrat doit être actif ou signé en attente de validation
         return in_array($contract->getStatus(), [
             Contract::STATUS_ACTIVE,
-            Contract::STATUS_SIGNED,
+            Contract::STATUS_SIGNED_PENDING_VALIDATION,
         ]);
     }
 
@@ -154,6 +166,53 @@ class ContractVoter extends Voter
 
         // Ne peut pas clôturer un contrat déjà terminé
         return $contract->getStatus() !== Contract::STATUS_TERMINATED;
+    }
+
+    private function canSendForSignature(User $currentUser, Contract $contract): bool
+    {
+        // Seuls les admins peuvent envoyer pour signature
+        if (!$this->hasRole($currentUser, 'ROLE_ADMIN')) {
+            return false;
+        }
+
+        // Ne peut envoyer que les contrats en brouillon
+        return $contract->getStatus() === Contract::STATUS_DRAFT;
+    }
+
+    private function canResendSignature(User $currentUser, Contract $contract): bool
+    {
+        // Seuls les admins peuvent renvoyer le lien de signature
+        if (!$this->hasRole($currentUser, 'ROLE_ADMIN')) {
+            return false;
+        }
+
+        // Ne peut renvoyer que si le contrat est en attente de signature
+        return $contract->getStatus() === Contract::STATUS_PENDING_SIGNATURE;
+    }
+
+    private function canValidateSigned(User $currentUser, Contract $contract): bool
+    {
+        // Seuls les admins peuvent valider les contrats signés
+        if (!$this->hasRole($currentUser, 'ROLE_ADMIN')) {
+            return false;
+        }
+
+        // Ne peut valider que les contrats signés en attente de validation
+        return $contract->getStatus() === Contract::STATUS_SIGNED_PENDING_VALIDATION;
+    }
+
+    private function canCancel(User $currentUser, Contract $contract): bool
+    {
+        // Seuls les admins peuvent annuler les contrats
+        if (!$this->hasRole($currentUser, 'ROLE_ADMIN')) {
+            return false;
+        }
+
+        // Ne peut annuler que les contrats en brouillon ou en attente de signature
+        return in_array($contract->getStatus(), [
+            Contract::STATUS_DRAFT,
+            Contract::STATUS_PENDING_SIGNATURE,
+        ]);
     }
 
     private function hasRole(User $user, array|string $roles): bool

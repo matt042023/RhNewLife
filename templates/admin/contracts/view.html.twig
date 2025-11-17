@@ -28,14 +28,24 @@
 				</div>
 
 				<div>
-					{% if contract.status == 'draft' %}
+					{% if contract.status == 'DRAFT' %}
 						<span class="badge badge-neutral badge-lg">Brouillon</span>
-					{% elseif contract.status == 'active' %}
+					{% elseif contract.status == 'PENDING_SIGNATURE' %}
+						<span class="badge badge-warning badge-lg">En attente de signature</span>
+					{% elseif contract.status == 'SIGNED_PENDING_VALIDATION' %}
+						<span class="badge badge-info badge-lg">Signé - À valider</span>
+					{% elseif contract.status == 'ACTIVE' %}
 						<span class="badge badge-success badge-lg">Actif</span>
-					{% elseif contract.status == 'signed' %}
-						<span class="badge badge-info badge-lg">Signé</span>
-					{% elseif contract.status == 'terminated' %}
-						<span class="badge badge-neutral badge-lg">Terminé</span>
+					{% elseif contract.status == 'REPLACED' %}
+						<span class="badge badge-neutral badge-lg">Remplacé</span>
+					{% elseif contract.status == 'ARCHIVED' %}
+						<span class="badge badge-neutral badge-lg">Archivé</span>
+					{% elseif contract.status == 'CANCELLED' %}
+						<span class="badge badge-error badge-lg">Annulé</span>
+					{% elseif contract.status == 'SUSPENDED' %}
+						<span class="badge badge-warning badge-lg">Suspendu</span>
+					{% elseif contract.status == 'TERMINATED' %}
+						<span class="badge badge-neutral badge-lg">Résilié</span>
 					{% endif %}
 				</div>
 			</div>
@@ -53,7 +63,18 @@
 			<div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
 				<h2 class="text-lg font-bold text-gray-900 mb-4">Actions</h2>
 				<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-					{% if contract.status == 'draft' %}
+
+					{# Prévisualiser le contrat (tous les statuts) #}
+					<a href="{{ path('app_admin_contracts_preview', {id: contract.id}) }}" class="btn btn-outline justify-center" target="_blank">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+						</svg>
+						Prévisualiser
+					</a>
+
+					{# BROUILLON : Modifier et Envoyer pour signature #}
+					{% if contract.status == 'DRAFT' %}
 						<a href="{{ path('app_admin_contracts_edit', {id: contract.id}) }}" class="btn btn-secondary justify-center">
 							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -61,60 +82,115 @@
 							Modifier
 						</a>
 
-						<form method="post" action="{{ path('app_admin_contracts_validate', {id: contract.id}) }}" class="w-full">
-							<button type="submit" class="btn btn-success w-full justify-center">
+						<form method="post" action="{{ path('app_admin_contracts_send_for_signature', {id: contract.id}) }}" class="w-full" onsubmit="return confirm('Envoyer ce contrat pour signature à l\'employé ?')">
+							<button type="submit" class="btn btn-primary w-full justify-center">
 								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
 								</svg>
-								Valider
+								Envoyer pour signature
 							</button>
 						</form>
 					{% endif %}
 
-					{% if contract.status in ['active', 'signed'] %}
+					{# EN ATTENTE DE SIGNATURE : Renvoyer le lien #}
+					{% if contract.status == 'PENDING_SIGNATURE' %}
+						<form method="post" action="{{ path('app_admin_contracts_resend_signature', {id: contract.id}) }}" class="w-full">
+							<button type="submit" class="btn btn-warning w-full justify-center">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+								</svg>
+								Renvoyer le lien
+							</button>
+						</form>
+
+						<div class="col-span-2">
+							<div class="alert alert-warning">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+								</svg>
+								<span>En attente de signature par l'employé. Lien valide jusqu'au {{ contract.tokenExpiresAt|date('d/m/Y à H:i') }}</span>
+							</div>
+						</div>
+					{% endif %}
+
+					{# SIGNÉ EN ATTENTE DE VALIDATION : Valider le contrat #}
+					{% if contract.status == 'SIGNED_PENDING_VALIDATION' %}
+						<form method="post" action="{{ path('app_admin_contracts_validate_signed', {id: contract.id}) }}" class="w-full" onsubmit="return confirm('Valider ce contrat signé et le rendre actif ?')">
+							<button type="submit" class="btn btn-success w-full justify-center">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+								</svg>
+								Valider le contrat
+							</button>
+						</form>
+
+						{% if contract.signedFileUrl %}
+							<a href="{{ asset(contract.signedFileUrl) }}" class="btn btn-outline justify-center" target="_blank">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+								</svg>
+								Télécharger PDF signé
+							</a>
+						{% endif %}
+
+						<div class="col-span-2">
+							<div class="alert alert-info">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+								</svg>
+								<div>
+									<p class="font-semibold">Contrat signé le {{ contract.signedAt|date('d/m/Y à H:i') }}</p>
+									<p class="text-sm">IP: {{ contract.signatureIp ?? 'Non disponible' }}</p>
+								</div>
+							</div>
+						</div>
+					{% endif %}
+
+					{# ACTIF : Actions sur contrat actif #}
+					{% if contract.status == 'ACTIVE' %}
 						<form method="post" action="{{ path('app_admin_contracts_send_to_accounting', {id: contract.id}) }}" class="w-full">
 							<button type="submit" class="btn btn-info w-full justify-center">
 								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
 								</svg>
-								Envoyer compta
+								Envoyer à la compta
 							</button>
 						</form>
-					{% endif %}
 
-					{% if contract.status == 'active' %}
-						<button onclick="document.getElementById('upload-modal').classList.remove('hidden')" class="btn btn-primary justify-center">
-							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-							</svg>
-							Upload signé
-						</button>
-					{% endif %}
+						{% if contract.signedFileUrl %}
+							<a href="{{ asset(contract.signedFileUrl) }}" class="btn btn-outline justify-center" target="_blank">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+								</svg>
+								Télécharger PDF signé
+							</a>
+						{% endif %}
 
-					{% if signedDocument %}
-						<a href="{{ path('app_admin_contracts_download_signed', {id: contract.id}) }}" class="btn btn-outline justify-center" target="_blank" rel="noopener">
-							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-							</svg>
-							Telecharger signe
-						</a>
-					{% endif %}
-
-					{% if contract.status in ['active', 'signed'] %}
 						<a href="{{ path('app_admin_contracts_create_amendment', {id: contract.id}) }}" class="btn btn-warning justify-center">
 							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
 							</svg>
-							Avenant
+							Créer un avenant
 						</a>
 
-						<a href="{{ path('app_admin_contracts_close', {id: contract.id}) }}" class="btn btn-outline-danger justify-center">
+						<a href="{{ path('app_admin_contracts_close', {id: contract.id}) }}" class="btn btn-error justify-center">
 							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
 							</svg>
 							Clôturer
 						</a>
 					{% endif %}
+
+					{# BROUILLON, EN ATTENTE DE SIGNATURE : Annuler #}
+					{% if contract.status in ['DRAFT', 'PENDING_SIGNATURE'] %}
+						<a href="{{ path('app_admin_contracts_cancel', {id: contract.id}) }}" class="btn btn-error justify-center">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+							</svg>
+							Annuler
+						</a>
+					{% endif %}
+
 				</div>
 			</div>
 
@@ -286,7 +362,7 @@
 	</div>
 
 	{# Modal upload contrat signe #}
-	<div id="upload-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onclick="if(event.target === this) this.classList.add('hidden')">
+	<div id="upload-modal" class="fixed inset-0 z-50 bg-black/50 items-center justify-center p-4" onclick="if(event.target === this) this.style.display='none'" style="display: none;">
 		<div
 			class="relative w-full bg-white rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
 
@@ -296,7 +372,7 @@
 					<h3 class="text-xl font-bold text-gray-900">Upload contrat signé</h3>
 					<p class="text-sm text-gray-500 mt-1">Ajoutez la version signée du contrat au format PDF</p>
 				</div>
-				<button type="button" class="text-gray-400 hover:text-gray-600 transition" onclick="document.getElementById('upload-modal').classList.add('hidden')">
+				<button type="button" class="text-gray-400 hover:text-gray-600 transition" onclick="document.getElementById('upload-modal').style.display='none'">
 					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
 					</svg>
@@ -320,7 +396,7 @@
 
 				{# Actions #}
 				<div class="flex items-center justify-end gap-3 px-8 py-6 bg-gray-50 border-t border-gray-200">
-					<button type="button" onclick="document.getElementById('upload-modal').classList.add('hidden')" class="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors">
+					<button type="button" onclick="document.getElementById('upload-modal').style.display='none'" class="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors">
 						Annuler
 					</button>
 					<button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
