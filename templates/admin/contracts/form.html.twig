@@ -23,6 +23,22 @@
             </div>
         {% endif %}
 
+        {# Message d'information pour les avenants #}
+        {% if parentContract is defined and parentContract %}
+            <div class="alert alert-info mb-6">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <p class="font-semibold">Création d'un avenant (version {{ parentContract.version + 1 }})</p>
+                    <p class="text-sm">Les champs sont pré-remplis avec les données du contrat actuel. Modifiez uniquement ce qui change.</p>
+                    {% if parentContract.template %}
+                        <p class="text-sm">Template du contrat parent : <strong>{{ parentContract.template.name }}</strong></p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
         {# Form #}
         <form method="post" class="bg-white rounded-2xl shadow-lg p-8">
 

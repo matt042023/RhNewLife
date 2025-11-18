@@ -59,13 +59,32 @@ class ContractSignatureController extends AbstractController
         try {
             $this->signatureService->signContract($contract, $request);
 
-            return $this->render('contract_signature/signed_confirmation.html.twig', [
-                'contract' => $contract,
-                'employee' => $contract->getUser(),
+            // Rediriger vers la page de confirmation (compatible Turbo)
+            return $this->redirectToRoute('app_contract_signature_confirmation', [
+                'token' => $token,
             ]);
         } catch (\Exception $e) {
             $this->addFlash('error', 'Erreur lors de la signature : ' . $e->getMessage());
             return $this->redirectToRoute('app_contract_signature_sign', ['token' => $token]);
         }
+    }
+
+    /**
+     * Page de confirmation après signature
+     */
+    #[Route('/{token}/confirmation', name: 'app_contract_signature_confirmation', methods: ['GET'])]
+    public function confirmation(string $token): Response
+    {
+        // Récupérer le contrat (même avec token expiré pour afficher la confirmation)
+        $contract = $this->signatureService->getContractByToken($token);
+
+        if (!$contract) {
+            throw $this->createNotFoundException('Contrat non trouvé');
+        }
+
+        return $this->render('contract_signature/signed_confirmation.html.twig', [
+            'contract' => $contract,
+            'employee' => $contract->getUser(),
+        ]);
     }
 }

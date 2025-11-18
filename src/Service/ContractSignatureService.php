@@ -142,6 +142,29 @@ class ContractSignatureService
     }
 
     /**
+     * Récupère un contrat par son token (même si expiré ou déjà signé)
+     * Utilisé pour afficher la page de confirmation après signature
+     */
+    public function getContractByToken(string $token): ?Contract
+    {
+        $contract = $this->contractRepository->findBySignatureToken($token);
+
+        if (!$contract) {
+            return null;
+        }
+
+        // Accepter les contrats en attente de signature ou signés en attente de validation
+        if (!in_array($contract->getStatus(), [
+            Contract::STATUS_PENDING_SIGNATURE,
+            Contract::STATUS_SIGNED_PENDING_VALIDATION,
+        ])) {
+            return null;
+        }
+
+        return $contract;
+    }
+
+    /**
      * Traite la signature d'un contrat par l'employé
      */
     public function signContract(Contract $contract, Request $request): void
@@ -177,8 +200,8 @@ class ContractSignatureService
         // Changer le statut
         $contract->setStatus(Contract::STATUS_SIGNED_PENDING_VALIDATION);
 
-        // Invalider le token
-        $this->invalidateToken($contract);
+        // Ne pas invalider le token tout de suite pour permettre l'accès à la page de confirmation
+        // Le token sera invalidé par un cron job ou manuellement plus tard
 
         $this->entityManager->flush();
 

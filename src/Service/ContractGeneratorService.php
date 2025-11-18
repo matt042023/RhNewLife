@@ -22,7 +22,7 @@ class ContractGeneratorService
         private Environment $twig,
         string $projectDir
     ) {
-        $this->uploadsDir = $projectDir . '/var/uploads';
+        $this->uploadsDir = $projectDir . '/public/uploads';
     }
 
     /**
@@ -148,24 +148,19 @@ class ContractGeneratorService
         $fullPath = $targetDir . '/' . $filename;
         $relativePath = $subfolder . '/' . $filename;
 
-        // TODO: Implémenter la génération PDF avec Dompdf ou Snappy
-        // Pour l'instant, sauvegarde le HTML dans un fichier
-        // Cela sera remplacé par une vraie génération PDF après installation de la bibliothèque
-
         // Générer un HTML complet pour le PDF
         $pdfHtml = $this->wrapHtmlForPdf($html);
 
-        // Sauvegarder temporairement en HTML
-        // Dans la version finale, ceci sera remplacé par:
-        // $dompdf = new \Dompdf\Dompdf();
-        // $dompdf->loadHtml($pdfHtml);
-        // $dompdf->setPaper('A4', 'portrait');
-        // $dompdf->render();
-        // file_put_contents($fullPath, $dompdf->output());
+        // Générer le PDF avec Dompdf
+        $dompdf = new \Dompdf\Dompdf();
+        $dompdf->loadHtml($pdfHtml);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
 
-        file_put_contents($fullPath . '.html', $pdfHtml);
+        // Sauvegarder le PDF
+        file_put_contents($fullPath, $dompdf->output());
 
-        return $relativePath . '.html'; // Retourner .pdf après implémentation
+        return $relativePath;
     }
 
     /**

@@ -422,8 +422,11 @@ class ContractManager
         array $data,
         \App\Service\ContractGeneratorService $generator
     ): Contract {
-        // Vérifier qu'il n'y a pas déjà un contrat actif
-        if ($this->hasActiveContract($user)) {
+        // Vérifier s'il y a un contrat parent (avenant)
+        $isAmendment = isset($data['parentContract']);
+
+        // Vérifier qu'il n'y a pas déjà un contrat actif (sauf si c'est un avenant)
+        if (!$isAmendment && $this->hasActiveContract($user)) {
             throw new \RuntimeException('Cet utilisateur a déjà un contrat actif. Créez un avenant ou clôturez le contrat actuel.');
         }
 
@@ -431,8 +434,18 @@ class ContractManager
         $contract = new Contract();
         $contract->setUser($user);
         $contract->setTemplate($template);
+
+        // Si c'est un avenant, établir la relation parent-enfant
+        if ($isAmendment) {
+            $contract->setParentContract($data['parentContract']);
+            $contract->setVersion($data['version']);
+            // Retirer ces champs du tableau $data pour éviter les erreurs dans populateContract
+            unset($data['parentContract'], $data['version']);
+        } else {
+            $contract->setVersion(1);
+        }
+
         $this->populateContract($contract, $data);
-        $contract->setVersion(1);
         $contract->setStatus(Contract::STATUS_DRAFT);
 
         $this->entityManager->persist($contract);

@@ -42,6 +42,27 @@ class ContractController extends AbstractController
         $user = $this->getUserOrThrow($userId);
         $this->denyAccessUnlessGranted('CONTRACT_CREATE', $user);
 
+        // Gérer le cas de l'avenant : récupérer le contrat parent si présent
+        $parentContract = null;
+        $parentId = $request->query->getInt('parentId');
+
+        if ($parentId) {
+            $parentContract = $this->contractRepository->find($parentId);
+            if (!$parentContract) {
+                $this->addFlash('error', 'Contrat parent introuvable.');
+                return $this->redirectToRoute('app_admin_users_view', ['id' => $userId]);
+            }
+
+            // Vérifier que le parent appartient bien à cet utilisateur
+            if ($parentContract->getUser()->getId() !== $userId) {
+                $this->addFlash('error', 'Le contrat parent n\'appartient pas à cet utilisateur.');
+                return $this->redirectToRoute('app_admin_users_view', ['id' => $userId]);
+            }
+
+            // Vérifier les permissions pour créer un avenant
+            $this->denyAccessUnlessGranted('CONTRACT_CREATE_AMENDMENT', $parentContract);
+        }
+
         // Récupérer les templates actifs
         $activeTemplates = $this->templateContratRepository->findActiveTemplates();
 
@@ -96,6 +117,12 @@ class ContractController extends AbstractController
                     $data['workingDays'] = $workingDays;
                 }
 
+                // Si c'est un avenant, ajouter les données de relation parent
+                if ($parentContract) {
+                    $data['parentContract'] = $parentContract;
+                    $data['version'] = $parentContract->getVersion() + 1;
+                }
+
                 // Utiliser la méthode WF09 qui génère le PDF automatiquement
                 $contract = $this->contractManager->createContractFromTemplate(
                     $user,
@@ -104,7 +131,13 @@ class ContractController extends AbstractController
                     $this->contractGenerator
                 );
 
-                $this->addFlash('success', 'Contrat créé avec succès en mode brouillon. Le document a été généré depuis le modèle.');
+                // Message de succès approprié
+                if ($parentContract) {
+                    $this->addFlash('success', sprintf('Avenant créé avec succès (version %d). Le document a été généré depuis le modèle.', $contract->getVersion()));
+                } else {
+                    $this->addFlash('success', 'Contrat créé avec succès en mode brouillon. Le document a été généré depuis le modèle.');
+                }
+
                 return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
             } catch (\Exception $e) {
                 $errors[] = 'Erreur : ' . $e->getMessage();
@@ -119,18 +152,40 @@ class ContractController extends AbstractController
                     'formData' => $request->request->all(),
                     'isEdit' => false,
                     'contract' => null,
+                    'parentContract' => $parentContract,
                 ],
                 new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY)
             );
+        }
+
+        // Pré-remplir les données du parent si c'est un avenant
+        $formData = [];
+        if ($parentContract) {
+            $formData = [
+                'template_id' => $parentContract->getTemplate() ? $parentContract->getTemplate()->getId() : '',
+                'type' => $parentContract->getType(),
+                'start_date' => $parentContract->getStartDate() ? $parentContract->getStartDate()->format('Y-m-d') : '',
+                'end_date' => $parentContract->getEndDate() ? $parentContract->getEndDate()->format('Y-m-d') : '',
+                'essai_end_date' => $parentContract->getEssaiEndDate() ? $parentContract->getEssaiEndDate()->format('Y-m-d') : '',
+                'base_salary' => $parentContract->getBaseSalary(),
+                'prime' => $parentContract->getPrime(),
+                'activity_rate' => $parentContract->getActivityRate(),
+                'weekly_hours' => $parentContract->getWeeklyHours(),
+                'villa' => $parentContract->getVilla(),
+                'mutuelle' => $parentContract->isMutuelle(),
+                'prevoyance' => $parentContract->isPrevoyance(),
+                'working_days' => $parentContract->getWorkingDays(),
+            ];
         }
 
         return $this->render('admin/contracts/form.html.twig', [
             'user' => $user,
             'activeTemplates' => $activeTemplates,
             'errors' => [],
-            'formData' => [],
+            'formData' => $formData,
             'isEdit' => false,
             'contract' => null,
+            'parentContract' => $parentContract,
         ]);
     }
 
@@ -353,65 +408,15 @@ class ContractController extends AbstractController
     /**
      * Formulaire de création d'un avenant
      */
-    #[Route('/{id}/create-amendment', name: 'app_admin_contracts_create_amendment', methods: ['GET', 'POST'])]
-    public function createAmendment(Contract $contract, Request $request): Response
+    #[Route('/{id}/create-amendment', name: 'app_admin_contracts_create_amendment', methods: ['GET'])]
+    public function createAmendment(Contract $contract): Response
     {
         $this->denyAccessUnlessGranted('CONTRACT_CREATE_AMENDMENT', $contract);
 
-        if ($request->isMethod('POST')) {
-            $errors = [];
-
-            try {
-                $data = [
-                    'type' => $request->request->get('type'),
-                    'startDate' => new \DateTime($request->request->get('start_date')),
-                    'baseSalary' => $request->request->get('base_salary'),
-                    'activityRate' => $request->request->get('activity_rate', '1.00'),
-                    'weeklyHours' => $request->request->get('weekly_hours'),
-                    'villa' => $request->request->get('villa'),
-                ];
-
-                // Champs optionnels
-                $endDate = $request->request->get('end_date');
-                if ($endDate) {
-                    $data['endDate'] = new \DateTime($endDate);
-                }
-
-                $essaiEndDate = $request->request->get('essai_end_date');
-                if ($essaiEndDate) {
-                    $data['essaiEndDate'] = new \DateTime($essaiEndDate);
-                }
-
-                $workingDays = $request->request->all('working_days');
-                if ($workingDays) {
-                    $data['workingDays'] = $workingDays;
-                }
-
-                $reason = $request->request->get('amendment_reason');
-
-                $amendment = $this->contractManager->createAmendment($contract, $data, $reason);
-
-                $this->addFlash('success', sprintf('Avenant créé avec succès (version %d).', $amendment->getVersion()));
-                return $this->redirectToRoute('app_admin_contracts_view', ['id' => $amendment->getId()]);
-            } catch (\Exception $e) {
-                $errors[] = 'Erreur : ' . $e->getMessage();
-            }
-
-            return $this->render(
-                'admin/contracts/amendment_form.html.twig',
-                [
-                    'contract' => $contract,
-                    'errors' => $errors,
-                    'formData' => $request->request->all(),
-                ],
-                new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY)
-            );
-        }
-
-        return $this->render('admin/contracts/amendment_form.html.twig', [
-            'contract' => $contract,
-            'errors' => [],
-            'formData' => [],
+        // Rediriger vers le formulaire de création classique avec le parent en paramètre
+        return $this->redirectToRoute('app_admin_contracts_create', [
+            'userId' => $contract->getUser()->getId(),
+            'parentId' => $contract->getId()
         ]);
     }
 
@@ -526,7 +531,7 @@ class ContractController extends AbstractController
             return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
         }
 
-        $basePath = $this->getParameter('kernel.project_dir') . '/var/uploads/';
+        $basePath = $this->getParameter('kernel.project_dir') . '/public/uploads/';
         $filePath = $basePath . $contract->getDraftFileUrl();
 
         if (!is_file($filePath)) {
@@ -536,7 +541,6 @@ class ContractController extends AbstractController
 
         return $this->render('admin/contracts/preview.html.twig', [
             'contract' => $contract,
-            'fileContent' => file_get_contents($filePath),
         ]);
     }
 
