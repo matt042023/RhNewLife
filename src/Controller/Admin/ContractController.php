@@ -526,21 +526,45 @@ class ContractController extends AbstractController
     {
         $this->denyAccessUnlessGranted('CONTRACT_VIEW', $contract);
 
-        if (!$contract->getDraftFileUrl()) {
-            $this->addFlash('error', 'Aucun brouillon disponible pour ce contrat.');
+        $basePath = $this->getParameter('kernel.project_dir') . '/public/uploads/';
+
+        // Priorité : afficher le PDF signé si disponible, sinon le brouillon
+        $fileUrl = null;
+        $fileType = null;
+
+        if ($contract->getSignedFileUrl()) {
+            // Le contrat a été signé, afficher le PDF signé
+            $fileUrl = $contract->getSignedFileUrl();
+            $fileType = 'signé';
+            $filePath = $basePath . $fileUrl;
+
+            if (!is_file($filePath)) {
+                // Si le fichier signé n'existe pas, fallback sur le brouillon
+                $fileUrl = $contract->getDraftFileUrl();
+                $fileType = 'brouillon';
+                $filePath = $basePath . $fileUrl;
+            }
+        } else {
+            // Pas de PDF signé, afficher le brouillon
+            $fileUrl = $contract->getDraftFileUrl();
+            $fileType = 'brouillon';
+            $filePath = $basePath . $fileUrl;
+        }
+
+        if (!$fileUrl) {
+            $this->addFlash('error', 'Aucun fichier disponible pour ce contrat.');
             return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
         }
 
-        $basePath = $this->getParameter('kernel.project_dir') . '/public/uploads/';
-        $filePath = $basePath . $contract->getDraftFileUrl();
-
         if (!is_file($filePath)) {
-            $this->addFlash('error', 'Le fichier du brouillon est introuvable.');
+            $this->addFlash('error', 'Le fichier du contrat est introuvable.');
             return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
         }
 
         return $this->render('admin/contracts/preview.html.twig', [
             'contract' => $contract,
+            'fileUrl' => $fileUrl,
+            'fileType' => $fileType,
         ]);
     }
 
@@ -574,6 +598,31 @@ class ContractController extends AbstractController
         try {
             $this->contractManager->validateSignedContract($contract, $this->getUser());
             $this->addFlash('success', 'Contrat validé et activé avec succès.');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Erreur : ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+    }
+
+    /**
+     * Rejeter un contrat signé (uploadé) et demander un nouvel upload
+     */
+    #[Route('/{id}/reject-signed', name: 'app_admin_contracts_reject_signed', methods: ['POST'])]
+    public function rejectSigned(Contract $contract, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('CONTRACT_VALIDATE_SIGNED', $contract);
+
+        $reason = $request->request->get('rejection_reason');
+
+        if (!$reason) {
+            $this->addFlash('error', 'La raison du rejet est obligatoire.');
+            return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
+        }
+
+        try {
+            $this->contractManager->rejectSignedContract($contract, $reason, $this->getUser());
+            $this->addFlash('success', 'Le contrat a été rejeté. L\'employé a été notifié et pourra uploader à nouveau.');
         } catch (\Exception $e) {
             $this->addFlash('error', 'Erreur : ' . $e->getMessage());
         }

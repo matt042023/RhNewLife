@@ -37,10 +37,10 @@ class ContractSignatureController extends AbstractController
     }
 
     /**
-     * Traiter la signature
+     * Traiter l'upload du contrat signé manuellement
      */
-    #[Route('/{token}/submit', name: 'app_contract_signature_submit', methods: ['POST'])]
-    public function submit(string $token, Request $request): Response
+    #[Route('/{token}/upload', name: 'app_contract_signature_upload', methods: ['POST'])]
+    public function uploadSigned(string $token, Request $request): Response
     {
         $contract = $this->signatureService->validateToken($token);
 
@@ -50,21 +50,39 @@ class ContractSignatureController extends AbstractController
             ]);
         }
 
-        // Vérifier la case à cocher "J'ai lu et accepte"
-        if (!$request->request->get('accept_terms')) {
-            $this->addFlash('error', 'Vous devez accepter les termes du contrat pour le signer.');
+        // Récupérer le fichier uploadé
+        $file = $request->files->get('signed_contract');
+
+        if (!$file) {
+            $this->addFlash('error', 'Aucun fichier n\'a été uploadé.');
+            return $this->redirectToRoute('app_contract_signature_sign', ['token' => $token]);
+        }
+
+        // Valider le fichier
+        $maxSize = 10 * 1024 * 1024; // 10 Mo
+        if ($file->getSize() > $maxSize) {
+            $this->addFlash('error', 'Le fichier est trop volumineux. Taille maximum : 10 Mo.');
+            return $this->redirectToRoute('app_contract_signature_sign', ['token' => $token]);
+        }
+
+        // Vérifier le type MIME
+        $allowedMimeTypes = ['application/pdf'];
+        if (!in_array($file->getMimeType(), $allowedMimeTypes)) {
+            $this->addFlash('error', 'Le fichier doit être au format PDF.');
             return $this->redirectToRoute('app_contract_signature_sign', ['token' => $token]);
         }
 
         try {
-            $this->signatureService->signContract($contract, $request);
+            $this->signatureService->handleUploadedContract($contract, $file, $request);
+
+            $this->addFlash('success', 'Votre contrat signé a été uploadé avec succès !');
 
             // Rediriger vers la page de confirmation (compatible Turbo)
             return $this->redirectToRoute('app_contract_signature_confirmation', [
                 'token' => $token,
             ]);
         } catch (\Exception $e) {
-            $this->addFlash('error', 'Erreur lors de la signature : ' . $e->getMessage());
+            $this->addFlash('error', 'Erreur lors de l\'upload : ' . $e->getMessage());
             return $this->redirectToRoute('app_contract_signature_sign', ['token' => $token]);
         }
     }

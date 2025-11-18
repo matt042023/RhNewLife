@@ -21,6 +21,49 @@
             {% endfor %}
         {% endfor %}
 
+        {# Contrat en attente de signature #}
+        {% set pendingSignatureContract = null %}
+        {% for contract in allContracts %}
+            {% if contract.status == 'PENDING_SIGNATURE' %}
+                {% set pendingSignatureContract = contract %}
+            {% endif %}
+        {% endfor %}
+
+        {% if pendingSignatureContract %}
+            <div class="bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl shadow-xl p-8 mb-6 text-white">
+                <div class="flex items-center gap-6">
+                    <div class="flex-shrink-0">
+                        <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-bold mb-2">⚠️ Action requise : Contrat à signer</h2>
+                        <p class="text-white/90 mb-1">
+                            Votre contrat de travail <strong>{{ pendingSignatureContract.typeLabel }}</strong> est en attente de votre signature.
+                        </p>
+                        <p class="text-white/80 text-sm">
+                            {% if pendingSignatureContract.tokenExpiresAt %}
+                                Lien valide jusqu'au <strong>{{ pendingSignatureContract.tokenExpiresAt|date('d/m/Y à H:i') }}</strong>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        {% if pendingSignatureContract.signatureToken %}
+                            <a href="{{ path('app_contract_signature_sign', {token: pendingSignatureContract.signatureToken}) }}" class="btn btn-lg bg-white text-orange-600 hover:bg-gray-100 border-0 shadow-lg">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                Uploader mon contrat signé
+                            </a>
+                        {% else %}
+                            <span class="text-white/60 text-sm">Lien expiré - contactez le service RH</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
         {% if activeContract %}
             {# Contrat actif #}
             <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
@@ -144,8 +187,8 @@
 
                     {# PDF Viewer #}
                     {% include 'components/documents/_pdf_viewer_placeholder.html.twig' with {
-                        'documentUrl': asset(activeContract.signedFileUrl),
-                        'downloadRoute': asset(activeContract.signedFileUrl),
+                        'documentUrl': asset('uploads/' ~ activeContract.signedFileUrl),
+                        'downloadRoute': asset('uploads/' ~ activeContract.signedFileUrl),
                         'height': '700px'
                     } %}
                 </div>

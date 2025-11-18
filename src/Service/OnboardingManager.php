@@ -232,6 +232,11 @@ class OnboardingManager
 
     /**
      * Vérifie si le dossier d'onboarding est complet
+     * Un dossier est complet si :
+     * - Les informations personnelles sont remplies
+     * - Les coordonnées bancaires sont renseignées
+     * - Un contrat actif ou signé existe
+     * - Les documents obligatoires sont uploadés
      */
     public function isOnboardingComplete(User $user): bool
     {
@@ -241,6 +246,12 @@ class OnboardingManager
         }
 
         if (!$user->getIban() || !$user->getBic()) {
+            return false;
+        }
+
+        // Vérifie qu'un contrat actif ou signé existe
+        $activeContract = $user->getActiveContract();
+        if (!$activeContract) {
             return false;
         }
 

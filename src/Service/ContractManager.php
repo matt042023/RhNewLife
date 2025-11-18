@@ -13,6 +13,8 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Twig\Environment;
 
 /**
  * Service de gestion des contrats
@@ -30,7 +32,9 @@ class ContractManager
         private EntityManagerInterface $entityManager,
         private MailerInterface $mailer,
         private ParameterBagInterface $params,
-        private EventDispatcherInterface $eventDispatcher
+        private EventDispatcherInterface $eventDispatcher,
+        private UrlGeneratorInterface $urlGenerator,
+        private Environment $twig
     ) {}
 
     /**
@@ -69,6 +73,7 @@ class ContractManager
      * Passe le statut de draft à active
      * Définit la date d'embauche de l'utilisateur si elle n'existe pas
      * Si c'est un avenant, clôture automatiquement le contrat parent
+     * Crée automatiquement les Documents entities pour le système de documents
      */
     public function validateContract(Contract $contract, ?User $validatedBy = null): void
     {
@@ -96,6 +101,16 @@ class ContractManager
         // Activer l'utilisateur si nécessaire
         if ($user && $user->getStatus() === User::STATUS_ONBOARDING) {
             $user->setStatus(User::STATUS_ACTIVE);
+        }
+
+        // Créer les Document entities pour le système de documents
+        // Cela permet au contrat d'apparaître dans la section "Contrat" des documents
+        if ($contract->getDraftFileUrl()) {
+            $this->createContractDocument($contract, Document::TYPE_CONTRAT, $validatedBy);
+        }
+
+        if ($contract->getSignedFileUrl()) {
+            $this->createContractDocument($contract, Document::TYPE_CONTRACT_SIGNED, $validatedBy);
         }
 
         $this->entityManager->flush();
@@ -473,6 +488,7 @@ class ContractManager
 
     /**
      * Valide un contrat signé par l'employé (action admin)
+     * Crée automatiquement les Documents entities pour le système de documents
      */
     public function validateSignedContract(Contract $contract, User $admin): void
     {
@@ -504,9 +520,108 @@ class ContractManager
             $user->setStatus(\App\Entity\User::STATUS_ACTIVE);
         }
 
+        // Créer les Document entities pour le système de documents
+        // Cela permet au contrat d'apparaître dans la section "Contrat" des documents
+        if ($contract->getDraftFileUrl()) {
+            $this->createContractDocument($contract, Document::TYPE_CONTRAT, $admin);
+        }
+
+        if ($contract->getSignedFileUrl()) {
+            $this->createContractDocument($contract, Document::TYPE_CONTRACT_SIGNED, $admin);
+        }
+
         $this->entityManager->flush();
 
         // TODO: Envoyer email de notification à l'employé
+    }
+
+    /**
+     * Rejette un contrat signé (uploadé) et demande un nouvel upload
+     *
+     * @param Contract $contract Le contrat à rejeter
+     * @param string $reason La raison du rejet
+     * @param User $admin L'administrateur qui rejette le contrat
+     *
+     * @return void
+     * @throws \RuntimeException Si le contrat n'est pas en statut SIGNED_PENDING_VALIDATION
+     */
+    public function rejectSignedContract(Contract $contract, string $reason, User $admin): void
+    {
+        if ($contract->getStatus() !== Contract::STATUS_SIGNED_PENDING_VALIDATION) {
+            throw new \RuntimeException('Seuls les contrats signés en attente de validation peuvent être rejetés.');
+        }
+
+        // Retour au statut PENDING_SIGNATURE pour permettre un nouvel upload
+        $contract->setStatus(Contract::STATUS_PENDING_SIGNATURE);
+
+        // Générer un nouveau token de signature (7 jours de validité)
+        $token = bin2hex(random_bytes(32));
+        $contract->setSignatureToken($token);
+        $contract->setTokenExpiresAt((new \DateTime())->modify('+7 days'));
+
+        // Supprimer le fichier signé précédent (optionnel)
+        if ($contract->getSignedFileUrl()) {
+            $oldFilePath = $this->params->get('kernel.project_dir') . '/public/uploads/' . $contract->getSignedFileUrl();
+            if (file_exists($oldFilePath)) {
+                @unlink($oldFilePath); // Supprimer sans erreur si fichier inexistant
+            }
+            $contract->setSignedFileUrl(null);
+        }
+
+        // Réinitialiser les métadonnées de signature
+        $contract->setSignedAt(null);
+        $contract->setSignatureIp(null);
+        $contract->setSignatureUserAgent(null);
+
+        $this->entityManager->flush();
+
+        // Envoyer l'email de rejet à l'employé
+        $this->sendRejectionEmail($contract, $reason, $token);
+    }
+
+    /**
+     * Envoie l'email de rejet à l'employé
+     */
+    private function sendRejectionEmail(Contract $contract, string $reason, string $token): void
+    {
+        $employee = $contract->getUser();
+
+        // Générer l'URL d'upload
+        $uploadUrl = $this->urlGenerator->generate(
+            'app_contract_signature_sign',
+            ['token' => $token],
+            UrlGeneratorInterface::ABSOLUTE_URL
+        );
+
+        // Render email template
+        $emailHtml = $this->twig->render('emails/contract/signature_rejected.html.twig', [
+            'employee' => $employee,
+            'contract' => $contract,
+            'reason' => $reason,
+            'uploadUrl' => $uploadUrl,
+            'tokenExpiresAt' => $contract->getTokenExpiresAt(),
+        ]);
+
+        $email = (new Email())
+            ->from($this->params->get('app.mailer.sender_email'))
+            ->to($employee->getEmail())
+            ->subject(sprintf('Contrat à resigner - %s', $contract->getTypeLabel()))
+            ->html($emailHtml);
+
+        // Attacher le PDF brouillon du contrat
+        if ($contract->getDraftFileUrl()) {
+            $projectDir = $this->params->get('kernel.project_dir');
+            $draftFilePath = $projectDir . '/public/uploads/' . $contract->getDraftFileUrl();
+
+            if (file_exists($draftFilePath)) {
+                $email->attachFromPath(
+                    $draftFilePath,
+                    sprintf('Contrat_%s_%s.pdf', $contract->getTypeLabel(), $employee->getLastName())
+                );
+            }
+        }
+
+        $this->mailer->send($email);
     }
 
     /**
@@ -546,6 +661,102 @@ class ContractManager
         $contract->setTerminatedAt(new \DateTime());
 
         $this->entityManager->flush();
+    }
+
+    /**
+     * Crée des Document entities pour un contrat existant
+     * Utile pour la migration de données ou pour corriger des contrats sans documents
+     *
+     * @param Contract $contract Le contrat pour lequel créer les documents
+     * @param User|null $createdBy L'utilisateur qui effectue l'opération (généralement un admin)
+     * @return array Les documents créés
+     */
+    public function createDocumentsForContract(Contract $contract, ?User $createdBy = null): array
+    {
+        $documents = [];
+
+        // Créer le document pour le brouillon si disponible
+        if ($contract->getDraftFileUrl()) {
+            try {
+                $documents[] = $this->createContractDocument($contract, Document::TYPE_CONTRAT, $createdBy);
+            } catch (\RuntimeException $e) {
+                // Ignorer si le document existe déjà ou en cas d'erreur
+            }
+        }
+
+        // Créer le document pour le contrat signé si disponible
+        if ($contract->getSignedFileUrl()) {
+            try {
+                $documents[] = $this->createContractDocument($contract, Document::TYPE_CONTRACT_SIGNED, $createdBy);
+            } catch (\RuntimeException $e) {
+                // Ignorer si le document existe déjà ou en cas d'erreur
+            }
+        }
+
+        $this->entityManager->flush();
+
+        return $documents;
+    }
+
+    /**
+     * Crée un Document entity à partir d'un contrat
+     * Permet de lier le système de contrats au système de documents
+     *
+     * @param Contract $contract Le contrat source
+     * @param string $type Le type de document (TYPE_CONTRAT ou TYPE_CONTRACT_SIGNED)
+     * @param User|null $createdBy L'utilisateur qui crée le document (généralement l'admin)
+     * @return Document Le document créé
+     */
+    private function createContractDocument(Contract $contract, string $type, ?User $createdBy = null): Document
+    {
+        // Vérifier si le document existe déjà pour ce contrat
+        $existingDoc = $this->entityManager->getRepository(Document::class)
+            ->findOneBy([
+                'user' => $contract->getUser(),
+                'type' => $type,
+                'contract' => $contract
+            ]);
+
+        if ($existingDoc) {
+            return $existingDoc;
+        }
+
+        // Déterminer le fichier à utiliser selon le type
+        $fileUrl = $type === Document::TYPE_CONTRAT
+            ? $contract->getDraftFileUrl()
+            : $contract->getSignedFileUrl();
+
+        if (!$fileUrl) {
+            throw new \RuntimeException(
+                sprintf('Impossible de créer le document %s : fichier manquant', $type)
+            );
+        }
+
+        // Créer le document
+        $document = new Document();
+        $document
+            ->setUser($contract->getUser())
+            ->setContract($contract)
+            ->setType($type)
+            ->setFileName(basename($fileUrl))
+            ->setOriginalName(basename($fileUrl))
+            ->setStatus(Document::STATUS_VALIDATED) // Auto-validé car créé par le système
+            ->setValidatedBy($createdBy)
+            ->setValidatedAt(new \DateTime())
+            ->setUploadedBy($createdBy);
+
+        // Déterminer la taille du fichier si possible
+        $projectDir = $this->params->get('kernel.project_dir');
+        $filePath = $projectDir . '/public/uploads/' . $fileUrl;
+
+        if (file_exists($filePath)) {
+            $document->setFileSize(filesize($filePath));
+            $document->setMimeType('application/pdf');
+        }
+
+        $this->entityManager->persist($document);
+
+        return $document;
     }
 }
 

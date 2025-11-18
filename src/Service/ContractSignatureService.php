@@ -92,8 +92,8 @@ class ContractSignatureService
     {
         $employee = $contract->getUser();
 
-        // Générer l'URL de signature
-        $signatureUrl = $this->urlGenerator->generate(
+        // Générer l'URL d'upload (au lieu de signature électronique)
+        $uploadUrl = $this->urlGenerator->generate(
             'app_contract_signature_sign',
             ['token' => $token],
             UrlGeneratorInterface::ABSOLUTE_URL
@@ -103,7 +103,7 @@ class ContractSignatureService
         $emailHtml = $this->twig->render('emails/contract/signature_request.html.twig', [
             'employee' => $employee,
             'contract' => $contract,
-            'signatureUrl' => $signatureUrl,
+            'uploadUrl' => $uploadUrl,
             'tokenExpiresAt' => $contract->getTokenExpiresAt(),
         ]);
 
@@ -112,6 +112,19 @@ class ContractSignatureService
             ->to($employee->getEmail())
             ->subject(sprintf('Contrat de travail à signer - %s', $contract->getTypeLabel()))
             ->html($emailHtml);
+
+        // Attacher le PDF brouillon du contrat
+        if ($contract->getDraftFileUrl()) {
+            $projectDir = $this->params->get('kernel.project_dir');
+            $draftFilePath = $projectDir . '/public/uploads/' . $contract->getDraftFileUrl();
+
+            if (file_exists($draftFilePath)) {
+                $email->attachFromPath(
+                    $draftFilePath,
+                    sprintf('Contrat_%s_%s.pdf', $contract->getTypeLabel(), $employee->getLastName())
+                );
+            }
+        }
 
         $this->mailer->send($email);
     }
@@ -196,6 +209,68 @@ class ContractSignatureService
 
         $signedPdfPath = $this->generator->generateSignedPdf($contract, $signatureData);
         $contract->setSignedFileUrl($signedPdfPath);
+
+        // Changer le statut
+        $contract->setStatus(Contract::STATUS_SIGNED_PENDING_VALIDATION);
+
+        // Ne pas invalider le token tout de suite pour permettre l'accès à la page de confirmation
+        // Le token sera invalidé par un cron job ou manuellement plus tard
+
+        $this->entityManager->flush();
+
+        // Notifier l'admin
+        $this->notifyAdminContractSigned($contract);
+    }
+
+    /**
+     * Traite l'upload d'un contrat signé manuellement
+     *
+     * @param Contract $contract Le contrat concerné
+     * @param \Symfony\Component\HttpFoundation\File\UploadedFile $file Le fichier PDF uploadé
+     * @param Request $request La requête HTTP pour capturer les métadonnées
+     *
+     * @return void
+     * @throws \RuntimeException Si le contrat n'est pas en statut PENDING_SIGNATURE
+     */
+    public function handleUploadedContract(Contract $contract, $file, Request $request): void
+    {
+        // Vérifier que le contrat est en attente de signature
+        if ($contract->getStatus() !== Contract::STATUS_PENDING_SIGNATURE) {
+            throw new \RuntimeException('Ce contrat n\'est pas en attente de signature.');
+        }
+
+        // Générer un nom de fichier unique et sécurisé
+        $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeFilename = transliterator_transliterate(
+            'Any-Latin; Latin-ASCII; [^A-Za-z0-9_] remove; Lower()',
+            $originalFilename
+        );
+        $newFilename = sprintf(
+            'contract_signed_%d_%s_%s.pdf',
+            $contract->getId() ?? uniqid(),
+            $safeFilename,
+            uniqid()
+        );
+
+        // Déplacer le fichier dans le répertoire de stockage
+        $projectDir = $this->params->get('kernel.project_dir');
+        $uploadDir = $projectDir . '/public/uploads/contracts/signed';
+
+        // Créer le répertoire si nécessaire
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $file->move($uploadDir, $newFilename);
+
+        // Enregistrer le chemin relatif
+        $relativePath = 'contracts/signed/' . $newFilename;
+        $contract->setSignedFileUrl($relativePath);
+
+        // Capturer les métadonnées d'upload
+        $contract->setSignedAt(new \DateTime());
+        $contract->setSignatureIp($request->getClientIp());
+        $contract->setSignatureUserAgent($request->headers->get('User-Agent'));
 
         // Changer le statut
         $contract->setStatus(Contract::STATUS_SIGNED_PENDING_VALIDATION);
