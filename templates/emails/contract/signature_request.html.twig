@@ -87,7 +87,7 @@
 		<div class="content">
 			<p>Bonjour {{ employee.firstName }},</p>
 
-			<p>Votre contrat de travail est prêt et nécessite votre signature électronique.</p>
+			<p>Votre contrat de travail est prêt et disponible en pièce jointe de cet email.</p>
 
 			<div class="contract-details">
 				<h3>Détails du contrat</h3>
@@ -100,19 +100,31 @@
 			</p>
 			</div>
 
+			<div class="warning" style="background-color: #dbeafe; border-left: 4px solid #3b82f6;">
+				<p><strong>📝 Procédure de signature :</strong></p>
+				<ol style="margin: 10px 0 10px 20px; padding: 0;">
+					<li>Téléchargez le contrat PDF joint à cet email</li>
+					<li>Imprimez le contrat en 2 exemplaires</li>
+					<li>Signez les 2 exemplaires de manière manuscrite (signature et paraphe sur chaque page)</li>
+					<li>Scannez ou photographiez un exemplaire signé en PDF</li>
+					<li>Cliquez sur le bouton ci-dessous pour uploader le contrat signé</li>
+				</ol>
+			</div>
+
 			<p style="text-align: center;">
-				<a href="{{ signatureUrl }}" class="btn">
-					📋 Consulter et signer mon contrat
+				<a href="{{ uploadUrl }}" class="btn">
+					📤 Uploader mon contrat signé
 				</a>
 			</p>
 
 			<div class="warning">
 				<p><strong>⚠️ Important :</strong></p>
-				<p>Ce lien de signature est valide jusqu'au <strong>{{ tokenExpiresAt|date('d/m/Y à H:i') }}</strong>.</p>
+				<p>Ce lien d'upload est valide jusqu'au <strong>{{ tokenExpiresAt|date('d/m/Y à H:i') }}</strong>.</p>
+				<p>Le fichier uploadé doit être au format PDF et ne pas dépasser 10 Mo.</p>
 				<p>Après cette date, vous devrez demander un nouveau lien au service RH.</p>
 			</div>
 
-			<p>Si vous avez des questions concernant votre contrat, n'hésitez pas à contacter le service RH.</p>
+			<p>Si vous avez des questions concernant votre contrat ou la procédure de signature, n'hésitez pas à contacter le service RH.</p>
 
 			<p>
 				Cordialement,<br>
