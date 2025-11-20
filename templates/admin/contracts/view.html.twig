@@ -1,63 +1,73 @@
-{% extends 'base.html.twig' %}
+{% extends 'layout/dashboard_base.html.twig' %}
 
-{% block title %}Contrat
-	{{ contract.type }}
-	-
-	{{ contract.user.fullName }}
-	- RH NewLife
+{% block title %}Contrat {{ contract.type }} - {{ contract.user.fullName }} - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+	<li>
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<a href="{{ path('app_dashboard') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">Administration</a>
+		</div>
+	</li>
+	<li>
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<a href="{{ path('app_admin_users_view', {id: contract.user.id}) }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">{{ contract.user.fullName }}</a>
+		</div>
+	</li>
+	<li aria-current="page">
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Contrat {{ contract.type }}</span>
+		</div>
+	</li>
 {% endblock %}
 
-{% block body %}
-	<div class="min-h-screen bg-gray-50 p-8">
-		<div
-			class="max-w-5xl mx-auto">
-
-			{# Header #}
-			<div class="flex items-start justify-between mb-8">
-				<div>
-					<h1 class="text-3xl font-bold text-gray-900">Contrat
-						{{ contract.type }}</h1>
-					<p class="text-gray-600 mt-1">
-						{{ contract.user.fullName }}
-						({{ contract.user.matricule }})
-						{% if contract.isAmendment %}
-							<span class="badge badge-warning ml-2">Avenant version
-								{{ contract.version }}</span>
-						{% endif %}
-					</p>
-				</div>
-
-				<div>
-					{% if contract.status == 'DRAFT' %}
-						<span class="badge badge-neutral badge-lg">Brouillon</span>
-					{% elseif contract.status == 'PENDING_SIGNATURE' %}
-						<span class="badge badge-warning badge-lg">En attente de signature</span>
-					{% elseif contract.status == 'SIGNED_PENDING_VALIDATION' %}
-						<span class="badge badge-info badge-lg">Signé - À valider</span>
-					{% elseif contract.status == 'ACTIVE' %}
-						<span class="badge badge-success badge-lg">Actif</span>
-					{% elseif contract.status == 'REPLACED' %}
-						<span class="badge badge-neutral badge-lg">Remplacé</span>
-					{% elseif contract.status == 'ARCHIVED' %}
-						<span class="badge badge-neutral badge-lg">Archivé</span>
-					{% elseif contract.status == 'CANCELLED' %}
-						<span class="badge badge-error badge-lg">Annulé</span>
-					{% elseif contract.status == 'SUSPENDED' %}
-						<span class="badge badge-warning badge-lg">Suspendu</span>
-					{% elseif contract.status == 'TERMINATED' %}
-						<span class="badge badge-neutral badge-lg">Résilié</span>
+{% block page_header %}
+	<div class="px-4 py-6 lg:px-6">
+		<div class="flex flex-col md:flex-row md:items-start md:justify-between">
+			<div>
+				<h1 class="text-2xl md:text-3xl font-bold text-white mb-1">Contrat {{ contract.type }}</h1>
+				<p class="text-blue-100">
+					{{ contract.user.fullName }} ({{ contract.user.matricule }})
+					{% if contract.isAmendment %}
+						<span class="ml-2 px-2 py-1 text-xs font-semibold bg-yellow-500/30 text-white rounded-full border border-yellow-300/50">Avenant version {{ contract.version }}</span>
 					{% endif %}
-				</div>
+				</p>
 			</div>
+			<div class="mt-4 md:mt-0">
+				{% if contract.status == 'DRAFT' %}
+					<span class="px-3 py-2 text-sm font-semibold bg-gray-500/30 text-white rounded-full border border-gray-300/50">Brouillon</span>
+				{% elseif contract.status == 'PENDING_SIGNATURE' %}
+					<span class="px-3 py-2 text-sm font-semibold bg-yellow-500/30 text-white rounded-full border border-yellow-300/50">En attente de signature</span>
+				{% elseif contract.status == 'SIGNED_PENDING_VALIDATION' %}
+					<span class="px-3 py-2 text-sm font-semibold bg-blue-500/30 text-white rounded-full border border-blue-300/50">Signé - À valider</span>
+				{% elseif contract.status == 'ACTIVE' %}
+					<span class="px-3 py-2 text-sm font-semibold bg-green-500/30 text-white rounded-full border border-green-300/50">Actif</span>
+				{% elseif contract.status == 'REPLACED' %}
+					<span class="px-3 py-2 text-sm font-semibold bg-gray-500/30 text-white rounded-full border border-gray-300/50">Remplacé</span>
+				{% elseif contract.status == 'ARCHIVED' %}
+					<span class="px-3 py-2 text-sm font-semibold bg-gray-500/30 text-white rounded-full border border-gray-300/50">Archivé</span>
+				{% elseif contract.status == 'CANCELLED' %}
+					<span class="px-3 py-2 text-sm font-semibold bg-red-500/30 text-white rounded-full border border-red-300/50">Annulé</span>
+				{% elseif contract.status == 'SUSPENDED' %}
+					<span class="px-3 py-2 text-sm font-semibold bg-yellow-500/30 text-white rounded-full border border-yellow-300/50">Suspendu</span>
+				{% elseif contract.status == 'TERMINATED' %}
+					<span class="px-3 py-2 text-sm font-semibold bg-gray-500/30 text-white rounded-full border border-gray-300/50">Résilié</span>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+{% endblock %}
 
-			{# Flash messages #}
-			{% for label, messages in app.flashes %}
-				{% for message in messages %}
-					<div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-6">
-						{{ message }}
-					</div>
-				{% endfor %}
-			{% endfor %}
+{% block dashboard_content %}
+	<div class="max-w-5xl mx-auto">
 
 			{# Actions rapides #}
 			<div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
@@ -359,17 +369,16 @@
 				</div>
 			</div>
 
-			{# Retour #}
-			<div class="mt-6">
-				<a href="{{ path('app_admin_users_view', {id: contract.user.id}) }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-					</svg>
-					Retour à la fiche salarié
-				</a>
-			</div>
-
+		{# Retour #}
+		<div class="mt-6">
+			<a href="{{ path('app_admin_users_view', {id: contract.user.id}) }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+				</svg>
+				Retour à la fiche salarié
+			</a>
 		</div>
+
 	</div>
 
 	{# Modal upload contrat signe #}
