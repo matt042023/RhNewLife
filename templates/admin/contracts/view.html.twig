@@ -62,7 +62,8 @@
 			{# Actions rapides #}
 			<div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
 				<h2 class="text-lg font-bold text-gray-900 mb-4">Actions</h2>
-				<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+				<div
+					class="grid grid-cols-2 md:grid-cols-4 gap-3">
 
 					{# Prévisualiser le contrat (tous les statuts) #}
 					<a href="{{ path('app_admin_contracts_preview', {id: contract.id}) }}" class="btn btn-outline justify-center" target="_blank">
@@ -108,7 +109,8 @@
 								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
 								</svg>
-								<span>En attente de signature par l'employé. Lien valide jusqu'au {{ contract.tokenExpiresAt|date('d/m/Y à H:i') }}</span>
+								<span>En attente de signature par l'employé. Lien valide jusqu'au
+									{{ contract.tokenExpiresAt|date('d/m/Y à H:i') }}</span>
 							</div>
 						</div>
 					{% endif %}
@@ -146,8 +148,10 @@
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
 								</svg>
 								<div>
-									<p class="font-semibold">Contrat signé le {{ contract.signedAt|date('d/m/Y à H:i') }}</p>
-									<p class="text-sm">IP: {{ contract.signatureIp ?? 'Non disponible' }}</p>
+									<p class="font-semibold">Contrat signé le
+										{{ contract.signedAt|date('d/m/Y à H:i') }}</p>
+									<p class="text-sm">IP:
+										{{ contract.signatureIp ?? 'Non disponible' }}</p>
 								</div>
 							</div>
 						</div>
@@ -420,7 +424,8 @@
 	{# Modal de rejet du contrat #}
 	<div id="reject-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" style="background-color: rgba(0,0,0,0.5);">
 		<div class="flex items-center justify-center min-h-screen p-4">
-			<div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full transform transition-all">
+			<div
+				class="bg-white rounded-2xl shadow-2xl w-full transform transition-all">
 				{# Header #}
 				<div class="flex items-center justify-between p-6 border-b border-gray-200 bg-red-50">
 					<div>
@@ -450,17 +455,11 @@
 						<div class="form-control">
 							<label class="label">
 								<span class="label-text font-semibold text-lg">
-									Raison du rejet <span class="text-red-500">*</span>
+									Raison du rejet
+									<span class="text-red-500">*</span>
 								</span>
 							</label>
-							<textarea
-								name="rejection_reason"
-								id="rejection_reason"
-								rows="6"
-								class="textarea textarea-bordered w-full"
-								placeholder="Expliquez clairement pourquoi le contrat est rejeté (ex: signature manquante sur page 2, document illisible, mauvais document uploadé...)"
-								required
-							></textarea>
+							<textarea name="rejection_reason" id="rejection_reason" rows="6" class="textarea textarea-bordered w-full" placeholder="Expliquez clairement pourquoi le contrat est rejeté (ex: signature manquante sur page 2, document illisible, mauvais document uploadé...)" required></textarea>
 							<label class="label">
 								<span class="label-text-alt text-gray-500">Cette raison sera envoyée à l'employé par email</span>
 							</label>
@@ -498,21 +497,21 @@
 
 	<script>
 		function openRejectModal() {
-			document.getElementById('reject-modal').style.display = 'block';
-			document.body.style.overflow = 'hidden';
-		}
+document.getElementById('reject-modal').style.display = 'block';
+document.body.style.overflow = 'hidden';
+}
 
-		function closeRejectModal() {
-			document.getElementById('reject-modal').style.display = 'none';
-			document.body.style.overflow = 'auto';
-			document.getElementById('rejection_reason').value = '';
-		}
+function closeRejectModal() {
+document.getElementById('reject-modal').style.display = 'none';
+document.body.style.overflow = 'auto';
+document.getElementById('rejection_reason').value = '';
+}
 
-		// Fermer la modal en cliquant en dehors
-		document.getElementById('reject-modal')?.addEventListener('click', function(e) {
-			if (e.target === this) {
-				closeRejectModal();
-			}
-		});
+// Fermer la modal en cliquant en dehors
+document.getElementById('reject-modal') ?. addEventListener('click', function (e) {
+if (e.target === this) {
+closeRejectModal();
+}
+});
 	</script>
 {% endblock %}
