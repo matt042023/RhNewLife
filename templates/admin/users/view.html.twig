@@ -273,14 +273,24 @@
 										<div class="flex-1">
 											<div class="flex items-center gap-3 mb-2">
 												<h4 class="font-bold text-gray-900">{{ contract.type }}</h4>
-												{% if contract.status == 'draft' %}
+												{% if contract.status == 'DRAFT' %}
 													<span class="badge badge-neutral">Brouillon</span>
-												{% elseif contract.status == 'active' %}
+												{% elseif contract.status == 'PENDING_SIGNATURE' %}
+													<span class="badge badge-warning">En attente de signature</span>
+												{% elseif contract.status == 'SIGNED_PENDING_VALIDATION' %}
+													<span class="badge badge-info">Signé - À valider</span>
+												{% elseif contract.status == 'ACTIVE' %}
 													<span class="badge badge-success">Actif</span>
-												{% elseif contract.status == 'signed' %}
-													<span class="badge badge-info">Signé</span>
-												{% elseif contract.status == 'terminated' %}
-													<span class="badge badge-neutral">Terminé</span>
+												{% elseif contract.status == 'REPLACED' %}
+													<span class="badge badge-neutral">Remplacé</span>
+												{% elseif contract.status == 'TERMINATED' %}
+													<span class="badge badge-neutral">Résilié</span>
+												{% elseif contract.status == 'CANCELLED' %}
+													<span class="badge badge-error">Annulé</span>
+												{% elseif contract.status == 'ARCHIVED' %}
+													<span class="badge badge-neutral">Archivé</span>
+												{% elseif contract.status == 'SUSPENDED' %}
+													<span class="badge badge-warning">Suspendu</span>
 												{% endif %}
 												{% if contract.isAmendment %}
 													<span class="badge badge-warning">Avenant v{{ contract.version }}</span>
