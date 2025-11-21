@@ -6,6 +6,7 @@ use App\Entity\Document;
 use App\Entity\User;
 use App\Repository\DocumentRepository;
 use App\Security\Voter\DocumentVoter;
+use App\Service\ContractManager;
 use App\Service\DocumentManager;
 use App\Service\ProfileUpdateRequestManager;
 use App\Service\UserManager;
@@ -26,7 +27,8 @@ class ProfileController extends AbstractController
         private UserManager $userManager,
         private ProfileUpdateRequestManager $profileUpdateRequestManager,
         private DocumentManager $documentManager,
-        private DocumentRepository $documentRepository
+        private DocumentRepository $documentRepository,
+        private ContractManager $contractManager
     ) {
     }
 
@@ -123,6 +125,12 @@ class ProfileController extends AbstractController
     {
         /** @var User $user */
         $user = $this->getUser();
+
+        // Auto-créer les documents pour le contrat actif s'ils n'existent pas
+        $activeContract = $user->getActiveContract();
+        if ($activeContract) {
+            $this->contractManager->createDocumentsForContract($activeContract, $user);
+        }
 
         $documents = $this->documentRepository->findActiveByUser($user);
         $completion = $this->documentManager->getCompletionStatus($user);
@@ -326,6 +334,27 @@ class ProfileController extends AbstractController
         // Force le téléchargement au lieu de l'affichage dans le navigateur
         $response->setContentDisposition(
             'attachment',
+            $document->getOriginalName()
+        );
+
+        return $response;
+    }
+
+    #[Route('/documents/{id}/preview', name: 'app_profile_documents_preview', methods: ['GET'])]
+    public function previewDocument(Document $document): Response
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::VIEW, $document);
+
+        $filePath = $this->documentManager->getDocumentPath($document);
+        if (!is_file($filePath)) {
+            throw $this->createNotFoundException('Le fichier demandé est introuvable.');
+        }
+
+        $response = new BinaryFileResponse($filePath);
+
+        // Affiche le fichier dans le navigateur (inline)
+        $response->setContentDisposition(
+            'inline',
             $document->getOriginalName()
         );
 

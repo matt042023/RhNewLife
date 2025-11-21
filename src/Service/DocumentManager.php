@@ -553,6 +553,14 @@ class DocumentManager
 
     public function getDocumentPath(Document $document, bool $considerArchive = true): string
     {
+        // Pour les documents de contrat, le fileName contient le chemin relatif complet
+        // depuis uploads/ (ex: contracts/file.pdf)
+        if ($document->getContract() !== null) {
+            // uploadsDirectory pointe vers uploads/documents, on remonte d'un niveau
+            $uploadsBase = dirname($this->uploadsDirectory);
+            return $uploadsBase . '/' . $document->getFileName();
+        }
+
         $directory = $this->getUserDirectory($document->getUser());
 
         if ($considerArchive && $document->isArchived()) {

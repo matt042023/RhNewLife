@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\User;
 use App\Repository\DocumentRepository;
 use App\Repository\UserRepository;
+use App\Service\ContractManager;
 use App\Service\DocumentManager;
 use App\Service\UserManager;
 use App\Service\MatriculeGenerator;
@@ -23,7 +24,8 @@ class UserController extends AbstractController
         private UserRepository $userRepository,
         private MatriculeGenerator $matriculeGenerator,
         private DocumentRepository $documentRepository,
-        private DocumentManager $documentManager
+        private DocumentManager $documentManager,
+        private ContractManager $contractManager
     ) {
     }
 
@@ -158,6 +160,12 @@ class UserController extends AbstractController
 
         // Récupérer les contrats
         $contracts = $user->getContracts();
+
+        // Auto-créer les documents pour le contrat actif s'ils n'existent pas
+        $activeContract = $user->getActiveContract();
+        if ($activeContract) {
+            $this->contractManager->createDocumentsForContract($activeContract, $this->getUser());
+        }
 
         // Récupérer les documents actifs (non archivés)
         $documents = $this->documentRepository->findActiveByUser($user);

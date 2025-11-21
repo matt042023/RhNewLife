@@ -65,7 +65,7 @@
         {% if extension in ['pdf'] %}
             {# PDF Preview using iframe #}
             <iframe
-                src="{{ path('app_profile_documents_download', {id: document.id}) }}"
+                src="{{ path('app_profile_documents_preview', {id: document.id}) }}"
                 class="w-full h-[600px] border-0"
                 title="Aperçu du document PDF">
             </iframe>
@@ -73,7 +73,7 @@
             {# Image Preview #}
             <div class="flex items-center justify-center p-4">
                 <img
-                    src="{{ path('app_profile_documents_download', {id: document.id}) }}"
+                    src="{{ path('app_profile_documents_preview', {id: document.id}) }}"
                     alt="{{ document.originalName }}"
                     class="max-w-full h-auto rounded shadow-lg">
             </div>

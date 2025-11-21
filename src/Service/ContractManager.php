@@ -733,12 +733,14 @@ class ContractManager
         }
 
         // Créer le document
+        // Note: Pour les contrats, on stocke le chemin relatif complet (ex: contracts/file.pdf)
+        // car les fichiers ne sont pas dans le dossier documents/users/{matricule}/
         $document = new Document();
         $document
             ->setUser($contract->getUser())
             ->setContract($contract)
             ->setType($type)
-            ->setFileName(basename($fileUrl))
+            ->setFileName($fileUrl) // Chemin relatif complet depuis uploads/
             ->setOriginalName(basename($fileUrl))
             ->setStatus(Document::STATUS_VALIDATED) // Auto-validé car créé par le système
             ->setValidatedBy($createdBy)
