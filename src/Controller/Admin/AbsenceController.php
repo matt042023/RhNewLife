@@ -20,7 +20,8 @@ class AbsenceController extends AbstractController
 {
     public function __construct(
         private AbsenceService $absenceService,
-        private TypeAbsenceRepository $typeAbsenceRepository
+        private TypeAbsenceRepository $typeAbsenceRepository,
+        private \App\Repository\AbsenceRepository $absenceRepository
     ) {
     }
 
@@ -33,8 +34,13 @@ class AbsenceController extends AbstractController
         $filterForm = $this->createForm(AbsenceFilterType::class);
         $filterForm->handleRequest($request);
 
-        // Get pending absences by default
-        $absences = $this->absenceService->getPendingAbsences();
+        $filters = [];
+        if ($filterForm->isSubmitted() && $filterForm->isValid()) {
+            $filters = $filterForm->getData();
+        }
+
+        // Get all absences sorted (pending first) and filtered
+        $absences = $this->absenceRepository->findAllSorted($filters);
 
         // Get absences with overdue justifications
         $overdueJustifications = $this->absenceService->getAbsencesWithOverdueJustifications();
