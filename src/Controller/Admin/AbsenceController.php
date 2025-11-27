@@ -94,7 +94,7 @@ class AbsenceController extends AbstractController
                     $this->addFlash('success', 'Absence refusée.');
                 }
 
-                return $this->redirectToRoute('admin_absence_show', ['id' => $absence->getId()]);
+                return $this->redirectToRoute('admin_absence_show', ['id' => $absence->getId()], Response::HTTP_SEE_OTHER);
             } catch (\Exception $e) {
                 $this->addFlash('error', 'Erreur : ' . $e->getMessage());
             }
@@ -103,7 +103,7 @@ class AbsenceController extends AbstractController
         return $this->render('admin/absence/show.html.twig', [
             'absence' => $absence,
             'validationForm' => $validationForm->createView(),
-        ]);
+        ], new Response(null, $validationForm->isSubmitted() ? 422 : 200));
     }
 
 

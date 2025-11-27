@@ -340,7 +340,18 @@ class Absence
      */
     public function hasValidJustification(): bool
     {
-        return $this->justificationStatus === self::JUSTIF_VALIDATED;
+        if ($this->justificationStatus === self::JUSTIF_VALIDATED) {
+            return true;
+        }
+
+        // Fallback: check if any document is validated (self-healing)
+        foreach ($this->documents as $doc) {
+            if ($doc->getStatus() === Document::STATUS_VALIDATED) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
