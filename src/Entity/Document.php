@@ -127,6 +127,12 @@ class Document
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $validatedAt = null;
 
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $rejectedAt = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $rejectionReason = null;
+
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $uploadedBy = null;
@@ -323,7 +329,8 @@ class Document
     public function markAsRejected(string $reason): static
     {
         $this->status = self::STATUS_REJECTED;
-        $this->comment = $reason;
+        $this->rejectionReason = $reason;
+        $this->rejectedAt = new \DateTime();
         return $this;
     }
 
@@ -486,6 +493,28 @@ class Document
     public function setUploadedBy(?User $uploadedBy): static
     {
         $this->uploadedBy = $uploadedBy;
+        return $this;
+    }
+
+    public function getRejectedAt(): ?\DateTimeInterface
+    {
+        return $this->rejectedAt;
+    }
+
+    public function setRejectedAt(?\DateTimeInterface $rejectedAt): static
+    {
+        $this->rejectedAt = $rejectedAt;
+        return $this;
+    }
+
+    public function getRejectionReason(): ?string
+    {
+        return $this->rejectionReason;
+    }
+
+    public function setRejectionReason(?string $rejectionReason): static
+    {
+        $this->rejectionReason = $rejectionReason;
         return $this;
     }
 }

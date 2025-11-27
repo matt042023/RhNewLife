@@ -2,7 +2,10 @@
 
 namespace App\Controller;
 
+use App\Entity\Absence;
 use App\Entity\User;
+use App\Repository\AbsenceRepository;
+use App\Service\Absence\AbsenceCounterService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -39,10 +42,17 @@ class DashboardController extends AbstractController
 
     #[Route('/dashboard/employee', name: 'app_dashboard_employee')]
     #[IsGranted('ROLE_USER')]
-    public function employee(#[CurrentUser] User $user): Response
-    {
+    public function employee(
+        #[CurrentUser] User $user,
+        AbsenceCounterService $counterService
+    ): Response {
+        // Get user's leave counters for current year
+        $currentYear = (int) date('Y');
+        $counters = $counterService->getUserCounters($user, $currentYear);
+
         return $this->render('dashboard/employee.html.twig', [
             'user' => $user,
+            'counters' => $counters,
         ]);
     }
 
@@ -57,10 +67,18 @@ class DashboardController extends AbstractController
 
     #[Route('/dashboard/admin', name: 'app_dashboard_admin')]
     #[IsGranted('ROLE_ADMIN')]
-    public function admin(#[CurrentUser] User $user): Response
-    {
+    public function admin(
+        #[CurrentUser] User $user,
+        AbsenceRepository $absenceRepository
+    ): Response {
+        // Get pending absences for admin dashboard
+        $pendingAbsences = $absenceRepository->findBy([
+            'status' => Absence::STATUS_PENDING
+        ], ['createdAt' => 'DESC'], 10);
+
         return $this->render('dashboard/admin.html.twig', [
             'user' => $user,
+            'pendingAbsences' => $pendingAbsences,
         ]);
     }
 }
