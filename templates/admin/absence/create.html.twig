@@ -1,0 +1,139 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Créer une absence{% endblock %}
+
+{% block admin_title %}Créer une absence manuellement{% endblock %}
+{% block admin_subtitle %}Enregistrer une absence pour un employé{% endblock %}
+
+{% block admin_content %}
+    <div class="space-y-6">
+        {# Flash messages #}
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="p-4 rounded-lg {{ type == 'success' ? 'bg-green-100 text-green-800' : (type == 'error' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800') }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        {# Information utile #}
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">
+                        Création manuelle d'absence
+                    </h3>
+                    <div class="mt-2 text-sm text-blue-700">
+                        <p>Cette fonctionnalité permet aux administrateurs de :</p>
+                        <ul class="list-disc list-inside mt-1 ml-2">
+                            <li>Enregistrer des absences pour tout employé</li>
+                            <li>Définir le type, les dates et le statut de l'absence</li>
+                            <li>Ajouter des commentaires administratifs</li>
+                            <li>Joindre des justificatifs si nécessaire</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Formulaire de création #}
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-6">Informations de l'absence</h2>
+
+            {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+
+            <div class="space-y-6">
+                {# Employé #}
+                <div>
+                    {{ form_label(form.user, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                    {{ form_widget(form.user, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'}}) }}
+                    {{ form_errors(form.user) }}
+                </div>
+
+                {# Type d'absence #}
+                <div>
+                    {{ form_label(form.absenceType, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                    {{ form_widget(form.absenceType, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'}}) }}
+                    {{ form_errors(form.absenceType) }}
+                </div>
+
+                {# Dates #}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        {{ form_label(form.startAt, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                        {{ form_widget(form.startAt, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'}}) }}
+                        {{ form_errors(form.startAt) }}
+                    </div>
+                    <div>
+                        {{ form_label(form.endAt, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                        {{ form_widget(form.endAt, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'}}) }}
+                        {{ form_errors(form.endAt) }}
+                    </div>
+                </div>
+
+                {# Motif #}
+                <div>
+                    {{ form_label(form.reason, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                    {{ form_widget(form.reason, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500', 'rows': 3}}) }}
+                    {{ form_errors(form.reason) }}
+                </div>
+
+                {# Statut #}
+                <div>
+                    {{ form_label(form.status, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                    {{ form_widget(form.status, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'}}) }}
+                    {{ form_errors(form.status) }}
+                    <p class="mt-1 text-sm text-gray-500">
+                        Choisissez "Approuvée" pour valider directement l'absence lors de la création.
+                    </p>
+                </div>
+
+                {# Commentaire admin #}
+                <div>
+                    {{ form_label(form.adminComment, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                    {{ form_widget(form.adminComment, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500', 'rows': 2}}) }}
+                    {{ form_errors(form.adminComment) }}
+                </div>
+
+                {# Justificatif #}
+                <div>
+                    {{ form_label(form.justificationFile, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-blue-400 transition-colors">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="flex text-sm text-gray-600">
+                                <label class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+                                    <span>Télécharger un fichier</span>
+                                    {{ form_widget(form.justificationFile, {'attr': {'class': 'sr-only'}}) }}
+                                </label>
+                                <p class="pl-1">ou glisser-déposer</p>
+                            </div>
+                            <p class="text-xs text-gray-500">PDF, JPG, PNG jusqu'à 10MB</p>
+                        </div>
+                    </div>
+                    {{ form_errors(form.justificationFile) }}
+                </div>
+
+                {# Actions #}
+                <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+                    <a href="{{ path('admin_absence_index') }}" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+                        Annuler
+                    </a>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium shadow-sm transition-colors">
+                        Créer l'absence
+                    </button>
+                </div>
+            </div>
+
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

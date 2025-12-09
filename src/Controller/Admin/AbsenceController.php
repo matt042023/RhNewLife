@@ -6,6 +6,7 @@ use App\Entity\Absence;
 use App\Entity\Document;
 use App\Form\AbsenceFilterType;
 use App\Form\AbsenceValidationType;
+use App\Form\AdminAbsenceType;
 use App\Repository\TypeAbsenceRepository;
 use App\Service\Absence\AbsenceService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -50,6 +51,68 @@ class AbsenceController extends AbstractController
             'overdueJustifications' => $overdueJustifications,
             'filterForm' => $filterForm->createView(),
         ]);
+    }
+
+    /**
+     * Create absence manually (admin)
+     */
+    #[Route('/creer', name: 'admin_absence_create', methods: ['GET', 'POST'])]
+    public function create(Request $request): Response
+    {
+        $absence = new Absence();
+        $form = $this->createForm(AdminAbsenceType::class, $absence);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            try {
+                $justificationFile = $form->get('justificationFile')->getData();
+                $user = $absence->getUser();
+
+                // Créer l'absence via le service
+                $createdAbsence = $this->absenceService->createAbsence(
+                    user: $user,
+                    absenceType: $absence->getAbsenceType(),
+                    startAt: $absence->getStartAt(),
+                    endAt: $absence->getEndAt(),
+                    reason: $absence->getReason(),
+                    justificationFile: $justificationFile
+                );
+
+                // Si l'admin a créé l'absence avec un statut approuvé, la valider immédiatement
+                if ($absence->getStatus() === Absence::STATUS_APPROVED) {
+                    $this->absenceService->validateAbsence(
+                        $createdAbsence,
+                        $this->getUser(),
+                        forceWithoutJustification: $justificationFile === null
+                    );
+                } elseif ($absence->getStatus() === Absence::STATUS_REJECTED) {
+                    $this->absenceService->rejectAbsence(
+                        $createdAbsence,
+                        $this->getUser(),
+                        $absence->getAdminComment() ?? 'Refusée lors de la création'
+                    );
+                }
+
+                // Ajouter le commentaire admin si présent
+                if ($absence->getAdminComment()) {
+                    $createdAbsence->setAdminComment($absence->getAdminComment());
+                    $this->absenceRepository->save($createdAbsence, true);
+                }
+
+                $this->addFlash('success', sprintf(
+                    'Absence créée avec succès pour %s.',
+                    $user->getFullName()
+                ));
+
+                return $this->redirectToRoute('admin_absence_show', ['id' => $createdAbsence->getId()]);
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'Erreur lors de la création : ' . $e->getMessage());
+            }
+        }
+
+        return $this->render('admin/absence/create.html.twig', [
+            'form' => $form->createView(),
+        ], new Response(null, $form->isSubmitted() && !$form->isValid() ? 422 : 200));
     }
 
     /**
@@ -210,23 +273,6 @@ class AbsenceController extends AbstractController
         // TODO: Implement export service
         $this->addFlash('info', 'Export à implémenter');
         return $this->redirectToRoute('admin_absence_index');
-    }
-
-    /**
-     * Create absence manually (admin)
-     * TODO: Implement with form in Phase 4
-     */
-    #[Route('/creer', name: 'admin_absence_create', methods: ['GET', 'POST'])]
-    public function create(Request $request): Response
-    {
-        if ($request->isMethod('POST')) {
-            $this->addFlash('info', 'Création manuelle à implémenter en Phase 4');
-            return $this->redirectToRoute('admin_absence_index');
-        }
-
-        return $this->render('admin/absence/create.html.twig', [
-            'absenceTypes' => $this->typeAbsenceRepository->findActive(),
-        ]);
     }
 
     /**
