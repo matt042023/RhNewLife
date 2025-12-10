@@ -170,13 +170,22 @@ class AppointmentService
         $this->em->persist($appointment);
 
         // Ajouter le requester comme participant
-        $appointmentParticipant = new AppointmentParticipant();
-        $appointmentParticipant->setAppointment($appointment);
-        $appointmentParticipant->setUser($requester);
-        $appointmentParticipant->setPresenceStatus(AppointmentParticipant::PRESENCE_PENDING);
+        $requesterParticipant = new AppointmentParticipant();
+        $requesterParticipant->setAppointment($appointment);
+        $requesterParticipant->setUser($requester);
+        $requesterParticipant->setPresenceStatus(AppointmentParticipant::PRESENCE_PENDING);
 
-        $this->em->persist($appointmentParticipant);
-        $appointment->addAppointmentParticipant($appointmentParticipant);
+        $this->em->persist($requesterParticipant);
+        $appointment->addAppointmentParticipant($requesterParticipant);
+
+        // Ajouter le recipient (destinataire) comme participant
+        $recipientParticipant = new AppointmentParticipant();
+        $recipientParticipant->setAppointment($appointment);
+        $recipientParticipant->setUser($recipient);
+        $recipientParticipant->setPresenceStatus(AppointmentParticipant::PRESENCE_PENDING);
+
+        $this->em->persist($recipientParticipant);
+        $appointment->addAppointmentParticipant($recipientParticipant);
 
         $this->em->flush();
 

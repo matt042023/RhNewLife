@@ -46,6 +46,20 @@
 
         {# Actions rapides #}
         <div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0 flex gap-2">
+            {# Boutons de validation pour les demandes EN_ATTENTE #}
+            {% if appointment.type == 'DEMANDE' and appointment.statut == 'EN_ATTENTE' and is_granted('APPOINTMENT_VALIDATE', appointment) %}
+                <a href="{{ path('admin_appointment_validate', {id: appointment.id}) }}"
+                   class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition shadow-sm">
+                    ✅ Valider
+                </a>
+                <button type="button"
+                        data-modal-target="refuse-modal"
+                        data-modal-toggle="refuse-modal"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition shadow-sm">
+                    ❌ Refuser
+                </button>
+            {% endif %}
+
             {% if is_granted('APPOINTMENT_EDIT', appointment) %}
                 <a href="{{ path('admin_appointment_edit', {id: appointment.id}) }}"
                    class="px-4 py-2 bg-white text-blue-600 hover:bg-blue-50 font-medium rounded-lg transition shadow-sm">
@@ -250,6 +264,44 @@
                     </li>
                     {% endif %}
                 </ol>
+            </div>
+        </div>
+    </div>
+
+    {# Modal refus #}
+    <div id="refuse-modal" tabindex="-1" aria-hidden="true"
+         class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+        <div class="relative p-4 w-full max-w-2xl max-h-full">
+            <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                <div class="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Refuser la demande</h3>
+                    <button type="button" class="text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm w-8 h-8"
+                            data-modal-hide="refuse-modal">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 14 14">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                        </svg>
+                    </button>
+                </div>
+                <form method="post" action="{{ path('admin_appointment_refuse', {id: appointment.id}) }}">
+                    <div class="p-4 space-y-4">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Vous êtes sur le point de refuser la demande de <strong>{{ appointment.createdBy.fullName }}</strong>.
+                            Veuillez indiquer le motif du refus :
+                        </p>
+                        <textarea name="refusalReason" rows="5" required
+                                  class="form-control w-full"
+                                  placeholder="Expliquez la raison du refus..." minlength="10"></textarea>
+                    </div>
+                    <div class="flex items-center p-4 border-t border-gray-200 dark:border-gray-600">
+                        <button type="submit" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg">
+                            Confirmer le refus
+                        </button>
+                        <button type="button" data-modal-hide="refuse-modal"
+                                class="ms-3 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-medium rounded-lg">
+                            Annuler
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
