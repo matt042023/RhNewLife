@@ -9,14 +9,28 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: RendezVousRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class RendezVous
 {
+    // Anciens types (deprecated, pour compatibilité)
     public const TYPE_INDIVIDUEL = 'individuel';
     public const TYPE_GROUPE = 'groupe';
 
+    // Nouveaux types
+    public const TYPE_CONVOCATION = 'CONVOCATION';
+    public const TYPE_DEMANDE = 'DEMANDE';
+
+    // Anciens statuts (deprecated, pour compatibilité)
     public const STATUS_PLANNED = 'planned';
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_CANCELLED = 'cancelled';
+
+    // Nouveaux statuts
+    public const STATUS_EN_ATTENTE = 'EN_ATTENTE';
+    public const STATUS_CONFIRME = 'CONFIRME';
+    public const STATUS_REFUSE = 'REFUSE';
+    public const STATUS_ANNULE = 'ANNULE';
+    public const STATUS_TERMINE = 'TERMINE';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -54,9 +68,42 @@ class RendezVous
     #[ORM\JoinColumn(nullable: false)]
     private ?User $createdBy = null;
 
+    // Nouveaux champs
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $organizer = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $durationMinutes = 60;
+
+    #[ORM\Column(length: 255)]
+    private ?string $subject = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $location = null;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $createsAbsence = false;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $refusalReason = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    private ?\DateTimeInterface $createdAt = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    private ?\DateTimeInterface $updatedAt = null;
+
+    /**
+     * @var Collection<int, AppointmentParticipant>
+     */
+    #[ORM\OneToMany(mappedBy: 'appointment', targetEntity: AppointmentParticipant::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $appointmentParticipants;
+
     public function __construct()
     {
         $this->participants = new ArrayCollection();
+        $this->appointmentParticipants = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -194,5 +241,255 @@ class RendezVous
         $this->createdBy = $createdBy;
 
         return $this;
+    }
+
+    // Nouveaux getters/setters
+
+    public function getOrganizer(): ?User
+    {
+        return $this->organizer;
+    }
+
+    public function setOrganizer(?User $organizer): static
+    {
+        $this->organizer = $organizer;
+
+        return $this;
+    }
+
+    public function getDurationMinutes(): ?int
+    {
+        return $this->durationMinutes;
+    }
+
+    public function setDurationMinutes(?int $durationMinutes): static
+    {
+        $this->durationMinutes = $durationMinutes;
+
+        return $this;
+    }
+
+    public function getSubject(): ?string
+    {
+        return $this->subject;
+    }
+
+    public function setSubject(?string $subject): static
+    {
+        $this->subject = $subject;
+
+        return $this;
+    }
+
+    public function getLocation(): ?string
+    {
+        return $this->location;
+    }
+
+    public function setLocation(?string $location): static
+    {
+        $this->location = $location;
+
+        return $this;
+    }
+
+    public function isCreatesAbsence(): bool
+    {
+        return $this->createsAbsence;
+    }
+
+    public function setCreatesAbsence(bool $createsAbsence): static
+    {
+        $this->createsAbsence = $createsAbsence;
+
+        return $this;
+    }
+
+    public function getRefusalReason(): ?string
+    {
+        return $this->refusalReason;
+    }
+
+    public function setRefusalReason(?string $refusalReason): static
+    {
+        $this->refusalReason = $refusalReason;
+
+        return $this;
+    }
+
+    public function getCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeInterface $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeInterface
+    {
+        return $this->updatedAt;
+    }
+
+    public function setUpdatedAt(\DateTimeInterface $updatedAt): static
+    {
+        $this->updatedAt = $updatedAt;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, AppointmentParticipant>
+     */
+    public function getAppointmentParticipants(): Collection
+    {
+        return $this->appointmentParticipants;
+    }
+
+    public function addAppointmentParticipant(AppointmentParticipant $appointmentParticipant): static
+    {
+        if (!$this->appointmentParticipants->contains($appointmentParticipant)) {
+            $this->appointmentParticipants->add($appointmentParticipant);
+            $appointmentParticipant->setAppointment($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAppointmentParticipant(AppointmentParticipant $appointmentParticipant): static
+    {
+        if ($this->appointmentParticipants->removeElement($appointmentParticipant)) {
+            if ($appointmentParticipant->getAppointment() === $this) {
+                $appointmentParticipant->setAppointment(null);
+            }
+        }
+
+        return $this;
+    }
+
+    // Lifecycle callbacks
+
+    #[ORM\PrePersist]
+    public function onPrePersist(): void
+    {
+        $now = new \DateTime();
+        $this->createdAt ??= $now;
+        $this->updatedAt = $now;
+    }
+
+    #[ORM\PreUpdate]
+    public function onPreUpdate(): void
+    {
+        $this->updatedAt = new \DateTime();
+    }
+
+    // Méthodes helper
+
+    public function isConvocation(): bool
+    {
+        return $this->type === self::TYPE_CONVOCATION;
+    }
+
+    public function isDemande(): bool
+    {
+        return $this->type === self::TYPE_DEMANDE;
+    }
+
+    public function isEnAttente(): bool
+    {
+        return $this->statut === self::STATUS_EN_ATTENTE;
+    }
+
+    public function isConfirme(): bool
+    {
+        return $this->statut === self::STATUS_CONFIRME;
+    }
+
+    public function isRefuse(): bool
+    {
+        return $this->statut === self::STATUS_REFUSE;
+    }
+
+    public function isAnnule(): bool
+    {
+        return $this->statut === self::STATUS_ANNULE;
+    }
+
+    public function isTermine(): bool
+    {
+        return $this->statut === self::STATUS_TERMINE;
+    }
+
+    public function canBeValidated(): bool
+    {
+        return $this->isDemande() && $this->isEnAttente();
+    }
+
+    public function canBeEdited(): bool
+    {
+        return !$this->isTermine() && !$this->isRefuse();
+    }
+
+    public function hasParticipant(User $user): bool
+    {
+        foreach ($this->appointmentParticipants as $participant) {
+            if ($participant->getUser() === $user) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function getParticipantStatus(User $user): ?string
+    {
+        foreach ($this->appointmentParticipants as $participant) {
+            if ($participant->getUser() === $user) {
+                return $participant->getPresenceStatus();
+            }
+        }
+        return null;
+    }
+
+    public function addParticipantWithStatus(User $user, string $status = 'PENDING'): static
+    {
+        if (!$this->hasParticipant($user)) {
+            $appointmentParticipant = new AppointmentParticipant();
+            $appointmentParticipant->setUser($user);
+            $appointmentParticipant->setPresenceStatus($status);
+            $this->addAppointmentParticipant($appointmentParticipant);
+        }
+
+        return $this;
+    }
+
+    public function getAllConfirmed(): bool
+    {
+        if ($this->appointmentParticipants->isEmpty()) {
+            return false;
+        }
+
+        foreach ($this->appointmentParticipants as $participant) {
+            if ($participant->getPresenceStatus() !== AppointmentParticipant::PRESENCE_CONFIRMED) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Calcule la date de fin basée sur startAt et durationMinutes
+     */
+    public function getCalculatedEndAt(): ?\DateTimeInterface
+    {
+        if ($this->startAt && $this->durationMinutes) {
+            $endAt = clone $this->startAt;
+            $endAt->modify("+{$this->durationMinutes} minutes");
+            return $endAt;
+        }
+        return $this->endAt;
     }
 }

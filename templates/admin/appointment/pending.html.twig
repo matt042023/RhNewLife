@@ -1,0 +1,159 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Demandes en attente{% endblock %}
+
+{% block page_header %}
+<div class="px-4 py-6 lg:px-6">
+    <div class="flex items-center mb-2">
+        <a href="{{ path('admin_appointment_index') }}" class="text-white/80 hover:text-white mr-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+        </a>
+        <h1 class="text-2xl md:text-3xl font-bold text-white">Demandes en attente</h1>
+    </div>
+    <p class="text-blue-100 text-sm md:text-base">
+        {{ pendingRequests|length }} demande(s) à traiter
+    </p>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+
+    {# Liste des demandes #}
+    {% if pendingRequests|length > 0 %}
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {% for appointment in pendingRequests %}
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition">
+                    {# Badge demande #}
+                    <div class="mb-4">
+                        <span class="px-2 py-1 text-xs font-semibold rounded bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                            Demande
+                        </span>
+                        <span class="ml-2 px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                            En attente
+                        </span>
+                    </div>
+
+                    {# Sujet #}
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                        {{ appointment.subject }}
+                    </h3>
+
+                    {# Demandeur #}
+                    <div class="mb-3 flex items-start">
+                        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold mr-3 flex-shrink-0">
+                            {{ appointment.createdBy.firstName|slice(0, 1)|upper }}{{ appointment.createdBy.lastName|slice(0, 1)|upper }}
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                {{ appointment.createdBy.fullName }}
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ appointment.createdBy.email }}
+                            </p>
+                        </div>
+                    </div>
+
+                    {# Date souhaitée #}
+                    {% if appointment.startAt %}
+                        <div class="mb-3 flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span>Date souhaitée : {{ appointment.startAt|date('d/m/Y') }}</span>
+                        </div>
+                    {% endif %}
+
+                    {# Message #}
+                    {% if appointment.description %}
+                        <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                            <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">
+                                {{ appointment.description }}
+                            </p>
+                        </div>
+                    {% endif %}
+
+                    {# Date de création #}
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        Demandé le {{ appointment.createdAt|date('d/m/Y à H:i') }}
+                    </p>
+
+                    {# Actions #}
+                    <div class="flex gap-2">
+                        <a href="{{ path('admin_appointment_validate', {id: appointment.id}) }}"
+                           class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition text-center">
+                            ✅ Valider
+                        </a>
+                        <button type="button"
+                                data-modal-target="refuse-modal-{{ appointment.id }}"
+                                data-modal-toggle="refuse-modal-{{ appointment.id }}"
+                                class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition">
+                            ❌ Refuser
+                        </button>
+                    </div>
+
+                    {# Modal de refus #}
+                    <div id="refuse-modal-{{ appointment.id }}" tabindex="-1" aria-hidden="true"
+                         class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+                        <div class="relative p-4 w-full max-w-2xl max-h-full">
+                            <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                                {# Header #}
+                                <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+                                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                                        Refuser la demande
+                                    </h3>
+                                    <button type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                                            data-modal-hide="refuse-modal-{{ appointment.id }}">
+                                        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                                        </svg>
+                                        <span class="sr-only">Close modal</span>
+                                    </button>
+                                </div>
+                                {# Body #}
+                                <form method="post" action="{{ path('admin_appointment_refuse', {id: appointment.id}) }}">
+                                    <div class="p-4 md:p-5 space-y-4">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                                            Vous êtes sur le point de refuser la demande de <strong>{{ appointment.createdBy.fullName }}</strong>.
+                                            Veuillez indiquer le motif du refus :
+                                        </p>
+                                        <textarea name="refusalReason" rows="5" required
+                                                  class="form-control w-full"
+                                                  placeholder="Expliquez la raison du refus..." minlength="10"></textarea>
+                                    </div>
+                                    {# Footer #}
+                                    <div class="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
+                                        <button type="submit" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition">
+                                            Confirmer le refus
+                                        </button>
+                                        <button type="button" data-modal-hide="refuse-modal-{{ appointment.id }}"
+                                                class="ms-3 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-medium rounded-lg transition">
+                                            Annuler
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-gray-900 dark:text-white">Aucune demande en attente</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Toutes les demandes ont été traitées !
+            </p>
+            <div class="mt-6">
+                <a href="{{ path('admin_appointment_index') }}"
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
+                    Voir tous les rendez-vous
+                </a>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

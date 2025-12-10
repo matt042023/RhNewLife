@@ -1,0 +1,294 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}{{ appointment.subject }} - Admin{% endblock %}
+
+{% block page_header %}
+<div class="px-4 py-6 lg:px-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center mb-2">
+                <a href="{{ path('admin_appointment_index') }}" class="text-white/80 hover:text-white mr-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                </a>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">{{ appointment.subject }}</h1>
+            </div>
+
+            {# Badges #}
+            <div class="flex gap-2">
+                {% set typeColors = {
+                    'CONVOCATION': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+                    'DEMANDE': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                } %}
+                {% set statusColors = {
+                    'EN_ATTENTE': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+                    'CONFIRME': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                    'REFUSE': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+                    'ANNULE': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+                    'TERMINE': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                } %}
+
+                <span class="px-3 py-1 text-sm font-semibold rounded {{ typeColors[appointment.type] }}">
+                    {{ appointment.type == 'CONVOCATION' ? 'Convocation' : 'Demande' }}
+                </span>
+                <span class="px-3 py-1 text-sm font-semibold rounded {{ statusColors[appointment.statut] }}">
+                    {% if appointment.statut == 'EN_ATTENTE' %}En attente
+                    {% elseif appointment.statut == 'CONFIRME' %}Confirmé
+                    {% elseif appointment.statut == 'REFUSE' %}Refusé
+                    {% elseif appointment.statut == 'ANNULE' %}Annulé
+                    {% elseif appointment.statut == 'TERMINE' %}Terminé
+                    {% else %}{{ appointment.statut }}
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        {# Actions rapides #}
+        <div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0 flex gap-2">
+            {% if is_granted('APPOINTMENT_EDIT', appointment) %}
+                <a href="{{ path('admin_appointment_edit', {id: appointment.id}) }}"
+                   class="px-4 py-2 bg-white text-blue-600 hover:bg-blue-50 font-medium rounded-lg transition shadow-sm">
+                    Modifier
+                </a>
+            {% endif %}
+
+            {% if is_granted('APPOINTMENT_DELETE', appointment) %}
+                <button type="button"
+                        data-modal-target="cancel-modal"
+                        data-modal-toggle="cancel-modal"
+                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition shadow-sm">
+                    Annuler
+                </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {# Colonne principale #}
+        <div class="lg:col-span-2 space-y-6">
+            {# Informations principales #}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Informations</h2>
+
+                <dl class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2 md:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Date et heure</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white">
+                            {{ appointment.startAt|date('d/m/Y à H:i') }}
+                        </dd>
+                    </div>
+
+                    {% if appointment.durationMinutes %}
+                    <div class="col-span-2 md:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Durée</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white">
+                            {{ appointment.durationMinutes }} minutes
+                        </dd>
+                    </div>
+                    {% endif %}
+
+                    {% if appointment.location %}
+                    <div class="col-span-2 md:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Lieu</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white">
+                            {{ appointment.location }}
+                        </dd>
+                    </div>
+                    {% endif %}
+
+                    <div class="col-span-2 md:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Organisateur</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white">
+                            {{ appointment.organizer.fullName }}
+                        </dd>
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Créé par</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white">
+                            {{ appointment.createdBy.fullName }}
+                        </dd>
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Créé le</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white">
+                            {{ appointment.createdAt|date('d/m/Y à H:i') }}
+                        </dd>
+                    </div>
+
+                    {% if appointment.createsAbsence %}
+                    <div class="col-span-2">
+                        <span class="px-3 py-1 text-sm font-semibold rounded bg-purple-100 text-purple-800">
+                            ✅ Absence automatique activée
+                        </span>
+                    </div>
+                    {% endif %}
+                </dl>
+
+                {% if appointment.description %}
+                <div class="mt-6 pt-6 border-t">
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Description</h3>
+                    <p class="text-gray-900 dark:text-white whitespace-pre-line">{{ appointment.description }}</p>
+                </div>
+                {% endif %}
+
+                {% if appointment.statut == 'REFUSE' and appointment.refusalReason %}
+                <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h3 class="text-sm font-medium text-red-800 mb-2">Motif du refus</h3>
+                    <p class="text-sm text-red-700">{{ appointment.refusalReason }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            {# Participants #}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    Participants ({{ appointment.appointmentParticipants|length }})
+                </h2>
+
+                <div class="space-y-3">
+                    {% for participant in appointment.appointmentParticipants %}
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                                    {{ participant.user.firstName|slice(0, 1)|upper }}{{ participant.user.lastName|slice(0, 1)|upper }}
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900 dark:text-white">
+                                        {{ participant.user.fullName }}
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        {{ participant.user.email }}
+                                    </p>
+                                    {% if participant.confirmedAt %}
+                                        <p class="text-xs text-green-600 mt-1">
+                                            Confirmé le {{ participant.confirmedAt|date('d/m/Y à H:i') }}
+                                        </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col items-end gap-2">
+                                {# Badge statut #}
+                                {% if participant.presenceStatus == 'PENDING' %}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800">
+                                        ⏳ À confirmer
+                                    </span>
+                                {% elseif participant.presenceStatus == 'CONFIRMED' %}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
+                                        ✅ Confirmé
+                                    </span>
+                                {% elseif participant.presenceStatus == 'ABSENT' %}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">
+                                        ❌ Absent
+                                    </span>
+                                {% endif %}
+
+                                {# Lien vers absence #}
+                                {% if participant.linkedAbsence %}
+                                    <a href="{{ path('app_absence_show', {id: participant.linkedAbsence.id}) }}"
+                                       class="text-xs text-blue-600 hover:text-blue-800">
+                                        Voir l'absence
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# Colonne latérale - Timeline #}
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 sticky top-4">
+                <h2 class="text-lg font-semibold mb-4">Timeline</h2>
+
+                <ol class="relative border-s border-gray-200 dark:border-gray-700">
+                    {# Création #}
+                    <li class="mb-6 ms-4">
+                        <div class="absolute w-3 h-3 bg-blue-600 rounded-full mt-1.5 -start-1.5 border border-white dark:border-gray-900"></div>
+                        <time class="mb-1 text-sm font-normal text-gray-400">{{ appointment.createdAt|date('d/m/Y H:i') }}</time>
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Création</h3>
+                        <p class="text-xs text-gray-500">Par {{ appointment.createdBy.fullName }}</p>
+                    </li>
+
+                    {# Validation (si demande validée) #}
+                    {% if appointment.type == 'DEMANDE' and appointment.statut != 'EN_ATTENTE' %}
+                    <li class="mb-6 ms-4">
+                        <div class="absolute w-3 h-3 {% if appointment.statut == 'CONFIRME' %}bg-green-600{% else %}bg-red-600{% endif %} rounded-full mt-1.5 -start-1.5 border border-white"></div>
+                        <time class="mb-1 text-sm font-normal text-gray-400">{{ appointment.updatedAt|date('d/m/Y H:i') }}</time>
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                            {% if appointment.statut == 'CONFIRME' %}Validation{% else %}Refus{% endif %}
+                        </h3>
+                    </li>
+                    {% endif %}
+
+                    {# Confirmations de présence #}
+                    {% for participant in appointment.appointmentParticipants %}
+                        {% if participant.confirmedAt %}
+                        <li class="mb-6 ms-4">
+                            <div class="absolute w-3 h-3 bg-green-600 rounded-full mt-1.5 -start-1.5 border border-white"></div>
+                            <time class="mb-1 text-sm font-normal text-gray-400">{{ participant.confirmedAt|date('d/m/Y H:i') }}</time>
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Présence confirmée</h3>
+                            <p class="text-xs text-gray-500">{{ participant.user.fullName }}</p>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {# Annulation #}
+                    {% if appointment.statut == 'ANNULE' %}
+                    <li class="ms-4">
+                        <div class="absolute w-3 h-3 bg-red-600 rounded-full mt-1.5 -start-1.5 border border-white"></div>
+                        <time class="mb-1 text-sm font-normal text-gray-400">{{ appointment.updatedAt|date('d/m/Y H:i') }}</time>
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Annulation</h3>
+                    </li>
+                    {% endif %}
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    {# Modal annulation #}
+    <div id="cancel-modal" tabindex="-1" aria-hidden="true"
+         class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+        <div class="relative p-4 w-full max-w-2xl max-h-full">
+            <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                <div class="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Annuler le rendez-vous</h3>
+                    <button type="button" class="text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm w-8 h-8"
+                            data-modal-hide="cancel-modal">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 14 14">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                        </svg>
+                    </button>
+                </div>
+                <form method="post" action="{{ path('admin_appointment_cancel', {id: appointment.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('cancel-appointment-' ~ appointment.id) }}">
+                    <div class="p-4 space-y-4">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Êtes-vous sûr de vouloir annuler ce rendez-vous ? Les participants seront notifiés par email.
+                        </p>
+                        <textarea name="reason" rows="3"
+                                  class="form-control w-full"
+                                  placeholder="Raison de l'annulation (optionnel)"></textarea>
+                    </div>
+                    <div class="flex items-center p-4 border-t border-gray-200 dark:border-gray-600">
+                        <button type="submit" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg">
+                            Confirmer l'annulation
+                        </button>
+                        <button type="button" data-modal-hide="cancel-modal"
+                                class="ms-3 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-medium rounded-lg">
+                            Annuler
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

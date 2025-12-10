@@ -5,14 +5,23 @@ namespace App\Service\Planning;
 use App\Entity\RendezVous;
 use App\Entity\User;
 use App\Repository\AffectationRepository;
+use App\Service\Appointment\AppointmentService;
 use Doctrine\ORM\EntityManagerInterface;
 
+/**
+ * Service de gestion des rendez-vous (Planning)
+ *
+ * @deprecated Ce service est conservé pour la compatibilité avec l'ancien système de planning.
+ *             Pour les nouvelles fonctionnalités de rendez-vous (convocations, demandes, validations),
+ *             utiliser App\Service\Appointment\AppointmentService
+ */
 class RendezVousService
 {
     public function __construct(
         private EntityManagerInterface $em,
         private PlanningConflictService $conflictService,
-        private AffectationRepository $affectationRepository
+        private AffectationRepository $affectationRepository,
+        private ?AppointmentService $appointmentService = null
     ) {
     }
 
@@ -39,10 +48,17 @@ class RendezVousService
         // Before deleting, we might want to resolve conflicts (remove the "TO_REPLACE_RDV" status)
         // But since the RDV is gone, the conflict service check would pass next time.
         // Ideally we should trigger a re-check on affected affectations.
-        
+
+        // Si le nouveau système d'appointments est disponible, l'utiliser
+        if ($this->appointmentService &&
+            ($rdv->getType() === RendezVous::TYPE_CONVOCATION || $rdv->getType() === RendezVous::TYPE_DEMANDE)) {
+            // Le nouveau service gère l'annulation avec suppression des absences liées
+            $this->appointmentService->cancelAppointment($rdv, $rdv->getCreatedBy(), 'Supprimé');
+        }
+
         $this->em->remove($rdv);
         $this->em->flush();
-        
+
         // TODO: Trigger re-check of conflicts for the participants in the time range
     }
 

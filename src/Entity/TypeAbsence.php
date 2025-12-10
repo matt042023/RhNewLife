@@ -12,6 +12,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Table(name: 'type_absence')]
 class TypeAbsence
 {
+    // Codes de types d'absence
+    public const CODE_REUNION = 'REUNION';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
