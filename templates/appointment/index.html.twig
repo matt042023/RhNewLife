@@ -26,7 +26,7 @@
     <div class="mb-4 border-b border-gray-200 dark:border-gray-700">
         <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" role="tablist">
             <li class="mr-2" role="presentation">
-                <button class="inline-block p-4 border-b-2 rounded-t-lg tab-button active"
+                <button class="inline-block p-4 border-b-2 rounded-t-lg tab-button active text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500"
                         data-tabs-target="#upcoming" type="button" role="tab">
                     À venir
                     {% if upcomingAppointments|length > 0 %}
@@ -37,7 +37,7 @@
                 </button>
             </li>
             <li class="mr-2" role="presentation">
-                <button class="inline-block p-4 border-b-2 rounded-t-lg tab-button"
+                <button class="inline-block p-4 border-b-2 rounded-t-lg tab-button text-gray-500 border-transparent hover:text-gray-600 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
                         data-tabs-target="#requests" type="button" role="tab">
                     Mes demandes
                     {% if myRequests|length > 0 %}
@@ -48,7 +48,7 @@
                 </button>
             </li>
             <li class="mr-2" role="presentation">
-                <button class="inline-block p-4 border-b-2 rounded-t-lg tab-button"
+                <button class="inline-block p-4 border-b-2 rounded-t-lg tab-button text-gray-500 border-transparent hover:text-gray-600 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
                         data-tabs-target="#history" type="button" role="tab">
                     Historique
                 </button>
