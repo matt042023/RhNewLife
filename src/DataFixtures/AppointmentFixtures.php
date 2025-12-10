@@ -15,10 +15,10 @@ class AppointmentFixtures extends Fixture implements DependentFixtureInterface
     public function load(ObjectManager $manager): void
     {
         // Récupérer des utilisateurs de test
-        $admin = $this->getReference('user-admin', User::class);
-        $director = $this->getReference('user-director', User::class);
-        $educator1 = $this->getReference('user-educator-1', User::class);
-        $educator2 = $this->getReference('user-educator-2', User::class);
+        $admin = $this->getReference('admin', User::class);
+        $director = $this->getReference('director', User::class);
+        $educator1 = $this->getReference('educator-1', User::class);
+        $educator2 = $this->getReference('educator-2', User::class);
 
         // Récupérer le type d'absence REUNION
         $reunionType = $manager->getRepository(TypeAbsence::class)
@@ -173,7 +173,8 @@ class AppointmentFixtures extends Fixture implements DependentFixtureInterface
     public function getDependencies(): array
     {
         return [
-            UserFixtures::class, // Assurez-vous que cette fixture existe
+            AppFixtures::class,          // Pour récupérer admin/director
+            EducatorFixtures::class,     // Pour récupérer les éducateurs
         ];
     }
 }

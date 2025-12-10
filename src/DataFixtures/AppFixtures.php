@@ -39,6 +39,7 @@ class AppFixtures extends Fixture
         $admin->setPassword($hashedPassword);
 
         $manager->persist($admin);
+        $this->addReference('admin', $admin);
 
         // ========================================
         // 2. DIRECTEUR
@@ -64,6 +65,7 @@ class AppFixtures extends Fixture
         $director->setPassword($hashedPassword);
 
         $manager->persist($director);
+        $this->addReference('director', $director);
 
         // ========================================
         // 3. ÉDUCATEUR

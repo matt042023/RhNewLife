@@ -16,6 +16,7 @@ class TypeAbsenceFixtures extends Fixture
     public const TYPE_CPSS = 'CPSS';
     public const TYPE_ABSAUT = 'ABSAUT';
     public const TYPE_ABSNJ = 'ABSNJ';
+    public const TYPE_REUNION = 'REUNION';
 
     public function load(ObjectManager $manager): void
     {
@@ -83,6 +84,16 @@ class TypeAbsenceFixtures extends Fixture
             [
                 'code' => self::TYPE_ABSNJ,
                 'label' => 'Absence non justifiée',
+                'affectsPlanning' => true,
+                'deductFromCounter' => false,
+                'requiresJustification' => false,
+                'justificationDeadlineDays' => null,
+                'documentType' => null,
+                'active' => true,
+            ],
+            [
+                'code' => self::TYPE_REUNION,
+                'label' => 'Réunion',
                 'affectsPlanning' => true,
                 'deductFromCounter' => false,
                 'requiresJustification' => false,
