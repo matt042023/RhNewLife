@@ -349,11 +349,9 @@ class AppointmentService
 
         // Vérifier si tous les participants ont confirmé
         if ($appointment->getAllConfirmed()) {
-            $appointment->setStatut(RendezVous::STATUS_TERMINE);
-            $this->em->flush();
-
-            $this->logger->info('Tous les participants ont confirmé, RDV terminé', [
-                'appointment_id' => $appointment->getId()
+            $this->logger->info('Tous les participants ont confirmé leur présence', [
+                'appointment_id' => $appointment->getId(),
+                'scheduled_at' => $appointment->getStartAt()->format('Y-m-d H:i')
             ]);
         }
 

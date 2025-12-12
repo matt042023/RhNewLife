@@ -492,4 +492,85 @@ class RendezVous
         }
         return $this->endAt;
     }
+
+    /**
+     * Vérifie si le rendez-vous est passé (a déjà eu lieu)
+     */
+    public function isPast(): bool
+    {
+        if (!$this->getCalculatedEndAt()) {
+            return false;
+        }
+        return $this->getCalculatedEndAt() < new \DateTime();
+    }
+
+    /**
+     * Vérifie si le rendez-vous est à venir
+     */
+    public function isUpcoming(): bool
+    {
+        if (!$this->startAt) {
+            return false;
+        }
+        return $this->startAt > new \DateTime();
+    }
+
+    /**
+     * Vérifie si le rendez-vous est en cours
+     */
+    public function isOngoing(): bool
+    {
+        if (!$this->startAt || !$this->getCalculatedEndAt()) {
+            return false;
+        }
+        $now = new \DateTime();
+        return $this->startAt <= $now && $this->getCalculatedEndAt() >= $now;
+    }
+
+    /**
+     * Retourne le statut d'affichage réel basé sur la date et les confirmations
+     */
+    public function getDisplayStatus(): string
+    {
+        // Si annulé ou refusé, retourner tel quel
+        if ($this->isAnnule() || $this->isRefuse()) {
+            return $this->statut;
+        }
+
+        // Si en attente de validation, retourner tel quel
+        if ($this->isEnAttente()) {
+            return $this->statut;
+        }
+
+        // Si le RDV est passé
+        if ($this->isPast()) {
+            return self::STATUS_TERMINE;
+        }
+
+        // Si confirmé et tous les participants ont confirmé
+        if ($this->isConfirme() && $this->getAllConfirmed()) {
+            return 'PRET'; // Tous prêts, en attente du RDV
+        }
+
+        // Sinon retourner le statut actuel
+        return $this->statut;
+    }
+
+    /**
+     * Retourne le label du statut d'affichage
+     */
+    public function getDisplayStatusLabel(): string
+    {
+        $status = $this->getDisplayStatus();
+
+        return match($status) {
+            'EN_ATTENTE' => 'En attente',
+            'CONFIRME' => 'Confirmé',
+            'PRET' => 'Prêt',
+            'REFUSE' => 'Refusé',
+            'ANNULE' => 'Annulé',
+            'TERMINE' => 'Terminé',
+            default => $status
+        };
+    }
 }
