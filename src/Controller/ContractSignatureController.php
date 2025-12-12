@@ -37,6 +37,40 @@ class ContractSignatureController extends AbstractController
     }
 
     /**
+     * Télécharger le contrat PDF (brouillon)
+     */
+    #[Route('/{token}/download', name: 'app_contract_signature_download', methods: ['GET'])]
+    public function download(string $token): Response
+    {
+        $contract = $this->signatureService->validateToken($token);
+
+        if (!$contract) {
+            return $this->render('contract_signature/token_expired.html.twig', [
+                'token' => $token,
+            ]);
+        }
+
+        if (!$contract->getDraftFileUrl()) {
+            throw $this->createNotFoundException('Le fichier du contrat n\'est pas disponible.');
+        }
+
+        $projectDir = $this->getParameter('kernel.project_dir');
+        $filePath = $projectDir . '/public/uploads/' . $contract->getDraftFileUrl();
+
+        if (!file_exists($filePath)) {
+            throw $this->createNotFoundException('Le fichier physique est introuvable.');
+        }
+
+        $response = new \Symfony\Component\HttpFoundation\BinaryFileResponse($filePath);
+        $response->setContentDisposition(
+            \Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            'Contrat_' . $contract->getTypeLabel() . '.pdf'
+        );
+
+        return $response;
+    }
+
+    /**
      * Traiter l'upload du contrat signé manuellement
      */
     #[Route('/{token}/upload', name: 'app_contract_signature_upload', methods: ['POST'])]

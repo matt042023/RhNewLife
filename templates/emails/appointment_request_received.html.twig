@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f59e0b; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
+        .info-box { background-color: white; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b; border-radius: 4px; }
+        .info-row { margin: 10px 0; }
+        .label { font-weight: bold; color: #6b7280; }
+        .button { display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 6px; margin: 10px 5px; }
+        .button-secondary { background-color: #ef4444; }
+        .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📨 Nouvelle demande de rendez-vous</h1>
+        </div>
+
+        <div class="content">
+            <p>Bonjour <strong>{{ recipient.fullName }}</strong>,</p>
+
+            <p>Vous avez reçu une nouvelle demande de rendez-vous de la part de <strong>{{ requester.fullName }}</strong>.</p>
+
+            <div class="info-box">
+                <h2 style="margin-top: 0; color: #1f2937;">{{ appointment.subject }}</h2>
+
+                <div class="info-row">
+                    <span class="label">👤 Demandeur :</span>
+                    {{ requester.fullName }} ({{ requester.email }})
+                </div>
+
+                {% if appointment.startAt %}
+                <div class="info-row">
+                    <span class="label">📅 Date souhaitée :</span>
+                    {{ appointment.startAt|date('d/m/Y') }}
+                </div>
+                {% else %}
+                <div class="info-row">
+                    <span class="label">📅 Date :</span>
+                    À définir
+                </div>
+                {% endif %}
+
+                {% if appointment.description %}
+                <div class="info-row" style="margin-top: 20px;">
+                    <span class="label">💬 Message :</span>
+                    <p style="margin: 10px 0; background-color: #f3f4f6; padding: 15px; border-radius: 4px;">
+                        {{ appointment.description|nl2br }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="text-align: center;">
+                <a href="{{ url('admin_appointment_validate', {id: appointment.id}) }}" class="button">
+                    ✅ Valider la demande
+                </a>
+                <a href="{{ url('admin_appointment_pending') }}" class="button button-secondary">
+                    ❌ Traiter plus tard
+                </a>
+            </div>
+
+            <p style="margin-top: 30px; padding: 15px; background-color: #fef3c7; border-radius: 6px; font-size: 14px;">
+                <strong>⏰ Action requise :</strong> Merci de traiter cette demande rapidement.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Cet email a été envoyé automatiquement par GestionRH NewLife.</p>
+            <p>Merci de ne pas répondre à cet email.</p>
+        </div>
+    </div>
+</body>
+</html>

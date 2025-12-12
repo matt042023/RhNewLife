@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\Absence;
 use App\Entity\Contract;
 use App\Entity\Document;
 use App\Entity\User;
@@ -384,6 +385,12 @@ class DocumentManager
     public function validateDocument(Document $document, ?string $comment = null, ?User $validatedBy = null): void
     {
         $document->markAsValidated($comment, $validatedBy);
+
+        // If linked to an absence, update absence justification status
+        if ($document->getAbsence()) {
+            $document->getAbsence()->setJustificationStatus(Absence::JUSTIF_VALIDATED);
+        }
+
         $this->entityManager->flush();
 
         $this->logger->info('Document validated', [
@@ -401,6 +408,13 @@ class DocumentManager
     public function rejectDocument(Document $document, string $reason): void
     {
         $document->markAsRejected($reason);
+
+        // If linked to an absence, reset status and set new deadline
+        if ($document->getAbsence()) {
+            $document->getAbsence()->setJustificationStatus(Absence::JUSTIF_PENDING);
+            $document->getAbsence()->setJustificationDeadline((new \DateTime())->modify('+2 days'));
+        }
+
         $this->entityManager->flush();
 
         $this->logger->info('Document rejected', [

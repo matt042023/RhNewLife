@@ -1,0 +1,160 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Valider une demande{% endblock %}
+
+{% block page_header %}
+<div class="px-4 py-6 lg:px-6">
+    <div class="flex items-center mb-2">
+        <a href="{{ path('admin_appointment_show', {id: appointment.id}) }}" class="text-white/80 hover:text-white mr-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+        </a>
+        <h1 class="text-2xl md:text-3xl font-bold text-white">Valider la demande</h1>
+    </div>
+    <p class="text-blue-100 text-sm md:text-base">Confirmez les détails du rendez-vous</p>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-4xl mx-auto">
+
+    {# Informations de la demande #}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Demande de rendez-vous</h2>
+
+        <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Demandeur</dt>
+                <dd class="mt-1 text-gray-900 dark:text-white font-medium">
+                    {{ appointment.createdBy.fullName }}
+                </dd>
+            </div>
+
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Objet</dt>
+                <dd class="mt-1 text-gray-900 dark:text-white">
+                    {{ appointment.subject }}
+                </dd>
+            </div>
+
+            {% if appointment.startAt %}
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Date souhaitée</dt>
+                <dd class="mt-1 text-gray-900 dark:text-white">
+                    {{ appointment.startAt|date('d/m/Y à H:i') }}
+                </dd>
+            </div>
+            {% endif %}
+
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Demandé le</dt>
+                <dd class="mt-1 text-gray-900 dark:text-white">
+                    {{ appointment.createdAt|date('d/m/Y à H:i') }}
+                </dd>
+            </div>
+        </dl>
+
+        {% if appointment.description %}
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Message du demandeur</dt>
+            <dd class="text-gray-900 dark:text-white whitespace-pre-line">{{ appointment.description }}</dd>
+        </div>
+        {% endif %}
+    </div>
+
+    {# Formulaire de validation #}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Détails du rendez-vous</h2>
+
+        {{ form_start(form) }}
+
+        {# Date et heure #}
+        <div class="mb-6">
+            {{ form_label(form.scheduledAt, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}
+            {{ form_widget(form.scheduledAt) }}
+            {{ form_errors(form.scheduledAt) }}
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {% if appointment.startAt %}
+                    Date suggérée : {{ appointment.startAt|date('d/m/Y à H:i') }}
+                {% else %}
+                    Aucune date suggérée, choisissez une date appropriée
+                {% endif %}
+            </p>
+        </div>
+
+        {# Durée #}
+        <div class="mb-6">
+            {{ form_label(form.durationMinutes, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}
+            {{ form_widget(form.durationMinutes) }}
+            {{ form_errors(form.durationMinutes) }}
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Entre 15 et 480 minutes (8 heures)
+            </p>
+        </div>
+
+        {# Lieu #}
+        <div class="mb-6">
+            {{ form_label(form.location, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}
+            {{ form_widget(form.location) }}
+            {{ form_errors(form.location) }}
+        </div>
+
+        {# Créer absence automatique #}
+        <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div class="flex items-start">
+                <div class="flex items-center h-5">
+                    {{ form_widget(form.createsAbsence) }}
+                </div>
+                <div class="ml-3 text-sm">
+                    {{ form_label(form.createsAbsence, null, {'label_attr': {'class': 'font-medium text-gray-700 dark:text-gray-300'}}) }}
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {{ form_help(form.createsAbsence) }}
+                    </p>
+                </div>
+            </div>
+            {{ form_errors(form.createsAbsence) }}
+        </div>
+
+        {# Commentaire admin #}
+        <div class="mb-6">
+            {{ form_label(form.adminComment, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}
+            {{ form_widget(form.adminComment) }}
+            {{ form_errors(form.adminComment) }}
+        </div>
+
+        {# Informations importantes #}
+        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
+            <div class="flex">
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">À savoir</h3>
+                    <ul class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+                        <li>Le demandeur sera notifié par email de votre validation</li>
+                        <li>Le statut passera automatiquement à "CONFIRMÉ"</li>
+                        <li><strong class="text-green-600 dark:text-green-400">Votre présence sera automatiquement confirmée</strong> (pas besoin de reconfirmer)</li>
+                        <li>Le demandeur devra ensuite confirmer sa présence</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {# Boutons d'action #}
+        <div class="flex gap-3">
+            <button type="submit" class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">
+                <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Valider la demande
+            </button>
+            <a href="{{ path('admin_appointment_show', {id: appointment.id}) }}" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition">
+                Annuler
+            </a>
+        </div>
+
+        {{ form_end(form) }}
+    </div>
+</div>
+{% endblock %}

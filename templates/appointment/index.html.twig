@@ -1,0 +1,144 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Mes Rendez-vous{% endblock %}
+
+{% block page_header %}
+<div class="px-4 py-6 lg:px-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div class="flex-1 min-w-0">
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">Mes Rendez-vous</h1>
+            <p class="text-blue-100 text-sm md:text-base">Gérez vos rendez-vous et demandes</p>
+        </div>
+        <div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0">
+            <a href="{{ path('app_appointment_request') }}" class="inline-flex items-center px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium shadow-sm">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                Demander un rendez-vous
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+    {# Onglets #}
+    <div class="mb-4 border-b border-gray-200 dark:border-gray-700">
+        <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" role="tablist">
+            <li class="mr-2" role="presentation">
+                <button class="inline-block p-4 border-b-2 rounded-t-lg tab-button active text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500"
+                        data-tabs-target="#upcoming" type="button" role="tab">
+                    À venir
+                    {% if upcomingAppointments|length > 0 %}
+                        <span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            {{ upcomingAppointments|length }}
+                        </span>
+                    {% endif %}
+                </button>
+            </li>
+            <li class="mr-2" role="presentation">
+                <button class="inline-block p-4 border-b-2 rounded-t-lg tab-button text-gray-500 border-transparent hover:text-gray-600 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                        data-tabs-target="#requests" type="button" role="tab">
+                    Mes demandes
+                    {% if myRequests|length > 0 %}
+                        <span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                            {{ myRequests|length }}
+                        </span>
+                    {% endif %}
+                </button>
+            </li>
+            <li class="mr-2" role="presentation">
+                <button class="inline-block p-4 border-b-2 rounded-t-lg tab-button text-gray-500 border-transparent hover:text-gray-600 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                        data-tabs-target="#history" type="button" role="tab">
+                    Historique
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    {# Contenu des onglets #}
+    <div>
+        {# Onglet À venir #}
+        <div class="tab-content active" id="upcoming" role="tabpanel">
+            {% if upcomingAppointments|length > 0 %}
+                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {% for appointment in upcomingAppointments %}
+                        {% include 'appointment/_appointment_card.html.twig' with {'appointment': appointment} %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucun rendez-vous à venir</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Vous n'avez pas de rendez-vous planifié.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        {# Onglet Mes demandes #}
+        <div class="tab-content hidden" id="requests" role="tabpanel">
+            {% if myRequests|length > 0 %}
+                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {% for appointment in myRequests %}
+                        {% include 'appointment/_appointment_card.html.twig' with {'appointment': appointment} %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucune demande</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Vous n'avez pas de demande de rendez-vous en cours.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        {# Onglet Historique #}
+        <div class="tab-content hidden" id="history" role="tabpanel">
+            {% if historyAppointments|length > 0 %}
+                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {% for appointment in historyAppointments %}
+                        {% include 'appointment/_appointment_card.html.twig' with {'appointment': appointment} %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucun historique</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Votre historique de rendez-vous est vide.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+<script>
+// Simple tab switching
+document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const target = button.getAttribute('data-tabs-target');
+
+            // Remove active classes
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active', 'text-blue-600', 'border-blue-600', 'dark:text-blue-500', 'dark:border-blue-500');
+                btn.classList.add('text-gray-500', 'border-transparent', 'hover:text-gray-600', 'hover:border-gray-300', 'dark:text-gray-400', 'dark:hover:text-gray-300');
+            });
+            tabContents.forEach(content => content.classList.add('hidden'));
+
+            // Add active classes
+            button.classList.remove('text-gray-500', 'border-transparent', 'hover:text-gray-600', 'hover:border-gray-300', 'dark:text-gray-400', 'dark:hover:text-gray-300');
+            button.classList.add('active', 'text-blue-600', 'border-blue-600', 'dark:text-blue-500', 'dark:border-blue-500');
+            document.querySelector(target).classList.remove('hidden');
+        });
+    });
+});
+</script>
+{% endblock %}
