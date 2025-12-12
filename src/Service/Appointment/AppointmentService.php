@@ -243,6 +243,17 @@ class AppointmentService
         $endAt->modify("+{$durationMinutes} minutes");
         $appointment->setEndAt($endAt);
 
+        // Confirmer automatiquement la présence du validateur
+        // En validant la demande, l'admin accepte implicitement d'être présent
+        $validatorParticipant = $this->findParticipant($appointment, $validator);
+        if ($validatorParticipant) {
+            $validatorParticipant->confirm();
+            $this->logger->info('Présence du validateur confirmée automatiquement', [
+                'appointment_id' => $appointment->getId(),
+                'validator_id' => $validator->getId()
+            ]);
+        }
+
         // Créer l'absence si nécessaire
         if ($createsAbsence) {
             foreach ($appointment->getAppointmentParticipants() as $participant) {
