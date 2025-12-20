@@ -41,24 +41,38 @@ class OnboardingManager
         // Validation du mot de passe
         $this->validatePassword($plainPassword);
 
-        // Création de l'utilisateur
-        $user = new User();
-        $user
-            ->setEmail($invitation->getEmail())
-            ->setFirstName($invitation->getFirstName())
-            ->setLastName($invitation->getLastName())
-            ->setPosition($invitation->getPosition())
-            ->setVilla($invitation->getVilla())
-            ->setStatus(User::STATUS_ONBOARDING)
-            ->setRoles(['ROLE_USER'])
-            ->setCguAcceptedAt(new \DateTime());
+        // Vérifier si l'utilisateur existe déjà (création manuelle par admin)
+        $user = $this->userRepository->findOneBy(['email' => $invitation->getEmail()]);
+
+        if ($user) {
+            // L'utilisateur existe déjà (création manuelle) - juste mettre à jour le mot de passe et le statut
+            $this->logger->info('Activating existing user', [
+                'user_id' => $user->getId(),
+                'email' => $user->getEmail(),
+            ]);
+        } else {
+            // Création d'un nouvel utilisateur (ancien flux)
+            $user = new User();
+            $user
+                ->setEmail($invitation->getEmail())
+                ->setFirstName($invitation->getFirstName())
+                ->setLastName($invitation->getLastName())
+                ->setPosition($invitation->getPosition())
+                ->setVilla($invitation->getVilla())
+                ->setRoles(['ROLE_USER']);
+
+            $this->entityManager->persist($user);
+        }
+
+        // Mettre à jour le statut et le mot de passe (pour les deux cas)
+        $user->setStatus(User::STATUS_ONBOARDING);
+        $user->setCguAcceptedAt(new \DateTime());
 
         // Hash du mot de passe
         $hashedPassword = $this->passwordHasher->hashPassword($user, $plainPassword);
         $user->setPassword($hashedPassword);
 
         // Sauvegarde
-        $this->entityManager->persist($user);
         $this->entityManager->flush();
 
         // Marque l'invitation comme utilisée

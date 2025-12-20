@@ -96,14 +96,27 @@ class ContractController extends AbstractController
                     throw new \RuntimeException('Ce modèle de contrat n\'est pas actif.');
                 }
 
+                // Détecter le système de suivi choisi
+                $useAnnualDaySystem = (bool)$request->request->get('use_annual_day_system', false);
+
                 $data = [
                     'type' => $request->request->get('type'),
                     'startDate' => new \DateTime($request->request->get('start_date')),
                     'baseSalary' => $request->request->get('base_salary'),
-                    'activityRate' => $request->request->get('activity_rate', '1.00'),
-                    'weeklyHours' => $request->request->get('weekly_hours'),
                     'createdBy' => $this->getUser(),
+                    'useAnnualDaySystem' => $useAnnualDaySystem,
                 ];
+
+                // Gestion selon le système choisi
+                if ($useAnnualDaySystem) {
+                    // Système annuel: toujours 258 jours
+                    $data['annualDaysRequired'] = '258.00';
+                    $data['annualDayNotes'] = $request->request->get('annual_day_notes');
+                } else {
+                    // Système horaire classique
+                    $data['activityRate'] = $request->request->get('activity_rate', '1.00');
+                    $data['weeklyHours'] = $request->request->get('weekly_hours');
+                }
 
                 // Gérer la villa (relation vers entité)
                 $villaId = $request->request->get('villa_id');
@@ -732,4 +745,5 @@ class ContractController extends AbstractController
 
         return $user;
     }
+
 }

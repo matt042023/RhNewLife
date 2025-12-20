@@ -34,7 +34,8 @@ class ContractManager
         private ParameterBagInterface $params,
         private EventDispatcherInterface $eventDispatcher,
         private UrlGeneratorInterface $urlGenerator,
-        private Environment $twig
+        private Environment $twig,
+        private ?AnnualDayCounterService $annualDayCounterService = null
     ) {}
 
     /**
@@ -101,6 +102,11 @@ class ContractManager
         // Activer l'utilisateur si nécessaire
         if ($user && $user->getStatus() === User::STATUS_ONBOARDING) {
             $user->setStatus(User::STATUS_ACTIVE);
+        }
+
+        // Initialiser le compteur annuel si le contrat utilise ce système
+        if ($contract->usesAnnualDaySystem() && $this->annualDayCounterService) {
+            $this->annualDayCounterService->initializeCounterForContract($contract);
         }
 
         // Créer les Document entities pour le système de documents
@@ -369,6 +375,17 @@ class ContractManager
         }
         if (isset($data['createdBy'])) {
             $contract->setCreatedBy($data['createdBy']);
+        }
+
+        // Nouveaux champs pour système de compteur annuel
+        if (isset($data['useAnnualDaySystem'])) {
+            $contract->setUseAnnualDaySystem($data['useAnnualDaySystem']);
+        }
+        if (isset($data['annualDaysRequired'])) {
+            $contract->setAnnualDaysRequired($data['annualDaysRequired']);
+        }
+        if (isset($data['annualDayNotes'])) {
+            $contract->setAnnualDayNotes($data['annualDayNotes']);
         }
     }
 

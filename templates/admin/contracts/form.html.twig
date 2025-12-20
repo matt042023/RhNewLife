@@ -159,7 +159,7 @@
                     Rémunération et temps de travail
                 </h2>
 
-                <div class="grid grid-cols-2 gap-6">
+                <div class="grid grid-cols-2 gap-6 mb-6">
                     <div>
                         <label class="form-label">Salaire de base (brut mensuel) *</label>
                         <div class="relative">
@@ -168,22 +168,6 @@
                                    class="form-input pr-8" required>
                             <span class="absolute right-3 top-3 text-gray-500">€</span>
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="form-label">Taux d'activité</label>
-                        <select name="activity_rate" class="form-select">
-                            <option value="1.00" {{ (formData.activity_rate ?? contract.activityRate ?? '1.00') == '1.00' ? 'selected' : '' }}>100% (temps plein)</option>
-                            <option value="0.80" {{ (formData.activity_rate ?? contract.activityRate ?? '') == '0.80' ? 'selected' : '' }}>80%</option>
-                            <option value="0.50" {{ (formData.activity_rate ?? contract.activityRate ?? '') == '0.50' ? 'selected' : '' }}>50% (mi-temps)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="form-label">Heures hebdomadaires *</label>
-                        <input type="number" name="weekly_hours" step="0.5"
-                               value="{{ formData.weekly_hours ?? contract.weeklyHours ?? '35' }}"
-                               class="form-input" required>
                     </div>
 
                     <div>
@@ -209,23 +193,91 @@
                         </p>
                     </div>
                 </div>
-            </div>
 
-            {# Jours travaillés #}
-            <div class="mb-8">
-                <h2 class="text-xl font-bold text-gray-900 mb-4">Jours travaillés</h2>
-                <div class="grid grid-cols-7 gap-3">
-                    {% set days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'] %}
-                    {% set workingDays = formData.working_days ?? (contract and contract.workingDays ? contract.workingDays : ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']) %}
-
-                    {% for day in days %}
-                        <label class="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <input type="checkbox" name="working_days[]" value="{{ day }}"
-                                   {{ day in workingDays ? 'checked' : '' }}
-                                   class="w-4 h-4 text-blue-600 rounded">
-                            <span class="text-sm font-medium">{{ day }}</span>
+                {# Choix du système de suivi #}
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                    <label class="font-semibold text-gray-900 block mb-3">Système de suivi du temps de travail</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 bg-white" id="tracking-annual-label">
+                            <input type="radio" name="tracking_system" value="annual" class="mt-1 w-4 h-4 text-blue-600" checked>
+                            <div>
+                                <div class="font-medium text-gray-900">Compteur de jours annuels</div>
+                                <div class="text-sm text-gray-600">Pour les éducateurs (258 jours/an)</div>
+                            </div>
                         </label>
-                    {% endfor %}
+
+                        <label class="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 bg-white" id="tracking-hourly-label">
+                            <input type="radio" name="tracking_system" value="hourly" class="mt-1 w-4 h-4 text-blue-600">
+                            <div>
+                                <div class="font-medium text-gray-900">Suivi horaire classique</div>
+                                <div class="text-sm text-gray-600">Heures hebdomadaires et jours travaillés</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                {# Champs cachés pour le système choisi #}
+                <input type="hidden" name="use_annual_day_system" id="use_annual_day_system_input" value="1">
+                <input type="hidden" name="annual_days_required" id="annual_days_input" value="258">
+
+                {# Panel Compteur Annuel #}
+                <div id="annual-panel" class="tracking-panel">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-5">
+                        <h3 class="font-semibold text-blue-900 mb-3">📅 Jours annuels à effectuer</h3>
+
+                        <div class="bg-white rounded-lg p-4 mb-4">
+                            <div class="text-center my-3">
+                                <span class="text-4xl font-bold text-blue-600">258</span>
+                                <span class="text-xl text-gray-600 ml-2">jours</span>
+                            </div>
+                            <small class="block text-center text-gray-500">
+                                Standard pour tous les éducateurs
+                            </small>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Notes (optionnel)</label>
+                            <textarea name="annual_day_notes" class="form-input" rows="2" placeholder="Ex: Temps partiel convenu, particularités..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                {# Panel Suivi Horaire #}
+                <div id="hourly-panel" class="tracking-panel" style="display:none;">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="form-label">Taux d'activité</label>
+                            <select name="activity_rate" class="form-select">
+                                <option value="1.00" {{ (formData.activity_rate ?? contract.activityRate ?? '1.00') == '1.00' ? 'selected' : '' }}>100% (temps plein)</option>
+                                <option value="0.80" {{ (formData.activity_rate ?? contract.activityRate ?? '') == '0.80' ? 'selected' : '' }}>80%</option>
+                                <option value="0.50" {{ (formData.activity_rate ?? contract.activityRate ?? '') == '0.50' ? 'selected' : '' }}>50% (mi-temps)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Heures hebdomadaires</label>
+                            <input type="number" name="weekly_hours" step="0.5"
+                                   value="{{ formData.weekly_hours ?? contract.weeklyHours ?? '35' }}"
+                                   class="form-input">
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-3">Jours travaillés</h3>
+                        <div class="grid grid-cols-7 gap-3">
+                            {% set days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'] %}
+                            {% set workingDays = formData.working_days ?? (contract and contract.workingDays ? contract.workingDays : ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']) %}
+
+                            {% for day in days %}
+                                <label class="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                    <input type="checkbox" name="working_days[]" value="{{ day }}"
+                                           {{ day in workingDays ? 'checked' : '' }}
+                                           class="w-4 h-4 text-blue-600 rounded">
+                                    <span class="text-sm font-medium">{{ day }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -257,4 +309,37 @@
         </div>
 
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const annualPanel = document.getElementById('annual-panel');
+        const hourlyPanel = document.getElementById('hourly-panel');
+        const radioButtons = document.querySelectorAll('input[name="tracking_system"]');
+        const annualLabel = document.getElementById('tracking-annual-label');
+        const hourlyLabel = document.getElementById('tracking-hourly-label');
+        const useAnnualDaySystemInput = document.getElementById('use_annual_day_system_input');
+
+        // Toggle panels based on radio selection
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'annual') {
+                    annualPanel.style.display = 'block';
+                    hourlyPanel.style.display = 'none';
+                    annualLabel.classList.add('border-blue-500', 'bg-blue-50');
+                    hourlyLabel.classList.remove('border-blue-500', 'bg-blue-50');
+                    useAnnualDaySystemInput.value = '1';
+                } else {
+                    annualPanel.style.display = 'none';
+                    hourlyPanel.style.display = 'block';
+                    annualLabel.classList.remove('border-blue-500', 'bg-blue-50');
+                    hourlyLabel.classList.add('border-blue-500', 'bg-blue-50');
+                    useAnnualDaySystemInput.value = '0';
+                }
+            });
+        });
+
+        // Initial highlight
+        annualLabel.classList.add('border-blue-500', 'bg-blue-50');
+    });
+    </script>
 {% endblock %}

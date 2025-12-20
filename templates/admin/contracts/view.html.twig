@@ -259,22 +259,45 @@
 					<dl class="space-y-3">
 						<div>
 							<dt class="text-sm text-gray-500">Salaire de base (brut)</dt>
-							<dd class="font-bold text-xl text-gray-900">{{ contract.baseSalary }}
-								€</dd>
+							<dd class="font-bold text-xl text-gray-900">{{ contract.baseSalary }} €</dd>
 						</div>
 						<div>
 							<dt class="text-sm text-gray-500">Salaire net estimé</dt>
-							<dd class="text-gray-900">{{ contract.estimatedNetSalary }}
-								€</dd>
+							<dd class="text-gray-900">{{ contract.estimatedNetSalary }} €</dd>
 						</div>
-						<div>
-							<dt class="text-sm text-gray-500">Taux d'activité</dt>
-							<dd class="text-gray-900">{{ (contract.activityRate * 100)|number_format(0) }}%</dd>
-						</div>
-						<div>
-							<dt class="text-sm text-gray-500">Heures hebdomadaires</dt>
-							<dd class="text-gray-900">{{ contract.weeklyHours }}h</dd>
-						</div>
+
+						{% if contract.usesAnnualDaySystem %}
+							{# Système compteur annuel #}
+							<div class="border-t pt-3 mt-3">
+								<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mb-2">
+									Compteur jours annuels
+								</span>
+								<div>
+									<dt class="text-sm text-gray-500">Jours annuels à effectuer</dt>
+									<dd class="font-bold text-2xl text-blue-600">{{ contract.annualDaysRequired|number_format(0) }} jours</dd>
+									{% if contract.annualDayNotes %}
+										<dd class="text-sm text-gray-600 mt-1">{{ contract.annualDayNotes }}</dd>
+									{% endif %}
+								</div>
+							</div>
+						{% else %}
+							{# Système horaire classique #}
+							<div class="border-t pt-3 mt-3">
+								<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 mb-2">
+									Suivi horaire classique
+								</span>
+								<div class="grid grid-cols-2 gap-4">
+									<div>
+										<dt class="text-sm text-gray-500">Taux d'activité</dt>
+										<dd class="text-gray-900">{{ contract.activityRate ? ((contract.activityRate * 100)|number_format(0)) : '100' }}%</dd>
+									</div>
+									<div>
+										<dt class="text-sm text-gray-500">Heures hebdomadaires</dt>
+										<dd class="text-gray-900">{{ contract.weeklyHours ?? '35' }}h</dd>
+									</div>
+								</div>
+							</div>
+						{% endif %}
 					</dl>
 				</div>
 			</div>
@@ -298,16 +321,13 @@
 							{% endif %}
 						</dd>
 					</div>
-					<div>
-						<dt class="text-sm text-gray-500 mb-1">Jours travaillés</dt>
-						<dd class="text-gray-900">
-							{% if contract.workingDays %}
-								{{ contract.workingDays|join(', ') }}
-							{% else %}
-								Non renseigné
-							{% endif %}
-						</dd>
-					</div>
+
+					{% if not contract.usesAnnualDaySystem and contract.workingDays %}
+						<div>
+							<dt class="text-sm text-gray-500 mb-1">Jours travaillés</dt>
+							<dd class="text-gray-900">{{ contract.workingDays|join(', ') }}</dd>
+						</div>
+					{% endif %}
 				</div>
 			</div>
 

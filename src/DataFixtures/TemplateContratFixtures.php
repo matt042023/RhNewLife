@@ -345,28 +345,30 @@ class TemplateContratFixtures extends Fixture
     <div class="section">
         <h2>ARTICLE 4 - DURÉE DU TRAVAIL</h2>
         <div class="article-content">
-            <div class="info-box">
+            <p>La durée légale du travail est fixée à 35 heures par semaine. Les horaires de travail pourront être répartis selon les nécessités du service et l'organisation de l'établissement.</p>
+
+            {% if contract.weeklyHours %}
+            <div class="info-box" style="margin-top: 15px;">
                 <p><span class="info-label">Durée hebdomadaire :</span> <strong>{{ contract.weeklyHours }} heures</strong></p>
                 {% if contract.activityRate and contract.activityRate < 1 %}
                 <p><span class="info-label">Taux d'activité :</span> {{ (contract.activityRate * 100)|number_format(0) }}%</p>
-                <p><span class="info-label">Équivalent temps plein :</span> {{ (contract.activityRate * 35)|number_format(2) }} heures/semaine</p>
-                {% endif %}
-                {% if contract.workingDaysFormatted %}
-                <p><span class="info-label">Jours travaillés :</span> {{ contract.workingDaysFormatted }}</p>
                 {% endif %}
             </div>
-
-            <p style="margin-top: 15px;">La durée légale du travail est fixée à 35 heures par semaine. Les horaires de travail pourront être répartis selon les nécessités du service et l'organisation de l'établissement.</p>
+            {% endif %}
 
             <div class="important-notice">
-                <p><strong>⚠ SPÉCIFICITÉS DU LIEU DE VIE</strong></p>
+                <p style="margin: 0 0 10px 0; font-weight: bold;">📅 SPÉCIFICITÉS DU LIEU DE VIE</p>
+
                 <p>En raison de la nature de l'activité (accueil 24h/24 de jeunes en difficultés), le Salarié est susceptible d'effectuer :</p>
-                <ul style="margin-left: 20px; margin-top: 10px;">
+
+                <ul style="margin-left: 30px; margin-top: 10px;">
                     <li class="list-item">Du travail en soirée et/ou de nuit</li>
                     <li class="list-item">Du travail le week-end et jours fériés selon planning</li>
                     <li class="list-item">Des astreintes selon les besoins du service</li>
                 </ul>
             </div>
+
+            <p style="margin-top: 15px;">Les plannings de travail sont établis par la Direction en concertation avec l'équipe, en tenant compte des contraintes du service et des disponibilités du personnel.</p>
         </div>
     </div>
 
@@ -964,32 +966,33 @@ HTML;
 
     <!-- Article 5 : Durée du travail -->
     <div class="section">
-        <h2>ARTICLE 5 - DURÉE DU TRAVAIL</h2>
-        <div class="article-content">
-            <div class="info-box">
-                <p><span class="info-label">Durée hebdomadaire :</span> <strong>{{ contract.weeklyHours }} heures</strong></p>
-                {% if contract.activityRate and contract.activityRate < 1 %}
-                <p><span class="info-label">Taux d'activité :</span> {{ (contract.activityRate * 100)|number_format(0) }}%</p>
-                <p><span class="info-label">Équivalent temps plein :</span> {{ (contract.activityRate * 35)|number_format(2) }} heures/semaine</p>
-                {% endif %}
-                {% if contract.workingDaysFormatted %}
-                <p><span class="info-label">Jours travaillés :</span> {{ contract.workingDaysFormatted }}</p>
-                {% endif %}
-            </div>
+    <h2>ARTICLE 5 - DURÉE DU TRAVAIL</h2>
 
-            <p style="margin-top: 15px;">La durée légale du travail est fixée à 35 heures par semaine. Les horaires de travail pourront être répartis selon les nécessités du service.</p>
+    <p>La durée légale du travail est fixée à 35 heures par semaine. Les horaires de travail pourront être répartis selon les nécessités du service et l'organisation de l'établissement.</p>
 
-            <div class="important-notice">
-                <p><strong>⚠ SPÉCIFICITÉS DU LIEU DE VIE</strong></p>
-                <p>En raison de la nature de l'activité (accueil 24h/24 de jeunes en difficultés), le Salarié est susceptible d'effectuer :</p>
-                <ul style="margin-left: 20px; margin-top: 10px;">
-                    <li class="list-item">Du travail en soirée et/ou de nuit</li>
-                    <li class="list-item">Du travail le week-end et jours fériés selon planning</li>
-                    <li class="list-item">Des astreintes selon les besoins du service</li>
-                </ul>
-            </div>
-        </div>
+    {% if contract.weeklyHours %}
+    <div class="info-box" style="margin-top: 15px;">
+        <p><span class="info-label">Durée hebdomadaire :</span> <strong>{{ contract.weeklyHours }} heures</strong></p>
+        {% if contract.activityRate and contract.activityRate < 1 %}
+        <p><span class="info-label">Taux d'activité :</span> {{ (contract.activityRate * 100)|number_format(0) }}%</p>
+        {% endif %}
     </div>
+    {% endif %}
+
+    <div class="important-notice">
+        <p style="margin: 0 0 10px 0; font-weight: bold;">📅 SPÉCIFICITÉS DU LIEU DE VIE</p>
+
+        <p>En raison de la nature de l'activité (accueil 24h/24 de jeunes en difficultés), le Salarié est susceptible d'effectuer :</p>
+
+        <ul style="margin-left: 30px; margin-top: 10px;">
+            <li class="list-item">Du travail en soirée et/ou de nuit</li>
+            <li class="list-item">Du travail le week-end et jours fériés selon planning</li>
+            <li class="list-item">Des astreintes selon les besoins du service</li>
+        </ul>
+    </div>
+
+    <p style="margin-top: 15px;">Les plannings de travail sont établis par la Direction en concertation avec l'équipe, en tenant compte des contraintes du service et des disponibilités du personnel.</p>
+</div>
 
     <!-- Article 6 : Période d'essai -->
     <div class="section">

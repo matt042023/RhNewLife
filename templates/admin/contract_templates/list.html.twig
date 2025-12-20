@@ -2,23 +2,21 @@
 
 {% block title %}Templates de Contrat - RH NewLife{% endblock %}
 
-{% block body %}
-<div class="min-h-screen bg-gray-50 p-8">
-	<div class="max-w-7xl mx-auto">
+{% block admin_title %}Templates de Contrat{% endblock %}
+{% block admin_subtitle %}Gérer les modèles de contrats de travail{% endblock %}
 
-		{# Header #}
-		<div class="flex items-center justify-between mb-8">
-			<div>
-				<h1 class="text-3xl font-bold text-gray-900">Templates de Contrat</h1>
-				<p class="text-gray-600 mt-1">Gérer les modèles de contrats de travail</p>
-			</div>
-			<a href="{{ path('app_admin_contract_templates_create') }}" class="btn btn-primary">
-				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-				</svg>
-				Créer un template
-			</a>
-		</div>
+{% block admin_actions %}
+	<a href="{{ path('app_admin_contract_templates_create') }}" class="inline-flex items-center px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg shadow hover:bg-blue-50 transition">
+		<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+		</svg>
+		Créer un template
+	</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="px-4 py-6 lg:px-8">
+	<div class="max-w-7xl mx-auto">
 
 		{# Flash messages #}
 		{% for label, messages in app.flashes %}
@@ -120,4 +118,4 @@
 		</div>
 	</div>
 </div>
-{% endblock %}
+{% endblock admin_content %}

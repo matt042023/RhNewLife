@@ -2,27 +2,36 @@
 
 {% block title %}Template {{ template.name }} - RH NewLife{% endblock %}
 
-{% block body %}
-<div class="min-h-screen bg-gray-50 p-8">
-	<div class="max-w-7xl mx-auto">
+{% block admin_title %}{{ template.name }}{% endblock %}
+{% block admin_subtitle %}
+	{{ template.description }}
+	{% if template.active %}
+		<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-3">Actif</span>
+	{% else %}
+		<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 ml-3">Inactif</span>
+	{% endif %}
+{% endblock %}
 
-		{# Header #}
-		<div class="flex items-start justify-between mb-8">
-			<div>
-				<a href="{{ path('app_admin_contract_templates_list') }}" class="text-primary hover:underline mb-2 inline-block">
-					← Retour à la liste
-				</a>
-				<h1 class="text-3xl font-bold text-gray-900">{{ template.name }}</h1>
-				<p class="text-gray-600 mt-1">{{ template.description }}</p>
-			</div>
-			<div class="flex gap-2">
-				{% if template.active %}
-					<span class="badge badge-success badge-lg">Actif</span>
-				{% else %}
-					<span class="badge badge-ghost badge-lg">Inactif</span>
-				{% endif %}
-			</div>
-		</div>
+{% block admin_actions %}
+	<div class="flex gap-2">
+		<a href="{{ path('app_admin_contract_templates_list') }}" class="inline-flex items-center px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg shadow hover:bg-blue-50 transition">
+			<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+			</svg>
+			Retour
+		</a>
+		<a href="{{ path('app_admin_contract_templates_edit', {id: template.id}) }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition">
+			<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+			</svg>
+			Éditer
+		</a>
+	</div>
+{% endblock %}
+
+{% block admin_content %}
+<div class="px-4 py-6 lg:px-8">
+	<div class="max-w-7xl mx-auto">
 
 		{# Flash messages #}
 		{% for label, messages in app.flashes %}
@@ -33,17 +42,10 @@
 			{% endfor %}
 		{% endfor %}
 
-		{# Actions #}
+		{# Actions rapides #}
 		<div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
-			<h2 class="text-lg font-bold mb-4">Actions</h2>
+			<h2 class="text-lg font-bold mb-4">Actions rapides</h2>
 			<div class="flex flex-wrap gap-3">
-				<a href="{{ path('app_admin_contract_templates_edit', {id: template.id}) }}" class="btn btn-primary">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-					</svg>
-					Éditer
-				</a>
-
 				<a href="{{ path('app_admin_contract_templates_preview', {id: template.id}) }}" class="btn btn-secondary" target="_blank">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -163,4 +165,4 @@
 		</div>
 	</div>
 </div>
-{% endblock %}
+{% endblock admin_content %}

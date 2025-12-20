@@ -86,6 +86,7 @@ class Contract
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
     private ?string $prime = null;
 
+    // DEPRECATED - Conservé pour compatibilité historique
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $workingDays = null;
 
@@ -93,11 +94,34 @@ class Contract
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Villa $villa = null;
 
-    #[ORM\Column(type: Types::DECIMAL, precision: 3, scale: 2, options: ['default' => '1.00'])]
-    private string $activityRate = '1.00';
+    // DEPRECATED - Conservé pour compatibilité historique
+    #[ORM\Column(type: Types::DECIMAL, precision: 3, scale: 2, nullable: true)]
+    private ?string $activityRate = null;
 
+    // DEPRECATED - Conservé pour compatibilité historique
     #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, nullable: true)]
     private ?string $weeklyHours = null;
+
+    // NOUVEAUX CHAMPS - Système de compteur annuel
+
+    /**
+     * Indique si ce contrat utilise le système de jours annuels (éducateurs)
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $useAnnualDaySystem = false;
+
+    /**
+     * Nombre de jours annuels à effectuer (258 par défaut, ou proratisé)
+     * Calculé automatiquement lors de la création du contrat
+     */
+    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, nullable: true)]
+    private ?string $annualDaysRequired = null;
+
+    /**
+     * Notes ou commentaires sur le compteur annuel
+     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $annualDayNotes = null;
 
     #[ORM\Column(options: ['default' => false])]
     private bool $mutuelle = false;
@@ -301,12 +325,12 @@ class Contract
         return $this;
     }
 
-    public function getActivityRate(): string
+    public function getActivityRate(): ?string
     {
         return $this->activityRate;
     }
 
-    public function setActivityRate(string $activityRate): static
+    public function setActivityRate(?string $activityRate): static
     {
         $this->activityRate = $activityRate;
         return $this;
@@ -790,5 +814,65 @@ class Contract
         }
 
         return implode(', ', $formatted);
+    }
+
+    // Getters/Setters pour le système de compteur annuel
+
+    public function getUseAnnualDaySystem(): bool
+    {
+        return $this->useAnnualDaySystem;
+    }
+
+    public function setUseAnnualDaySystem(bool $useAnnualDaySystem): static
+    {
+        $this->useAnnualDaySystem = $useAnnualDaySystem;
+        return $this;
+    }
+
+    public function usesAnnualDaySystem(): bool
+    {
+        return $this->useAnnualDaySystem;
+    }
+
+    public function getAnnualDaysRequired(): ?string
+    {
+        return $this->annualDaysRequired;
+    }
+
+    public function setAnnualDaysRequired(?string $annualDaysRequired): static
+    {
+        $this->annualDaysRequired = $annualDaysRequired;
+        return $this;
+    }
+
+    public function getAnnualDayNotes(): ?string
+    {
+        return $this->annualDayNotes;
+    }
+
+    public function setAnnualDayNotes(?string $annualDayNotes): static
+    {
+        $this->annualDayNotes = $annualDayNotes;
+        return $this;
+    }
+
+    /**
+     * Retourne le nombre de jours annuels standard (258 jours)
+     */
+    public function getStandardAnnualDays(): float
+    {
+        return 258.0;
+    }
+
+    /**
+     * Retourne les jours annuels formatés pour affichage
+     */
+    public function getAnnualDaysRequiredFormatted(): string
+    {
+        if (!$this->annualDaysRequired) {
+            return 'Non défini';
+        }
+
+        return number_format((float)$this->annualDaysRequired, 0) . ' jours';
     }
 }

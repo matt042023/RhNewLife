@@ -94,6 +94,11 @@ class UserController extends AbstractController
                 $errors[] = 'Email invalide.';
             }
 
+            // Vérifier si l'email existe déjà
+            if ($email && $this->userRepository->findOneBy(['email' => $email])) {
+                $errors[] = 'Cet email est déjà utilisé par un autre utilisateur.';
+            }
+
             if (!$firstName || !$lastName) {
                 $errors[] = 'Le nom et le prénom sont obligatoires.';
             }
@@ -142,16 +147,30 @@ class UserController extends AbstractController
                 }
             }
 
-            return $this->render('admin/users/create.html.twig', [
-                'errors' => $errors,
-                'formData' => $request->request->all(),
-                'villas' => $this->villaRepository->findAll(),
-            ]);
+            // S'il y a des erreurs, les stocker en flash et rediriger (requis par Turbo)
+            if (!empty($errors)) {
+                foreach ($errors as $error) {
+                    $this->addFlash('error', $error);
+                }
+                // Stocker les données du formulaire en session pour les ré-afficher
+                $request->getSession()->set('create_user_form_data', $request->request->all());
+                return $this->redirectToRoute('app_admin_users_create');
+            }
+        }
+
+        // Récupérer les données du formulaire depuis la session si elles existent
+        $formData = $request->getSession()->get('create_user_form_data', []);
+        $request->getSession()->remove('create_user_form_data');
+
+        // Récupérer les erreurs depuis les flash messages
+        $errors = [];
+        foreach ($this->container->get('request_stack')->getSession()->getFlashBag()->get('error', []) as $error) {
+            $errors[] = $error;
         }
 
         return $this->render('admin/users/create.html.twig', [
-            'errors' => [],
-            'formData' => [],
+            'errors' => $errors,
+            'formData' => $formData,
             'villas' => $this->villaRepository->findAll(),
         ]);
     }
@@ -244,16 +263,24 @@ class UserController extends AbstractController
                 $errors[] = 'Erreur : ' . $e->getMessage();
             }
 
-            return $this->render('admin/users/edit.html.twig', [
-                'user' => $user,
-                'errors' => $errors,
-                'villas' => $this->villaRepository->findAll(),
-            ]);
+            // S'il y a des erreurs, les stocker en flash et rediriger (requis par Turbo)
+            if (!empty($errors)) {
+                foreach ($errors as $error) {
+                    $this->addFlash('error', $error);
+                }
+                return $this->redirectToRoute('app_admin_users_edit', ['id' => $user->getId()]);
+            }
+        }
+
+        // Récupérer les erreurs depuis les flash messages
+        $errors = [];
+        foreach ($this->container->get('request_stack')->getSession()->getFlashBag()->get('error', []) as $error) {
+            $errors[] = $error;
         }
 
         return $this->render('admin/users/edit.html.twig', [
             'user' => $user,
-            'errors' => [],
+            'errors' => $errors,
             'villas' => $this->villaRepository->findAll(),
         ]);
     }

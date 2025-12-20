@@ -129,24 +129,58 @@
                         </svg>
                         Rémunération
                     </h3>
-                    <div class="grid grid-cols-3 gap-6">
+
+                    {% if activeContract.usesAnnualDaySystem %}
+                        {# Système compteur annuel #}
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 mb-4">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white">
+                                    Compteur annuel
+                                </span>
+                            </div>
+
+                            <div class="bg-white rounded-xl p-6 text-center">
+                                <div class="text-sm text-gray-600 mb-2">Jours à effectuer en {{ "now"|date("Y") }}</div>
+                                <div class="text-5xl font-bold text-blue-600 mb-3">{{ activeContract.annualDaysRequired|number_format(0) }}</div>
+                                <div class="text-lg text-gray-700 font-medium">jours</div>
+                            </div>
+
+                            <div class="mt-4 bg-blue-50 rounded-lg p-4">
+                                <p class="text-sm font-semibold text-blue-900 mb-2">💡 Comment fonctionne le compteur?</p>
+                                <ul class="text-sm text-blue-800 space-y-1.5">
+                                    <li>• Vous avez <strong>{{ activeContract.annualDaysRequired|number_format(0) }} jours</strong> à effectuer cette année</li>
+                                    <li>• Chaque affectation (garde 1-2 jours, renfort) est déduite de ce total</li>
+                                    <li>• Le compteur se réinitialise à 258 jours le 1er janvier</li>
+                                    <li>• Votre salaire mensuel reste fixe</li>
+                                </ul>
+                            </div>
+                        </div>
+
                         <div class="bg-gray-50 rounded-xl p-4">
                             <dt class="text-sm text-gray-600 mb-1">Salaire brut mensuel</dt>
                             <dd class="text-2xl font-bold text-gray-900">{{ activeContract.baseSalary|number_format(2, ',', ' ') }} €</dd>
                         </div>
-                        <div class="bg-gray-50 rounded-xl p-4">
-                            <dt class="text-sm text-gray-600 mb-1">Taux d'activité</dt>
-                            <dd class="text-2xl font-bold text-gray-900">{{ activeContract.activityRate ?? 100 }}%</dd>
+                    {% else %}
+                        {# Système horaire classique #}
+                        <div class="grid grid-cols-3 gap-6">
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <dt class="text-sm text-gray-600 mb-1">Salaire brut mensuel</dt>
+                                <dd class="text-2xl font-bold text-gray-900">{{ activeContract.baseSalary|number_format(2, ',', ' ') }} €</dd>
+                            </div>
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <dt class="text-sm text-gray-600 mb-1">Taux d'activité</dt>
+                                <dd class="text-2xl font-bold text-gray-900">{{ activeContract.activityRate ? ((activeContract.activityRate * 100)|number_format(0)) : '100' }}%</dd>
+                            </div>
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <dt class="text-sm text-gray-600 mb-1">Heures/semaine</dt>
+                                <dd class="text-2xl font-bold text-gray-900">{{ activeContract.weeklyHours ?? '35' }}h</dd>
+                            </div>
                         </div>
-                        <div class="bg-gray-50 rounded-xl p-4">
-                            <dt class="text-sm text-gray-600 mb-1">Heures/semaine</dt>
-                            <dd class="text-2xl font-bold text-gray-900">{{ activeContract.weeklyHours }}h</dd>
-                        </div>
-                    </div>
+                    {% endif %}
                 </div>
 
-                {# Jours travaillés #}
-                {% if activeContract.workingDays %}
+                {# Jours travaillés - uniquement pour système horaire #}
+                {% if not activeContract.usesAnnualDaySystem and activeContract.workingDays %}
                     <div class="mb-8">
                         <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -2,22 +2,21 @@
 
 {% block title %}{{ isEdit ? 'Éditer' : 'Créer' }} un Template - RH NewLife{% endblock %}
 
-{% block body %}
-<div class="min-h-screen bg-gray-50 p-8">
-	<div class="max-w-7xl mx-auto">
+{% block admin_title %}{{ isEdit ? 'Éditer le template' : 'Créer un nouveau template' }}{% endblock %}
+{% block admin_subtitle %}{% if isEdit %}{{ template.name }}{% else %}Templates de contrat{% endif %}{% endblock %}
 
-		{# Header #}
-		<div class="mb-8">
-			<a href="{{ path('app_admin_contract_templates_list') }}" class="text-primary hover:underline mb-2 inline-block">
-				← Retour à la liste
-			</a>
-			<h1 class="text-3xl font-bold text-gray-900">
-				{{ isEdit ? 'Éditer le template' : 'Créer un nouveau template' }}
-			</h1>
-			{% if isEdit %}
-				<p class="text-gray-600 mt-1">{{ template.name }}</p>
-			{% endif %}
-		</div>
+{% block admin_actions %}
+	<a href="{{ path('app_admin_contract_templates_list') }}" class="inline-flex items-center px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg shadow hover:bg-blue-50 transition">
+		<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+		</svg>
+		Retour à la liste
+	</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="px-4 py-6 lg:px-8">
+	<div class="max-w-7xl mx-auto">
 
 		{# Errors #}
 		{% if errors is not empty %}
@@ -152,4 +151,4 @@
 		</div>
 	</div>
 </div>
-{% endblock %}
+{% endblock admin_content %}

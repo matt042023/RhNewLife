@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Service\InvitationManager;
 use App\Service\OnboardingManager;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,7 +19,8 @@ class OnboardingController extends AbstractController
     public function __construct(
         private InvitationManager $invitationManager,
         private OnboardingManager $onboardingManager,
-        private Security $security
+        private Security $security,
+        private LoggerInterface $logger
     ) {
     }
 
@@ -74,18 +76,33 @@ class OnboardingController extends AbstractController
             } catch (\InvalidArgumentException $e) {
                 $errors[] = $e->getMessage();
             } catch (\Exception $e) {
-                $errors[] = 'Une erreur est survenue. Veuillez réessayer.';
+                // Logger l'erreur complète pour le débogage
+                $this->logger->error('Erreur lors de l\'activation du compte', [
+                    'token' => $token,
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                $errors[] = 'Une erreur est survenue. Veuillez réessayer. Détails: ' . $e->getMessage();
             }
 
-            return $this->render('onboarding/activate.html.twig', [
-                'invitation' => $invitation,
-                'errors' => $errors,
-            ]);
+            // S'il y a des erreurs, les stocker en flash et rediriger (requis par Turbo)
+            if (!empty($errors)) {
+                foreach ($errors as $error) {
+                    $this->addFlash('error', $error);
+                }
+                return $this->redirectToRoute('app_onboarding_activate', ['token' => $token]);
+            }
+        }
+
+        // Récupérer les erreurs depuis les flash messages
+        $errors = [];
+        foreach ($this->container->get('request_stack')->getSession()->getFlashBag()->get('error', []) as $error) {
+            $errors[] = $error;
         }
 
         return $this->render('onboarding/activate.html.twig', [
             'invitation' => $invitation,
-            'errors' => [],
+            'errors' => $errors,
         ]);
     }
 
