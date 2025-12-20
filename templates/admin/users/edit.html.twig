@@ -43,14 +43,14 @@
                 </div>
 
                 <div>
-                    <label class="form-label">Structure</label>
-                    <select name="structure" class="form-select">
-                        <option value="">Non renseigné</option>
-                        <option value="Direction" {{ user.structure == 'Direction' ? 'selected' : '' }}>Direction</option>
-                        <option value="Comptabilité" {{ user.structure == 'Comptabilité' ? 'selected' : '' }}>Comptabilité</option>
-                        <option value="RH" {{ user.structure == 'RH' ? 'selected' : '' }}>RH</option>
-                        <option value="Production" {{ user.structure == 'Production' ? 'selected' : '' }}>Production</option>
-                        <option value="Logistique" {{ user.structure == 'Logistique' ? 'selected' : '' }}>Logistique</option>
+                    <label class="form-label">Villa</label>
+                    <select name="villa_id" class="form-select">
+                        <option value="">Aucune villa</option>
+                        {% for villa in villas %}
+                            <option value="{{ villa.id }}" {{ user.villa and user.villa.id == villa.id ? 'selected' : '' }}>
+                                {{ villa.nom }}
+                            </option>
+                        {% endfor %}
                     </select>
                 </div>
 

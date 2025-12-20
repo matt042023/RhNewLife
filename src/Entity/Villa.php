@@ -24,9 +24,23 @@ class Villa
     #[ORM\OneToMany(mappedBy: 'villa', targetEntity: Affectation::class)]
     private Collection $affectations;
 
+    /**
+     * @var Collection<int, User>
+     */
+    #[ORM\OneToMany(mappedBy: 'villa', targetEntity: User::class)]
+    private Collection $users;
+
+    /**
+     * @var Collection<int, Contract>
+     */
+    #[ORM\OneToMany(mappedBy: 'villa', targetEntity: Contract::class)]
+    private Collection $contracts;
+
     public function __construct()
     {
         $this->affectations = new ArrayCollection();
+        $this->users = new ArrayCollection();
+        $this->contracts = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -86,5 +100,81 @@ class Villa
         }
 
         return $this;
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function getUsers(): Collection
+    {
+        return $this->users;
+    }
+
+    public function addUser(User $user): static
+    {
+        if (!$this->users->contains($user)) {
+            $this->users->add($user);
+            $user->setVilla($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUser(User $user): static
+    {
+        if ($this->users->removeElement($user)) {
+            if ($user->getVilla() === $this) {
+                $user->setVilla(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Compte les utilisateurs actifs assignés à cette villa
+     */
+    public function getActiveUsersCount(): int
+    {
+        return $this->users->filter(function(User $user) {
+            return $user->getStatus() === User::STATUS_ACTIVE;
+        })->count();
+    }
+
+    /**
+     * @return Collection<int, Contract>
+     */
+    public function getContracts(): Collection
+    {
+        return $this->contracts;
+    }
+
+    public function addContract(Contract $contract): static
+    {
+        if (!$this->contracts->contains($contract)) {
+            $this->contracts->add($contract);
+            $contract->setVilla($this);
+        }
+
+        return $this;
+    }
+
+    public function removeContract(Contract $contract): static
+    {
+        if ($this->contracts->removeElement($contract)) {
+            if ($contract->getVilla() === $this) {
+                $contract->setVilla(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Vérifie si la villa peut être supprimée en toute sécurité
+     */
+    public function canBeDeleted(): bool
+    {
+        return $this->users->isEmpty() && $this->affectations->isEmpty() && $this->contracts->isEmpty();
     }
 }

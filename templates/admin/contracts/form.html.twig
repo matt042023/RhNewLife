@@ -188,12 +188,25 @@
 
                     <div>
                         <label class="form-label">Villa affectée</label>
-                        <select name="villa" class="form-select">
-                            <option value="">Non affecté</option>
-                            <option value="Villa A" {{ (formData.villa ?? contract.villa ?? '') == 'Villa A' ? 'selected' : '' }}>Villa A</option>
-                            <option value="Villa B" {{ (formData.villa ?? contract.villa ?? '') == 'Villa B' ? 'selected' : '' }}>Villa B</option>
-                            <option value="Villa C" {{ (formData.villa ?? contract.villa ?? '') == 'Villa C' ? 'selected' : '' }}>Villa C</option>
+                        <select name="villa_id" id="villa_id" class="form-select">
+                            <option value="">Non affectée</option>
+                            {% for villa in villas %}
+                                <option value="{{ villa.id }}"
+                                        {% if isEdit and contract.villa and contract.villa.id == villa.id %}selected
+                                        {% elseif not isEdit and formData.villa_id is defined and formData.villa_id == villa.id %}selected
+                                        {% elseif not isEdit and formData.villa_id is not defined and user.villa and user.villa.id == villa.id %}selected
+                                        {% endif %}>
+                                    {{ villa.nom }}
+                                </option>
+                            {% endfor %}
                         </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            {% if user.villa %}
+                                Villa actuelle de {{ user.firstName }} : <strong>{{ user.villa.nom }}</strong>
+                            {% else %}
+                                Aucune villa assignée à {{ user.firstName }}
+                            {% endif %}
+                        </p>
                     </div>
                 </div>
             </div>

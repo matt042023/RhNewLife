@@ -88,15 +88,20 @@
         </div>
 
         <div>
-            <label for="structure" class="form-label">
-                Structure
+            <label for="villa_id" class="form-label">
+                Villa
             </label>
-            <select name="structure" id="structure" class="form-select">
-                <option value="">-- Sélectionner une structure --</option>
-                <option value="Siège Social" {{ (formData.structure ?? '') == 'Siège Social' ? 'selected' : '' }}>Siège Social</option>
-                <option value="Villa des Lilas" {{ (formData.structure ?? '') == 'Villa des Lilas' ? 'selected' : '' }}>Villa des Lilas</option>
-                <option value="Villa des Roses" {{ (formData.structure ?? '') == 'Villa des Roses' ? 'selected' : '' }}>Villa des Roses</option>
+            <select name="villa_id" id="villa_id" class="form-select">
+                <option value="">Aucune villa</option>
+                {% for villa in villas %}
+                    <option value="{{ villa.id }}" {{ (formData.villa_id ?? '') == villa.id ? 'selected' : '' }}>
+                        {{ villa.nom }}
+                    </option>
+                {% endfor %}
             </select>
+            <p class="form-help">
+                Pour les éducateurs uniquement
+            </p>
         </div>
 
         <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">

@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\User;
 use App\Repository\DocumentRepository;
 use App\Repository\UserRepository;
+use App\Repository\VillaRepository;
 use App\Service\ContractManager;
 use App\Service\DocumentManager;
 use App\Service\UserManager;
@@ -25,7 +26,8 @@ class UserController extends AbstractController
         private MatriculeGenerator $matriculeGenerator,
         private DocumentRepository $documentRepository,
         private DocumentManager $documentManager,
-        private ContractManager $contractManager
+        private ContractManager $contractManager,
+        private VillaRepository $villaRepository
     ) {
     }
 
@@ -75,7 +77,7 @@ class UserController extends AbstractController
             $firstName = $request->request->get('first_name');
             $lastName = $request->request->get('last_name');
             $position = $request->request->get('position');
-            $structure = $request->request->get('structure');
+            $villaId = $request->request->get('villa_id');
             $phone = $request->request->get('phone');
             $address = $request->request->get('address');
             $familyStatus = $request->request->get('family_status');
@@ -96,8 +98,8 @@ class UserController extends AbstractController
                 $errors[] = 'Le nom et le prénom sont obligatoires.';
             }
 
-            if (!$position || !$structure) {
-                $errors[] = 'Le poste et la structure sont obligatoires.';
+            if (!$position) {
+                $errors[] = 'Le poste est obligatoire.';
             }
 
             if (empty($errors)) {
@@ -107,7 +109,6 @@ class UserController extends AbstractController
                         'firstName' => $firstName,
                         'lastName' => $lastName,
                         'position' => $position,
-                        'structure' => $structure,
                     ];
 
                     // Ajouter les champs optionnels s'ils sont fournis
@@ -119,6 +120,12 @@ class UserController extends AbstractController
                     if ($bic) $data['bic'] = $bic;
                     if ($hiringDate) {
                         $data['hiringDate'] = new \DateTime($hiringDate);
+                    }
+                    if ($villaId) {
+                        $villa = $this->villaRepository->find($villaId);
+                        if ($villa) {
+                            $data['villa'] = $villa;
+                        }
                     }
 
                     $user = $this->userManager->createManualUser($data, $sendInvitation);
@@ -138,12 +145,14 @@ class UserController extends AbstractController
             return $this->render('admin/users/create.html.twig', [
                 'errors' => $errors,
                 'formData' => $request->request->all(),
+                'villas' => $this->villaRepository->findAll(),
             ]);
         }
 
         return $this->render('admin/users/create.html.twig', [
             'errors' => [],
             'formData' => [],
+            'villas' => $this->villaRepository->findAll(),
         ]);
     }
 
@@ -206,7 +215,6 @@ class UserController extends AbstractController
                     'firstName' => $request->request->get('first_name'),
                     'lastName' => $request->request->get('last_name'),
                     'position' => $request->request->get('position'),
-                    'structure' => $request->request->get('structure'),
                     'phone' => $request->request->get('phone'),
                     'address' => $request->request->get('address'),
                     'familyStatus' => $request->request->get('family_status'),
@@ -220,6 +228,14 @@ class UserController extends AbstractController
                     $data['hiringDate'] = new \DateTime($hiringDate);
                 }
 
+                $villaId = $request->request->get('villa_id');
+                if ($villaId) {
+                    $villa = $this->villaRepository->find($villaId);
+                    $data['villa'] = $villa;
+                } else {
+                    $data['villa'] = null;
+                }
+
                 $this->userManager->updateUserProfile($user, $data);
 
                 $this->addFlash('success', 'Profil utilisateur mis à jour avec succès.');
@@ -231,12 +247,14 @@ class UserController extends AbstractController
             return $this->render('admin/users/edit.html.twig', [
                 'user' => $user,
                 'errors' => $errors,
+                'villas' => $this->villaRepository->findAll(),
             ]);
         }
 
         return $this->render('admin/users/edit.html.twig', [
             'user' => $user,
             'errors' => [],
+            'villas' => $this->villaRepository->findAll(),
         ]);
     }
 

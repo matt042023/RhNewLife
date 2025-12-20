@@ -150,8 +150,19 @@
 					<dd class="text-gray-900 dark:text-white">{{ user.position ?? '-' }}</dd>
 				</div>
 				<div>
-					<dt class="text-sm text-gray-500 dark:text-gray-400">Structure</dt>
-					<dd class="text-gray-900 dark:text-white">{{ user.structure ?? '-' }}</dd>
+					<dt class="text-sm text-gray-500 dark:text-gray-400">Villa</dt>
+					<dd class="text-gray-900 dark:text-white">
+						{% if user.villa %}
+							<span class="inline-flex items-center gap-1.5">
+								{% if user.villa.color %}
+									<span class="w-2 h-2 rounded-full" style="background-color: {{ user.villa.color }}"></span>
+								{% endif %}
+								{{ user.villa.nom }}
+							</span>
+						{% else %}
+							-
+						{% endif %}
+					</dd>
 				</div>
 				<div>
 					<dt class="text-sm text-gray-500 dark:text-gray-400">Date d'embauche</dt>

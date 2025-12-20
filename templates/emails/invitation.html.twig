@@ -87,14 +87,16 @@
             <p>
                 Nous sommes ravis de vous accueillir dans notre équipe ! Vous avez été invité(e) à rejoindre
                 <strong>RH NewLife</strong> en tant que <strong>{{ invitation.position ?? 'membre de l\'équipe' }}</strong>
-                {% if invitation.structure %}dans la structure <strong>{{ invitation.structure }}</strong>{% endif %}.
+                {% if invitation.villa %}à la <strong>{{ invitation.villa.nom }}</strong>{% endif %}.
             </p>
 
             <div class="info-box">
                 <strong>📋 Vos informations :</strong><br>
                 <strong>Email :</strong> {{ invitation.email }}<br>
                 <strong>Poste :</strong> {{ invitation.position ?? 'Non spécifié' }}<br>
-                <strong>Structure :</strong> {{ invitation.structure ?? 'Non spécifiée' }}
+                {% if invitation.villa %}
+                <strong>Villa :</strong> {{ invitation.villa.nom }}<br>
+                {% endif %}
             </div>
 
             <p>

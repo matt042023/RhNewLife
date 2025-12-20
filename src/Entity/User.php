@@ -58,8 +58,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $position = null;
 
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $structure = null;
+    #[ORM\ManyToOne(targetEntity: Villa::class, inversedBy: 'users')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?Villa $villa = null;
 
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $familyStatus = null;
@@ -253,14 +254,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getStructure(): ?string
+    public function getVilla(): ?Villa
     {
-        return $this->structure;
+        return $this->villa;
     }
 
-    public function setStructure(?string $structure): static
+    public function setVilla(?Villa $villa): static
     {
-        $this->structure = $structure;
+        $this->villa = $villa;
         return $this;
     }
 

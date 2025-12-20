@@ -42,7 +42,9 @@
                 <div class="card-body">
                     <p><strong>Email :</strong> {{ user.email }}</p>
                     <p><strong>Poste :</strong> {{ user.position ?? 'Non défini' }}</p>
-                    <p><strong>Structure :</strong> {{ user.structure ?? 'Non définie' }}</p>
+                    {% if user.villa %}
+                    <p><strong>Villa :</strong> {{ user.villa.nom }}</p>
+                    {% endif %}
                 </div>
             </div>
 

@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\Invitation;
 use App\Repository\InvitationRepository;
+use App\Repository\VillaRepository;
 use App\Service\InvitationManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,7 +18,8 @@ class InvitationController extends AbstractController
 {
     public function __construct(
         private InvitationManager $invitationManager,
-        private InvitationRepository $invitationRepository
+        private InvitationRepository $invitationRepository,
+        private VillaRepository $villaRepository
     ) {
     }
 
@@ -59,7 +61,7 @@ class InvitationController extends AbstractController
             $firstName = $request->request->get('first_name');
             $lastName = $request->request->get('last_name');
             $position = $request->request->get('position');
-            $structure = $request->request->get('structure');
+            $villaId = $request->request->get('villa_id');
 
             $errors = [];
 
@@ -74,13 +76,22 @@ class InvitationController extends AbstractController
 
             if (empty($errors)) {
                 try {
+                    $villa = null;
+                    if ($villaId) {
+                        $villa = $this->villaRepository->find($villaId);
+                    }
+
                     $invitation = $this->invitationManager->createInvitation(
                         $email,
                         $firstName,
                         $lastName,
-                        $position,
-                        $structure
+                        $position
                     );
+
+                    if ($villa) {
+                        $invitation->setVilla($villa);
+                        $this->invitationRepository->getEntityManager()->flush();
+                    }
 
                     $this->addFlash('success', 'Invitation envoyée à ' . $email);
                     return $this->redirectToRoute('app_admin_onboarding_list');
@@ -92,12 +103,14 @@ class InvitationController extends AbstractController
             return $this->render('admin/invitations/create.html.twig', [
                 'errors' => $errors,
                 'formData' => $request->request->all(),
+                'villas' => $this->villaRepository->findAll(),
             ]);
         }
 
         return $this->render('admin/invitations/create.html.twig', [
             'errors' => [],
             'formData' => [],
+            'villas' => $this->villaRepository->findAll(),
         ]);
     }
 

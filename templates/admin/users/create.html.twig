@@ -57,15 +57,16 @@
                     </div>
 
                     <div>
-                        <label class="form-label">Structure *</label>
-                        <select name="structure" class="form-select" required>
-                            <option value="">Sélectionner...</option>
-                            <option value="Direction" {{ (formData.structure ?? '') == 'Direction' ? 'selected' : '' }}>Direction</option>
-                            <option value="Comptabilité" {{ (formData.structure ?? '') == 'Comptabilité' ? 'selected' : '' }}>Comptabilité</option>
-                            <option value="RH" {{ (formData.structure ?? '') == 'RH' ? 'selected' : '' }}>RH</option>
-                            <option value="Production" {{ (formData.structure ?? '') == 'Production' ? 'selected' : '' }}>Production</option>
-                            <option value="Logistique" {{ (formData.structure ?? '') == 'Logistique' ? 'selected' : '' }}>Logistique</option>
+                        <label class="form-label">Villa</label>
+                        <select name="villa_id" class="form-select">
+                            <option value="">Aucune villa</option>
+                            {% for villa in villas %}
+                                <option value="{{ villa.id }}" {{ (formData.villa_id ?? '') == villa.id ? 'selected' : '' }}>
+                                    {{ villa.nom }}
+                                </option>
+                            {% endfor %}
                         </select>
+                        <p class="text-sm text-gray-500 mt-1">Pour les éducateurs uniquement</p>
                     </div>
                 </div>
             </div>

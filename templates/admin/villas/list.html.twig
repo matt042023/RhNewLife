@@ -1,0 +1,118 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Gestion des Villas - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+	<li>
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<a href="{{ path('app_dashboard') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">Administration</a>
+		</div>
+	</li>
+	<li aria-current="page">
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Villas</span>
+		</div>
+	</li>
+{% endblock %}
+
+{% block page_header %}
+	<div class="px-4 py-6 lg:px-6">
+		<div class="flex flex-col md:flex-row md:items-center md:justify-between">
+			<div class="flex-1 min-w-0">
+				<h1 class="text-2xl md:text-3xl font-bold text-white mb-2">
+					Gestion des Villas
+				</h1>
+				<p class="text-blue-100 text-sm md:text-base">
+					Gérez les villas et assignez des éducateurs
+				</p>
+			</div>
+			<div class="mt-4 md:mt-0 md:ml-4">
+				<a href="{{ path('app_admin_villas_create') }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-white hover:bg-gray-50 rounded-lg transition focus:ring-4 focus:ring-blue-300">
+					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+					</svg>
+					Créer une villa
+				</a>
+			</div>
+		</div>
+	</div>
+{% endblock %}
+
+{% block dashboard_content %}
+	{% if villas is empty %}
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
+			<svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+			</svg>
+			<h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucune villa</h3>
+			<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Commencez par créer votre première villa.</p>
+			<div class="mt-6">
+				<a href="{{ path('app_admin_villas_create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+					</svg>
+					Créer une villa
+				</a>
+			</div>
+		</div>
+	{% else %}
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			{% for villa in villas %}
+				<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+					<div class="p-6">
+						<div class="flex items-start justify-between">
+							<div class="flex-1">
+								<div class="flex items-center gap-3 mb-3">
+									{% if villa.color %}
+										<div class="w-4 h-4 rounded-full flex-shrink-0" style="background-color: {{ villa.color }}"></div>
+									{% endif %}
+									<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+										{{ villa.nom }}
+									</h3>
+								</div>
+
+								<div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+									<div class="flex items-center gap-2">
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+										</svg>
+										<span>{{ villa.activeUsersCount }} utilisateur{{ villa.activeUsersCount > 1 ? 's' : '' }} actif{{ villa.activeUsersCount > 1 ? 's' : '' }}</span>
+									</div>
+									<div class="flex items-center gap-2">
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										<span>{{ villa.affectations|length }} affectation{{ villa.affectations|length > 1 ? 's' : '' }}</span>
+									</div>
+									{% if villa.color %}
+										<div class="flex items-center gap-2">
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+											</svg>
+											<span class="font-mono">{{ villa.color }}</span>
+										</div>
+									{% endif %}
+								</div>
+							</div>
+						</div>
+
+						<div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+							<a href="{{ path('app_admin_villas_view', {id: villa.id}) }}" class="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400">
+								Voir les détails
+								<svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+								</svg>
+							</a>
+						</div>
+					</div>
+				</div>
+			{% endfor %}
+		</div>
+	{% endif %}
+{% endblock %}

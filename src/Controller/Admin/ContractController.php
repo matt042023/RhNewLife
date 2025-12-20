@@ -8,6 +8,7 @@ use App\Repository\ContractRepository;
 use App\Repository\UserRepository;
 use App\Repository\DocumentRepository;
 use App\Repository\TemplateContratRepository;
+use App\Repository\VillaRepository;
 use App\Service\ContractManager;
 use App\Service\ContractGeneratorService;
 use App\Service\ContractSignatureService;
@@ -29,7 +30,8 @@ class ContractController extends AbstractController
         private DocumentRepository $documentRepository,
         private TemplateContratRepository $templateContratRepository,
         private ContractGeneratorService $contractGenerator,
-        private ContractSignatureService $signatureService
+        private ContractSignatureService $signatureService,
+        private VillaRepository $villaRepository
     ) {
     }
 
@@ -66,6 +68,9 @@ class ContractController extends AbstractController
         // Récupérer les templates actifs
         $activeTemplates = $this->templateContratRepository->findActiveTemplates();
 
+        // Récupérer toutes les villas pour le dropdown
+        $villas = $this->villaRepository->findAll();
+
         // Si aucun template n'existe, rediriger vers la création de template
         if (empty($activeTemplates) && !$request->isMethod('POST')) {
             $this->addFlash('warning', 'Aucun modèle de contrat disponible. Veuillez d\'abord créer un modèle de contrat.');
@@ -97,9 +102,17 @@ class ContractController extends AbstractController
                     'baseSalary' => $request->request->get('base_salary'),
                     'activityRate' => $request->request->get('activity_rate', '1.00'),
                     'weeklyHours' => $request->request->get('weekly_hours'),
-                    'villa' => $request->request->get('villa'),
                     'createdBy' => $this->getUser(),
                 ];
+
+                // Gérer la villa (relation vers entité)
+                $villaId = $request->request->get('villa_id');
+                if ($villaId) {
+                    $villa = $this->villaRepository->find($villaId);
+                    if ($villa) {
+                        $data['villa'] = $villa;
+                    }
+                }
 
                 // Champs optionnels
                 $endDate = $request->request->get('end_date');
@@ -153,6 +166,7 @@ class ContractController extends AbstractController
                     'isEdit' => false,
                     'contract' => null,
                     'parentContract' => $parentContract,
+                    'villas' => $villas,
                 ],
                 new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY)
             );
@@ -171,7 +185,7 @@ class ContractController extends AbstractController
                 'prime' => $parentContract->getPrime(),
                 'activity_rate' => $parentContract->getActivityRate(),
                 'weekly_hours' => $parentContract->getWeeklyHours(),
-                'villa' => $parentContract->getVilla(),
+                'villa_id' => $parentContract->getVilla() ? $parentContract->getVilla()->getId() : '',
                 'mutuelle' => $parentContract->isMutuelle(),
                 'prevoyance' => $parentContract->isPrevoyance(),
                 'working_days' => $parentContract->getWorkingDays(),
@@ -186,6 +200,7 @@ class ContractController extends AbstractController
             'isEdit' => false,
             'contract' => null,
             'parentContract' => $parentContract,
+            'villas' => $villas,
         ]);
     }
 
@@ -216,6 +231,9 @@ class ContractController extends AbstractController
             return $this->redirectToRoute('app_admin_contracts_view', ['id' => $contract->getId()]);
         }
 
+        // Récupérer toutes les villas pour le dropdown
+        $villas = $this->villaRepository->findAll();
+
         if ($request->isMethod('POST')) {
             $errors = [];
 
@@ -226,8 +244,16 @@ class ContractController extends AbstractController
                     'baseSalary' => $request->request->get('base_salary'),
                     'activityRate' => $request->request->get('activity_rate', '1.00'),
                     'weeklyHours' => $request->request->get('weekly_hours'),
-                    'villa' => $request->request->get('villa'),
                 ];
+
+                // Gérer la villa (relation vers entité)
+                $villaId = $request->request->get('villa_id');
+                if ($villaId) {
+                    $villa = $this->villaRepository->find($villaId);
+                    if ($villa) {
+                        $data['villa'] = $villa;
+                    }
+                }
 
                 // Champs optionnels
                 $endDate = $request->request->get('end_date');
@@ -269,6 +295,7 @@ class ContractController extends AbstractController
                     'errors' => $errors,
                     'formData' => $request->request->all(),
                     'isEdit' => true,
+                    'villas' => $villas,
                 ],
                 new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY)
             );
@@ -280,6 +307,7 @@ class ContractController extends AbstractController
             'errors' => [],
             'formData' => [],
             'isEdit' => true,
+            'villas' => $villas,
         ]);
     }
 

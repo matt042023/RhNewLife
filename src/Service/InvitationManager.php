@@ -33,7 +33,6 @@ class InvitationManager
         string $firstName,
         string $lastName,
         ?string $position = null,
-        ?string $structure = null,
         bool $skipOnboarding = false
     ): Invitation {
         $invitation = new Invitation();
@@ -42,7 +41,6 @@ class InvitationManager
             ->setFirstName($firstName)
             ->setLastName($lastName)
             ->setPosition($position)
-            ->setStructure($structure)
             ->setSkipOnboarding($skipOnboarding);
 
         $this->entityManager->persist($invitation);
@@ -73,15 +71,13 @@ class InvitationManager
         string $email,
         string $firstName,
         string $lastName,
-        ?string $position = null,
-        ?string $structure = null
+        ?string $position = null
     ): Invitation {
         return $this->createInvitation(
             $email,
             $firstName,
             $lastName,
             $position,
-            $structure,
             true // skipOnboarding = true
         );
     }

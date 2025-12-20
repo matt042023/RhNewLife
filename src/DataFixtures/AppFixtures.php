@@ -3,15 +3,22 @@
 namespace App\DataFixtures;
 
 use App\Entity\User;
+use App\Entity\Villa;
 use Doctrine\Bundle\FixturesBundle\Fixture;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-class AppFixtures extends Fixture
+class AppFixtures extends Fixture implements DependentFixtureInterface
 {
     public function __construct(
         private UserPasswordHasherInterface $passwordHasher
     ) {}
+
+    public function getDependencies(): array
+    {
+        return [VillaFixtures::class];
+    }
 
     public function load(ObjectManager $manager): void
     {
@@ -26,7 +33,6 @@ class AppFixtures extends Fixture
             ->setPhone('06 12 34 56 78')
             ->setAddress('123 Avenue des Champs-Élysées, 75008 Paris')
             ->setPosition('Administratrice RH')
-            ->setStructure('Siège Social')
             ->setFamilyStatus('Mariée')
             ->setChildren(2)
             ->setIban('FR76 3000 6000 0112 3456 7890 189')
@@ -52,7 +58,7 @@ class AppFixtures extends Fixture
             ->setPhone('06 23 45 67 89')
             ->setAddress('45 Rue de la République, 69002 Lyon')
             ->setPosition('Directeur')
-            ->setStructure('Villa des Lilas')
+            ->setVilla($this->getReference(VillaFixtures::VILLA_LILAS, Villa::class))
             ->setFamilyStatus('Marié')
             ->setChildren(1)
             ->setIban('FR76 3000 3000 3000 0123 4567 890')
@@ -78,7 +84,7 @@ class AppFixtures extends Fixture
             ->setPhone('06 34 56 78 90')
             ->setAddress('12 Rue Victor Hugo, 33000 Bordeaux')
             ->setPosition('Éducateur spécialisé')
-            ->setStructure('Villa des Roses')
+            ->setVilla($this->getReference(VillaFixtures::VILLA_ROSES, Villa::class))
             ->setFamilyStatus('Célibataire')
             ->setChildren(0)
             ->setIban('FR76 1234 5678 9012 3456 7890 123')

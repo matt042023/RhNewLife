@@ -119,7 +119,18 @@
                                         <div class="text-sm text-gray-900 dark:text-white">{{ user.position ?? '-' }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900 dark:text-white">{{ user.structure ?? '-' }}</div>
+                                        <div class="text-sm text-gray-900 dark:text-white">
+                                            {% if user.villa %}
+                                                <span class="inline-flex items-center gap-1.5">
+                                                    {% if user.villa.color %}
+                                                        <span class="w-2 h-2 rounded-full" style="background-color: {{ user.villa.color }}"></span>
+                                                    {% endif %}
+                                                    {{ user.villa.nom }}
+                                                </span>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         {% if user.status == 'active' %}

@@ -48,7 +48,7 @@ class OnboardingManager
             ->setFirstName($invitation->getFirstName())
             ->setLastName($invitation->getLastName())
             ->setPosition($invitation->getPosition())
-            ->setStructure($invitation->getStructure())
+            ->setVilla($invitation->getVilla())
             ->setStatus(User::STATUS_ONBOARDING)
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt(new \DateTime());
@@ -103,7 +103,7 @@ class OnboardingManager
             ->setFirstName($invitation->getFirstName())
             ->setLastName($invitation->getLastName())
             ->setPosition($invitation->getPosition())
-            ->setStructure($invitation->getStructure())
+            ->setVilla($invitation->getVilla())
             ->setStatus(User::STATUS_ACTIVE) // Directement actif
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt(new \DateTime());

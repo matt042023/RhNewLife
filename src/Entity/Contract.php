@@ -89,8 +89,9 @@ class Contract
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $workingDays = null;
 
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $villa = null;
+    #[ORM\ManyToOne(targetEntity: Villa::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Villa $villa = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 3, scale: 2, options: ['default' => '1.00'])]
     private string $activityRate = '1.00';
@@ -289,12 +290,12 @@ class Contract
         return $this;
     }
 
-    public function getVilla(): ?string
+    public function getVilla(): ?Villa
     {
         return $this->villa;
     }
 
-    public function setVilla(?string $villa): static
+    public function setVilla(?Villa $villa): static
     {
         $this->villa = $villa;
         return $this;

@@ -80,8 +80,19 @@
 								<p class="font-semibold text-gray-900">{{ user.position ?? '-' }}</p>
 							</div>
 							<div>
-								<span class="text-gray-600">Structure</span>
-								<p class="font-semibold text-gray-900">{{ user.structure ?? '-' }}</p>
+								<span class="text-gray-600">Villa</span>
+								<p class="font-semibold text-gray-900">
+									{% if user.villa %}
+										<span class="inline-flex items-center gap-1.5">
+											{% if user.villa.color %}
+												<span class="w-2 h-2 rounded-full" style="background-color: {{ user.villa.color }}"></span>
+											{% endif %}
+											{{ user.villa.nom }}
+										</span>
+									{% else %}
+										-
+									{% endif %}
+								</p>
 							</div>
 						</div>
 					</div>

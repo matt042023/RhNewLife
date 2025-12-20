@@ -208,7 +208,7 @@ class TemplateContrat
                 '{{ employee.address }}' => 'Adresse complète',
                 '{{ employee.matricule }}' => 'Matricule',
                 '{{ employee.position }}' => 'Poste',
-                '{{ employee.structure }}' => 'Structure',
+                '{{ employee.villa }}' => 'Villa',
                 '{{ employee.familyStatus }}' => 'Situation familiale',
                 '{{ employee.children }}' => 'Nombre d\'enfants',
                 '{{ employee.iban }}' => 'IBAN',

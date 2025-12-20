@@ -32,8 +32,9 @@ class Invitation
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $position = null;
 
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $structure = null;
+    #[ORM\ManyToOne(targetEntity: Villa::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Villa $villa = null;
 
     #[ORM\Column(length: 64, unique: true)]
     private ?string $token = null;
@@ -131,14 +132,14 @@ class Invitation
         return $this;
     }
 
-    public function getStructure(): ?string
+    public function getVilla(): ?Villa
     {
-        return $this->structure;
+        return $this->villa;
     }
 
-    public function setStructure(?string $structure): static
+    public function setVilla(?Villa $villa): static
     {
-        $this->structure = $structure;
+        $this->villa = $villa;
         return $this;
     }
 

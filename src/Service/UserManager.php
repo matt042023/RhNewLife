@@ -29,7 +29,7 @@ class UserManager
      * Crée un utilisateur manuellement (par l'admin)
      * Génère automatiquement le matricule et envoie une invitation
      *
-     * @param array $data Données de l'utilisateur (email, firstName, lastName, position, structure, etc.)
+     * @param array $data Données de l'utilisateur (email, firstName, lastName, position, villa, etc.)
      * @param bool $sendInvitation Si true, envoie une invitation d'activation
      * @return User L'utilisateur créé
      */
@@ -56,9 +56,6 @@ class UserManager
         if (isset($data['position'])) {
             $user->setPosition($data['position']);
         }
-        if (isset($data['structure'])) {
-            $user->setStructure($data['structure']);
-        }
         if (isset($data['phone'])) {
             $user->setPhone($data['phone']);
         }
@@ -80,6 +77,9 @@ class UserManager
         if (isset($data['hiringDate'])) {
             $user->setHiringDate($data['hiringDate']);
         }
+        if (isset($data['villa'])) {
+            $user->setVilla($data['villa']);
+        }
 
         // Générer le matricule
         $this->matriculeGenerator->assignToUser($user);
@@ -98,7 +98,7 @@ class UserManager
                 $user->getFirstName(),
                 $user->getLastName(),
                 $user->getPosition(),
-                $user->getStructure()
+                $user->getVilla()?->getNom()
             );
         }
 
@@ -141,11 +141,11 @@ class UserManager
         if (isset($data['position'])) {
             $user->setPosition($data['position']);
         }
-        if (isset($data['structure'])) {
-            $user->setStructure($data['structure']);
-        }
         if (isset($data['hiringDate'])) {
             $user->setHiringDate($data['hiringDate']);
+        }
+        if (array_key_exists('villa', $data)) {
+            $user->setVilla($data['villa']);
         }
 
         $this->entityManager->flush();
@@ -172,7 +172,6 @@ class UserManager
             'iban' => 'IBAN',
             'bic' => 'BIC',
             'position' => 'Poste',
-            'structure' => 'Structure',
         ];
 
         $totalFields = count($requiredFields);

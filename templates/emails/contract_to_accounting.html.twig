@@ -130,7 +130,7 @@
                 <strong>Matricule :</strong> {{ contract.user.matricule }}<br>
                 <strong>Email :</strong> {{ contract.user.email }}<br>
                 {% if contract.user.position %}<strong>Poste :</strong> {{ contract.user.position }}<br>{% endif %}
-                {% if contract.user.structure %}<strong>Structure :</strong> {{ contract.user.structure }}{% endif %}
+                {% if contract.user.villa %}<strong>Villa :</strong> {{ contract.user.villa.nom }}{% endif %}
             </div>
 
             <h3 style="color: #1f2937; margin-top: 30px;">Détails du contrat</h3>
@@ -171,7 +171,7 @@
                 {% if contract.villa %}
                 <tr>
                     <td>Villa</td>
-                    <td>{{ contract.villa }}</td>
+                    <td>{{ contract.villa.nom }}</td>
                 </tr>
                 {% endif %}
                 {% if contract.workingDays %}

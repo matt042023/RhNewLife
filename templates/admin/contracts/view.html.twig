@@ -285,7 +285,18 @@
 				<div class="grid grid-cols-2 gap-6">
 					<div>
 						<dt class="text-sm text-gray-500 mb-1">Villa affectée</dt>
-						<dd class="text-gray-900">{{ contract.villa ?? 'Non affecté' }}</dd>
+						<dd class="text-gray-900">
+							{% if contract.villa %}
+								<span class="inline-flex items-center gap-1.5">
+									{% if contract.villa.color %}
+										<span class="w-2 h-2 rounded-full" style="background-color: {{ contract.villa.color }}"></span>
+									{% endif %}
+									{{ contract.villa.nom }}
+								</span>
+							{% else %}
+								Non affectée
+							{% endif %}
+						</dd>
 					</div>
 					<div>
 						<dt class="text-sm text-gray-500 mb-1">Jours travaillés</dt>

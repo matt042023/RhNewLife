@@ -100,7 +100,7 @@
                 <strong>👤 Vos informations :</strong><br>
                 <strong>Email :</strong> {{ user.email }}<br>
                 <strong>Poste :</strong> {{ user.position ?? 'Non spécifié' }}<br>
-                {% if user.structure %}<strong>Structure :</strong> {{ user.structure }}<br>{% endif %}
+                {% if user.villa %}<strong>Villa :</strong> {{ user.villa.nom }}<br>{% endif %}
                 {% if user.matricule %}<strong>Matricule :</strong> {{ user.matricule }}{% endif %}
             </div>
 

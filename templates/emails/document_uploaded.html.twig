@@ -101,7 +101,7 @@
                 <strong>Nom :</strong> {{ user.fullName }}<br>
                 <strong>Email :</strong> {{ user.email }}<br>
                 {% if user.position %}<strong>Poste :</strong> {{ user.position }}<br>{% endif %}
-                {% if user.structure %}<strong>Structure :</strong> {{ user.structure }}<br>{% endif %}
+                {% if user.villa %}<strong>Villa :</strong> {{ user.villa.nom }}<br>{% endif %}
             </div>
 
             <div class="document-card">

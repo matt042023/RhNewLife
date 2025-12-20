@@ -57,8 +57,19 @@
                     <span class="font-semibold text-gray-900">{{ app.user.position ?? '-' }}</span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-gray-600">Structure</span>
-                    <span class="font-semibold text-gray-900">{{ app.user.structure ?? '-' }}</span>
+                    <span class="text-gray-600">Villa</span>
+                    <span class="font-semibold text-gray-900">
+                        {% if app.user.villa %}
+                            <span class="inline-flex items-center gap-1.5">
+                                {% if app.user.villa.color %}
+                                    <span class="w-2 h-2 rounded-full" style="background-color: {{ app.user.villa.color }}"></span>
+                                {% endif %}
+                                {{ app.user.villa.nom }}
+                            </span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-gray-600">Téléphone</span>

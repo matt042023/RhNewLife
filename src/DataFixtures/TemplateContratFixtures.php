@@ -289,8 +289,8 @@ class TemplateContratFixtures extends Fixture
             
             <div class="info-box" style="margin-top: 15px;">
                 <p><span class="info-label">Poste occupé :</span> <strong>{{ employee.position }}</strong></p>
-                {% if employee.structure %}
-                <p><span class="info-label">Structure d'affectation :</span> {{ employee.structure }}</p>
+                {% if employee.villa %}
+                <p><span class="info-label">Villa d'affectation :</span> {{ employee.villa }}</p>
                 {% endif %}
                 {% if contract.villa %}
                 <p><span class="info-label">Villa :</span> {{ contract.villa }}</p>
@@ -892,8 +892,8 @@ HTML;
 
             <div class="info-box" style="margin-top: 15px;">
                 <p><span class="info-label">Poste occupé :</span> <strong>{{ employee.position }}</strong></p>
-                {% if employee.structure %}
-                <p><span class="info-label">Structure d'affectation :</span> {{ employee.structure }}</p>
+                {% if employee.villa %}
+                <p><span class="info-label">Villa d'affectation :</span> {{ employee.villa }}</p>
                 {% endif %}
                 {% if contract.villa %}
                 <p><span class="info-label">Villa :</span> {{ contract.villa }}</p>

@@ -98,7 +98,7 @@
 						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Salarié</th>
 						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Matricule</th>
 						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Poste</th>
-						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Structure</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Villa</th>
 						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Statut</th>
 						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Embauche</th>
 						<th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Actions</th>
@@ -126,7 +126,17 @@
                                     {% endif %}
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-600">{{ user.position ?? '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-600">{{ user.structure ?? '-' }}</td>
+                                <td class="px-6 py-4">
+                                    {% if user.villa %}
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                                              style="background-color: {{ user.villa.color ?? '#E5E7EB' }}20; color: {{ user.villa.color ?? '#6B7280' }}">
+                                            <span class="w-2 h-2 rounded-full" style="background-color: {{ user.villa.color ?? '#6B7280' }}"></span>
+                                            {{ user.villa.nom }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-gray-400 text-sm">-</span>
+                                    {% endif %}
+                                </td>
                                 <td class="px-6 py-4">
                                     {% if user.status == 'invited' %}
                                         <span class="badge badge-info">Invité</span>

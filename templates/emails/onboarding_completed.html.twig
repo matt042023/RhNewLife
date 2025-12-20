@@ -23,7 +23,9 @@
                 <strong>Salarié :</strong> {{ user.firstName }} {{ user.lastName }}<br>
                 <strong>Email :</strong> {{ user.email }}<br>
                 <strong>Poste :</strong> {{ user.position }}<br>
-                <strong>Structure :</strong> {{ user.structure }}
+                {% if user.villa %}
+                <strong>Villa :</strong> {{ user.villa.nom }}<br>
+                {% endif %}
             </div>
             <p>Le salarié a terminé son parcours d'onboarding. Vous pouvez maintenant valider son dossier.</p>
             <p><strong>⚠️ Action requise :</strong> Vérifiez les documents et informations avant validation.</p>
