@@ -33,8 +33,8 @@
 				</p>
 			</div>
 			<div class="mt-4 md:mt-0 md:ml-4">
-				<a href="{{ path('app_admin_users_create') }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-white hover:bg-gray-50 rounded-lg transition focus:ring-4 focus:ring-blue-300">
-					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="{{ path('app_admin_users_create') }}" class="glass-btn glass-btn-success inline-flex items-center gap-2">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
 					</svg>
 					Créer un salarié
@@ -46,7 +46,7 @@
 
 {% block dashboard_content %}
 	{# Filtres #}
-	<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+	<div class="glass-card p-6 mb-6">
 		<form method="get" class="flex gap-4">
 			<div class="flex-1">
 				<input
@@ -54,11 +54,11 @@
 					name="search"
 					value="{{ search ?? '' }}"
 					placeholder="Rechercher par nom, email ou matricule..."
-					class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+					class="glass-input w-full"
 				>
 			</div>
 			<div>
-				<select name="status" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+				<select name="status" class="glass-input">
 					<option value="">Tous les statuts</option>
 					<option value="invited" {{ currentStatus == 'invited' ? 'selected' : '' }}>Invité</option>
 					<option value="onboarding" {{ currentStatus == 'onboarding' ? 'selected' : '' }}>Onboarding</option>
@@ -66,8 +66,8 @@
 					<option value="archived" {{ currentStatus == 'archived' ? 'selected' : '' }}>Archivé</option>
 				</select>
 			</div>
-			<button type="submit" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600">
-				<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<button type="submit" class="glass-btn inline-flex items-center gap-2">
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 				</svg>
 				Filtrer
@@ -77,82 +77,82 @@
 
 	{# Liste des salariés #}
 	{% if users is empty %}
-		<div class="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-sm text-center">
+		<div class="glass-card p-12 text-center">
 			<svg class="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
 			</svg>
 			<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Aucun salarié</h3>
 			<p class="text-gray-600 dark:text-gray-400 mb-6">Créez votre premier employé pour commencer</p>
-			<a href="{{ path('app_admin_users_create') }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition">
-				<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<a href="{{ path('app_admin_users_create') }}" class="glass-btn glass-btn-primary inline-flex items-center gap-2">
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
 				</svg>
 				Créer un salarié
 			</a>
 		</div>
 	{% else %}
-		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+		<div class="glass-card overflow-hidden">
 			<table class="w-full">
-				<thead class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+				<thead class="backdrop-blur-sm bg-white/20 dark:bg-white/10 border-b border-white/10">
 					<tr>
-						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Salarié</th>
-						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Matricule</th>
-						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Poste</th>
-						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Villa</th>
-						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Statut</th>
-						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Embauche</th>
-						<th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Actions</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Salarié</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Matricule</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Poste</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Villa</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Statut</th>
+						<th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Embauche</th>
+						<th class="px-6 py-4 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Actions</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+				<tbody class="divide-y divide-white/5">
 					{% for user in users %}
-						<tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+						<tr class="transition-colors hover:bg-white/10 dark:hover:bg-white/5">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                                             {{ user.firstName|first }}{{ user.lastName|first }}
                                         </div>
                                         <div>
-                                            <div class="font-semibold text-gray-900">{{ user.fullName }}</div>
-                                            <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                            <div class="font-semibold text-gray-900 dark:text-white">{{ user.fullName }}</div>
+                                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ user.email }}</div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
                                     {% if user.matricule %}
-                                        <span class="font-mono text-sm text-gray-900">{{ user.matricule }}</span>
+                                        <span class="font-mono text-sm text-gray-900 dark:text-gray-100">{{ user.matricule }}</span>
                                     {% else %}
-                                        <span class="text-gray-400 text-sm">-</span>
+                                        <span class="text-gray-400 dark:text-gray-500 text-sm">-</span>
                                     {% endif %}
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-600">{{ user.position ?? '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ user.position ?? '-' }}</td>
                                 <td class="px-6 py-4">
                                     {% if user.villa %}
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                                              style="background-color: {{ user.villa.color ?? '#E5E7EB' }}20; color: {{ user.villa.color ?? '#6B7280' }}">
-                                            <span class="w-2 h-2 rounded-full" style="background-color: {{ user.villa.color ?? '#6B7280' }}"></span>
+                                        <span class="glass-badge inline-flex items-center gap-1.5"
+                                              style="background: linear-gradient(135deg, {{ user.villa.color ?? '#60a5fa' }}20, {{ user.villa.color ?? '#60a5fa' }}10); border-color: {{ user.villa.color ?? '#60a5fa' }}30; color: {{ user.villa.color ?? '#60a5fa' }}">
+                                            <span class="w-2 h-2 rounded-full" style="background-color: {{ user.villa.color ?? '#60a5fa' }}"></span>
                                             {{ user.villa.nom }}
                                         </span>
                                     {% else %}
-                                        <span class="text-gray-400 text-sm">-</span>
+                                        <span class="text-gray-400 dark:text-gray-500 text-sm">-</span>
                                     {% endif %}
                                 </td>
                                 <td class="px-6 py-4">
                                     {% if user.status == 'invited' %}
-                                        <span class="badge badge-info">Invité</span>
+                                        <span class="glass-badge glass-badge-info">Invité</span>
                                     {% elseif user.status == 'onboarding' %}
-                                        <span class="badge badge-warning">Onboarding</span>
+                                        <span class="glass-badge glass-badge-warning">Onboarding</span>
                                     {% elseif user.status == 'active' %}
-                                        <span class="badge badge-success">Actif</span>
+                                        <span class="glass-badge glass-badge-success">Actif</span>
                                     {% elseif user.status == 'archived' %}
-                                        <span class="badge badge-neutral">Archivé</span>
+                                        <span class="glass-badge">Archivé</span>
                                     {% endif %}
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-600">
+                                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
                                     {{ user.hiringDate ? user.hiringDate|date('d/m/Y') : '-' }}
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    <a href="{{ path('app_admin_users_view', {id: user.id}) }}" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                                    <a href="{{ path('app_admin_users_view', {id: user.id}) }}" class="glass-btn glass-btn-primary text-xs px-3 py-1.5">
                                         Voir
                                     </a>
                                 </td>

@@ -3,19 +3,19 @@
 {% block title %}Modifier {{ user.fullName }} - RH NewLife{% endblock %}
 
 {% block body %}
-<div class="min-h-screen bg-gray-50 p-8">
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-8">
     <div class="max-w-4xl mx-auto">
 
         {# Header #}
         <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">Modifier le profil</h1>
-            <p class="text-gray-600 mt-1">{{ user.fullName }} - {{ user.matricule }}</p>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Modifier le profil</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">{{ user.fullName }} - {{ user.matricule }}</p>
         </div>
 
         {# Errors #}
         {% if errors is not empty %}
-            <div class="alert alert-error mb-6">
-                <ul class="list-disc list-inside">
+            <div class="glass-card glass-card-danger mb-6 p-4">
+                <ul class="list-disc list-inside text-red-800 dark:text-red-200">
                     {% for error in errors %}
                         <li>{{ error }}</li>
                     {% endfor %}
@@ -24,27 +24,27 @@
         {% endif %}
 
         {# Form #}
-        <form method="post" class="bg-white rounded-2xl shadow-lg p-8">
+        <form method="post" class="glass-card p-8 space-y-6">
 
             <div class="grid grid-cols-2 gap-6">
                 <div>
-                    <label class="form-label">Prénom</label>
-                    <input type="text" name="first_name" value="{{ user.firstName }}" class="form-input" required>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Prénom</label>
+                    <input type="text" name="first_name" value="{{ user.firstName }}" class="glass-input w-full" required>
                 </div>
 
                 <div>
-                    <label class="form-label">Nom</label>
-                    <input type="text" name="last_name" value="{{ user.lastName }}" class="form-input" required>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nom</label>
+                    <input type="text" name="last_name" value="{{ user.lastName }}" class="glass-input w-full" required>
                 </div>
 
                 <div>
-                    <label class="form-label">Poste</label>
-                    <input type="text" name="position" value="{{ user.position }}" class="form-input">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Poste</label>
+                    <input type="text" name="position" value="{{ user.position }}" class="glass-input w-full">
                 </div>
 
                 <div>
-                    <label class="form-label">Villa</label>
-                    <select name="villa_id" class="form-select">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Villa</label>
+                    <select name="villa_id" class="glass-input w-full">
                         <option value="">Aucune villa</option>
                         {% for villa in villas %}
                             <option value="{{ villa.id }}" {{ user.villa and user.villa.id == villa.id ? 'selected' : '' }}>
@@ -55,23 +55,23 @@
                 </div>
 
                 <div>
-                    <label class="form-label">Téléphone</label>
-                    <input type="tel" name="phone" value="{{ user.phone }}" class="form-input">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Téléphone</label>
+                    <input type="tel" name="phone" value="{{ user.phone }}" class="glass-input w-full">
                 </div>
 
                 <div>
-                    <label class="form-label">Date d'embauche</label>
-                    <input type="date" name="hiring_date" value="{{ user.hiringDate ? user.hiringDate|date('Y-m-d') : '' }}" class="form-input">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Date d'embauche</label>
+                    <input type="date" name="hiring_date" value="{{ user.hiringDate ? user.hiringDate|date('Y-m-d') : '' }}" class="glass-input w-full">
                 </div>
 
                 <div class="col-span-2">
-                    <label class="form-label">Adresse</label>
-                    <textarea name="address" class="form-input" rows="2">{{ user.address }}</textarea>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Adresse</label>
+                    <textarea name="address" class="glass-input w-full" rows="2">{{ user.address }}</textarea>
                 </div>
 
                 <div>
-                    <label class="form-label">Situation familiale</label>
-                    <select name="family_status" class="form-select">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Situation familiale</label>
+                    <select name="family_status" class="glass-input w-full">
                         <option value="">Non renseigné</option>
                         <option value="single" {{ user.familyStatus == 'single' ? 'selected' : '' }}>Célibataire</option>
                         <option value="married" {{ user.familyStatus == 'married' ? 'selected' : '' }}>Marié(e)</option>
@@ -81,27 +81,27 @@
                 </div>
 
                 <div>
-                    <label class="form-label">Nombre d'enfants</label>
-                    <input type="number" name="children" value="{{ user.children ?? 0 }}" min="0" class="form-input">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nombre d'enfants</label>
+                    <input type="number" name="children" value="{{ user.children ?? 0 }}" min="0" class="glass-input w-full">
                 </div>
 
                 <div>
-                    <label class="form-label">IBAN</label>
-                    <input type="text" name="iban" value="{{ user.iban }}" class="form-input">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">IBAN</label>
+                    <input type="text" name="iban" value="{{ user.iban }}" class="glass-input w-full">
                 </div>
 
                 <div>
-                    <label class="form-label">BIC</label>
-                    <input type="text" name="bic" value="{{ user.bic }}" class="form-input">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">BIC</label>
+                    <input type="text" name="bic" value="{{ user.bic }}" class="glass-input w-full">
                 </div>
             </div>
 
             {# Actions #}
-            <div class="flex items-center justify-between pt-6 mt-6 border-t">
-                <a href="{{ path('app_admin_users_view', {id: user.id}) }}" class="text-gray-600 hover:text-gray-800 font-semibold">
+            <div class="flex items-center justify-between pt-6 mt-6 border-t border-white/10">
+                <a href="{{ path('app_admin_users_view', {id: user.id}) }}" class="glass-btn px-4 py-2">
                     Annuler
                 </a>
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="glass-btn glass-btn-primary inline-flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
