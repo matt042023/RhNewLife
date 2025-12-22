@@ -30,11 +30,34 @@
             </div>
         </header>
 
-        {# Page header banner with glass overlay #}
+        {# Page header banner with metallic emerald glass effect #}
         <div class="relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800"></div>
-            <div class="absolute inset-0 backdrop-blur-sm bg-white/10 dark:bg-black/10"></div>
-            <div class="relative">
+            {# Base metallic emerald gradient - cylindrical effect #}
+            <div class="absolute inset-0 bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-600 dark:from-emerald-600 dark:via-emerald-700 dark:to-emerald-800"></div>
+
+            {# Cylindrical lighting - top highlight #}
+            <div class="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-transparent" style="mask-image: linear-gradient(to bottom, white 0%, transparent 30%);"></div>
+
+            {# Cylindrical shadow - bottom shadow #}
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30 dark:to-black/50" style="mask-image: linear-gradient(to bottom, transparent 70%, white 100%);"></div>
+
+            {# Blue metallic reflections - left to right shimmer #}
+            <div class="absolute inset-0 bg-gradient-to-r from-blue-400/30 via-cyan-300/20 to-transparent dark:from-blue-500/40 dark:via-cyan-400/30 dark:to-transparent"></div>
+
+            {# Secondary blue reflection - right side #}
+            <div class="absolute inset-0 bg-gradient-to-l from-blue-500/20 via-transparent to-transparent dark:from-blue-600/30"></div>
+
+            {# Metallic shine streak - diagonal #}
+            <div class="absolute inset-0 bg-gradient-to-br from-transparent via-white/20 to-transparent dark:via-white/15" style="mask-image: linear-gradient(135deg, transparent 40%, white 48%, white 52%, transparent 60%);"></div>
+
+            {# Glass frosted overlay for depth #}
+            <div class="absolute inset-0 backdrop-blur-[2px] bg-white/5 dark:bg-white/3"></div>
+
+            {# Noise texture for metallic grain #}
+            <div class="absolute inset-0 opacity-20 dark:opacity-30" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 400 400%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 /%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E'); background-size: 200px 200px;"></div>
+
+            {# Content layer #}
+            <div class="relative z-10">
                 {% block page_header %}
                     {% include 'components/_page_header.html.twig' %}
                 {% endblock %}

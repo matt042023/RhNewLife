@@ -998,6 +998,63 @@ body {
     }
 }
 
+/* ========================================
+   METALLIC EMERALD SIDEBAR STYLING
+   ======================================== */
+
+/* Sidebar active menu item with metallic emerald glass effect */
+.sidebar-menu-active {
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-menu-active::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right,
+        rgba(52, 211, 153, 0.3) 0%,
+        rgba(16, 185, 129, 0.2) 50%,
+        rgba(5, 150, 105, 0.3) 100%);
+    border-radius: 0.5rem;
+    z-index: 0;
+}
+
+.sidebar-menu-active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right,
+        rgba(59, 130, 246, 0.15) 0%,
+        rgba(103, 232, 249, 0.1) 50%,
+        transparent 100%);
+    border-radius: 0.5rem;
+    z-index: 1;
+}
+
+.dark .sidebar-menu-active::before {
+    background: linear-gradient(to right,
+        rgba(5, 150, 105, 0.4) 0%,
+        rgba(4, 120, 87, 0.3) 50%,
+        rgba(6, 95, 70, 0.4) 100%);
+}
+
+.dark .sidebar-menu-active::after {
+    background: linear-gradient(to right,
+        rgba(37, 99, 235, 0.2) 0%,
+        rgba(34, 211, 238, 0.15) 50%,
+        transparent 100%);
+}
+
+/* Emerald hover effect for sidebar items */
+.sidebar-menu-item:hover {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.dark .sidebar-menu-item:hover {
+    background: rgba(5, 150, 105, 0.15);
+}
+
 /* Respect user motion preferences */
 @media (prefers-reduced-motion: reduce) {
     *,

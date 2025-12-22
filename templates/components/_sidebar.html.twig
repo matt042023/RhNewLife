@@ -1,28 +1,48 @@
 <div class="h-full px-3 py-4 overflow-y-auto">
-    {# Logo and branding #}
+    {# Logo and branding with metallic emerald glass effect #}
     <div class="flex items-center mb-5 px-3 py-2">
-        <a href="{{ path('app_dashboard') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300">
-            <svg class="w-8 h-8 mr-3 text-blue-600 dark:text-blue-500 transition-transform duration-300 hover:scale-110" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"></path>
-            </svg>
-            <span class="text-xl font-semibold text-gray-900 dark:text-white">RH NewLife</span>
+        <a href="{{ path('app_dashboard') }}" class="flex items-center p-3 rounded-lg transition-all duration-300 relative overflow-hidden group">
+            {# Metallic emerald background with blue reflections #}
+            <div class="absolute inset-0 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 dark:from-emerald-600 dark:via-emerald-700 dark:to-emerald-800 rounded-lg"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-cyan-300/15 to-transparent dark:from-blue-500/30 dark:via-cyan-400/20 rounded-lg"></div>
+            <div class="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-black/20 dark:from-white/20 dark:to-black/30 rounded-lg"></div>
+            <div class="absolute inset-0 backdrop-blur-[1px] bg-white/5 dark:bg-white/3 rounded-lg"></div>
+
+            {# Content #}
+            <div class="relative flex items-center">
+                <svg class="w-8 h-8 mr-3 text-white drop-shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"></path>
+                </svg>
+                <span class="text-xl font-bold text-white drop-shadow-md">RH NewLife</span>
+            </div>
         </a>
     </div>
 
-    {# User info card with glass effect #}
-    <div class="mb-5 px-3 py-3 glass-card">
-        <a href="{{ path('app_profile_view') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 {{ app.request.get('_route') starts with 'app_profile' ? 'bg-white/20 dark:bg-white/10' : '' }}">
+    {# User info card with metallic emerald glass effect #}
+    <div class="mb-5 px-3 py-3 relative overflow-hidden rounded-lg group">
+        {# Metallic emerald background #}
+        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/20 via-emerald-500/15 to-emerald-600/20 dark:from-emerald-600/30 dark:via-emerald-700/25 dark:to-emerald-800/30"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-blue-400/10 via-cyan-300/5 to-transparent dark:from-blue-500/15 dark:via-cyan-400/10"></div>
+        <div class="absolute inset-0 backdrop-blur-md bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-lg"></div>
+
+        <a href="{{ path('app_profile_view') }}" class="relative flex items-center p-2 rounded-lg transition-all duration-300 hover:bg-white/10 dark:hover:bg-white/5 {{ app.request.get('_route') starts with 'app_profile' ? 'bg-white/15 dark:bg-white/10' : '' }}">
             <div class="flex items-center w-full">
                 <div class="flex-shrink-0">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold shadow-md">
-                        {{ app.user.firstName|slice(0, 1)|upper }}{{ app.user.lastName|slice(0, 1)|upper }}
+                    {# Avatar with metallic emerald effect #}
+                    <div class="w-10 h-10 rounded-full relative overflow-hidden shadow-lg">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 dark:from-emerald-500 dark:via-emerald-600 dark:to-emerald-700"></div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-400/30 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/30 to-black/20"></div>
+                        <div class="relative w-full h-full flex items-center justify-center text-white font-bold text-sm">
+                            {{ app.user.firstName|slice(0, 1)|upper }}{{ app.user.lastName|slice(0, 1)|upper }}
+                        </div>
                     </div>
                 </div>
                 <div class="flex-1 ml-3 min-w-0">
-                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
                         {{ app.user.firstName }} {{ app.user.lastName }}
                     </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    <p class="text-xs text-emerald-700 dark:text-emerald-300 truncate font-medium">
                         {{ app.user.position ?? 'Employé' }}
                     </p>
                 </div>
@@ -34,18 +54,28 @@
     <ul class="space-y-2 font-medium">
         {# Dashboard - visible to all #}
         <li>
-            <a href="{{ path('app_dashboard') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_dashboard' ? 'glass-card glass-card-primary' : '' }}">
-                <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 22 21">
-                    <path d="M16.975 11H10V4.025a1 1 0 0 0-1.066-.998 8.5 8.5 0 1 0 9.039 9.039.999.999 0 0 0-1-1.066h.002Z"/>
+            <a href="{{ path('app_dashboard') }}" class="sidebar-menu-item flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_dashboard' ? 'sidebar-menu-active' : '' }}">
+                <svg class="relative w-5 h-5 z-10 {{ app.request.get('_route') starts with 'app_dashboard' ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-500 dark:text-gray-400' }} transition duration-75" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 22 21">
+                    <path d="M16.975 11H10V4.025a1 1 0 0 0-1.066-.998 8.5 8.5 0 1 0 9.039 9.039.999.999 0 0 0-1-1.066h.002 Z"/>
                     <path d="M12.5 0c-.157 0-.311.01-.565.027A1 1 0 0 0 11 1.02V10h8.975a1 1 0 0 0 1-.935c.013-.188.028-.374.028-.565A8.51 8.51 0 0 0 12.5 0Z"/>
                 </svg>
-                <span class="ml-3">Tableau de bord</span>
+                <span class="relative ml-3 z-10 {{ app.request.get('_route') starts with 'app_dashboard' ? 'font-bold text-emerald-900 dark:text-emerald-50' : '' }}">Tableau de bord</span>
             </a>
         </li>
 
         {# Mon profil - visible to all #}
         <li>
-            <a href="{{ path('app_profile_view') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_profile' ? 'glass-card glass-card-primary' : '' }}">
+            <a href="{{ path('app_profile_view') }}" class="sidebar-menu-item flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_profile' ? 'sidebar-menu-active' : '' }}">
+                <svg class="relative w-5 h-5 z-10 {{ app.request.get('_route') starts with 'app_profile' ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-500 dark:text-gray-400' }} transition duration-75" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 18">
+                    <path d="M14 2a3.963 3.963 0 0 0-1.4.267 6.439 6.439 0 0 1-1.331 6.638A4 4 0 1 0 14 2Zm1 9h-1.264A6.957 6.957 0 0 1 15 15v2a2.97 2.97 0 0 1-.184 1H19a1 1 0 0 0 1-1v-1a5.006 5.006 0 0 0-5-5ZM6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Z"/>
+                </svg>
+                <span class="relative ml-3 z-10 {{ app.request.get('_route') starts with 'app_profile' ? 'font-bold text-emerald-900 dark:text-emerald-50' : '' }}">Mon profil</span>
+            </a>
+        </li>
+
+        {# Mes documents - visible to all #}
+        <li>
+            <a href="{{ path('app_profile_documents') }}" class="sidebar-menu-item flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:scale-[1.02] {{ app.request.get('_route') == 'app_profile_documents' ? 'sidebar-menu-active' : '' }}">
                 <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 18">
                     <path d="M14 2a3.963 3.963 0 0 0-1.4.267 6.439 6.439 0 0 1-1.331 6.638A4 4 0 1 0 14 2Zm1 9h-1.264A6.957 6.957 0 0 1 15 15v2a2.97 2.97 0 0 1-.184 1H19a1 1 0 0 0 1-1v-1a5.006 5.006 0 0 0-5-5ZM6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Z"/>
                 </svg>
