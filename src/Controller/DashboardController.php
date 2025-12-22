@@ -14,6 +14,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class DashboardController extends AbstractController
 {
+    #[Route('/', name: 'app_home')]
     #[Route('/dashboard', name: 'app_dashboard')]
     #[IsGranted('ROLE_USER')]
     public function index(#[CurrentUser] User $user): Response
