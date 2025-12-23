@@ -96,6 +96,57 @@
                 </div>
             </div>
 
+            {# Section Santé #}
+            <div class="pt-6 border-t border-white/10 space-y-6">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Santé (Mutuelle & Prévoyance)</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {# Mutuelle #}
+                    <div class="space-y-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-gray-800 dark:text-gray-200">Mutuelle</h4>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="mutuelle_enabled" value="1" class="sr-only peer" {{ user.health.mutuelleEnabled ? 'checked' : '' }}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Nom de la mutuelle</label>
+                                <input type="text" name="mutuelle_nom" value="{{ user.health.mutuelleNom }}" class="glass-input w-full text-sm" placeholder="ex: Harmonie Mutuelle">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Formule</label>
+                                <input type="text" name="mutuelle_formule" value="{{ user.health.mutuelleFormule }}" class="glass-input w-full text-sm" placeholder="ex: Formule Bronze">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Date fin validité</label>
+                                <input type="date" name="mutuelle_date_fin" value="{{ user.health.mutuelleDateFin ? user.health.mutuelleDateFin|date('Y-m-d') : '' }}" class="glass-input w-full text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Prévoyance #}
+                    <div class="space-y-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-gray-800 dark:text-gray-200">Prévoyance</h4>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="prevoyance_enabled" value="1" class="sr-only peer" {{ user.health.prevoyanceEnabled ? 'checked' : '' }}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                            </label>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Nom de la prévoyance</label>
+                                <input type="text" name="prevoyance_nom" value="{{ user.health.prevoyanceNom }}" class="glass-input w-full text-sm" placeholder="ex: AXA Prévoyance">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {# Actions #}
             <div class="flex items-center justify-between pt-6 mt-6 border-t border-white/10">
                 <a href="{{ path('app_admin_users_view', {id: user.id}) }}" class="glass-btn px-4 py-2">

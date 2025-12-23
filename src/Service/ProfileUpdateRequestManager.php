@@ -32,8 +32,7 @@ class ProfileUpdateRequestManager
         private string $senderEmail = 'noreply@rhnewlife.fr',
         private string $senderName = 'RH NewLife',
         private string $adminEmail = 'admin@rhnewlife.fr'
-    ) {
-    }
+    ) {}
 
     /**
      * Crée une nouvelle demande de modification de profil
@@ -47,7 +46,7 @@ class ProfileUpdateRequestManager
     public function createRequest(User $user, array $requestedData, ?string $reason = null): ProfileUpdateRequest
     {
         // Valider que les données demandées sont autorisées
-        $allowedFields = ['phone', 'address', 'familyStatus', 'children', 'iban', 'bic'];
+        $allowedFields = ['phone', 'address', 'familyStatus', 'children', 'iban', 'bic', 'mutuelleEnabled', 'prevoyanceEnabled'];
         foreach (array_keys($requestedData) as $field) {
             if (!in_array($field, $allowedFields, true)) {
                 throw new \InvalidArgumentException(sprintf(

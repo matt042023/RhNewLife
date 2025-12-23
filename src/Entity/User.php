@@ -105,12 +105,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Contract::class, mappedBy: 'user', orphanRemoval: true)]
     private Collection $contracts;
 
+    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
+    private ?Health $health = null;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
         $this->contracts = new ArrayCollection();
         $this->createdAt = new \DateTime();
         $this->updatedAt = new \DateTime();
+        $this->health = new Health();
+        $this->health->setUser($this);
     }
 
     #[ORM\PreUpdate]
@@ -498,9 +503,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function __serialize(): array
     {
         $data = (array) $this;
-        $data["\0".self::class."\0password"] = hash('crc32c', $this->password);
+        $data["\0" . self::class . "\0password"] = hash('crc32c', $this->password);
 
         return $data;
+    }
+
+    public function getHealth(): ?Health
+    {
+        return $this->health;
+    }
+
+    public function setHealth(Health $health): static
+    {
+        // set the owning side of the relation if necessary
+        if ($health->getUser() !== $this) {
+            $health->setUser($this);
+        }
+
+        $this->health = $health;
+
+        return $this;
     }
 
     #[\Deprecated]

@@ -29,8 +29,7 @@ class ProfileController extends AbstractController
         private DocumentManager $documentManager,
         private DocumentRepository $documentRepository,
         private ContractManager $contractManager
-    ) {
-    }
+    ) {}
 
     #[Route('', name: 'app_profile_view', methods: ['GET'])]
     public function view(): Response
@@ -70,7 +69,7 @@ class ProfileController extends AbstractController
                     $requestedData['address'] = $address;
                 }
 
-                $familyStatus = $request->request->get('family_status');
+                $familyStatus = $request->request->get('familyStatus');
                 if ($familyStatus !== null && $familyStatus !== $user->getFamilyStatus()) {
                     $requestedData['familyStatus'] = $familyStatus;
                 }
@@ -88,6 +87,16 @@ class ProfileController extends AbstractController
                 $bic = $request->request->get('bic');
                 if ($bic !== null && $bic !== $user->getBic()) {
                     $requestedData['bic'] = $bic;
+                }
+
+                $mutuelleEnabled = $request->request->get('mutuelleEnabled') === '1';
+                if ($mutuelleEnabled !== $user->getHealth()->isMutuelleEnabled()) {
+                    $requestedData['mutuelleEnabled'] = $mutuelleEnabled;
+                }
+
+                $prevoyanceEnabled = $request->request->get('prevoyanceEnabled') === '1';
+                if ($prevoyanceEnabled !== $user->getHealth()->isPrevoyanceEnabled()) {
+                    $requestedData['prevoyanceEnabled'] = $prevoyanceEnabled;
                 }
 
                 $reason = $request->request->get('reason');

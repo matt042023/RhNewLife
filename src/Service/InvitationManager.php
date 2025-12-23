@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\Invitation;
 use App\Entity\User;
+use App\Entity\Villa;
 use App\Repository\InvitationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
@@ -22,8 +23,7 @@ class InvitationManager
         private LoggerInterface $logger,
         private string $senderEmail = 'noreply@rhnewlife.fr',
         private string $senderName = 'RH NewLife'
-    ) {
-    }
+    ) {}
 
     /**
      * Crée une nouvelle invitation et envoie l'email
@@ -33,7 +33,8 @@ class InvitationManager
         string $firstName,
         string $lastName,
         ?string $position = null,
-        bool $skipOnboarding = false
+        bool $skipOnboarding = false,
+        ?Villa $villa = null
     ): Invitation {
         $invitation = new Invitation();
         $invitation
@@ -41,7 +42,8 @@ class InvitationManager
             ->setFirstName($firstName)
             ->setLastName($lastName)
             ->setPosition($position)
-            ->setSkipOnboarding($skipOnboarding);
+            ->setSkipOnboarding($skipOnboarding)
+            ->setVilla($villa);
 
         $this->entityManager->persist($invitation);
         $this->entityManager->flush();
@@ -71,14 +73,16 @@ class InvitationManager
         string $email,
         string $firstName,
         string $lastName,
-        ?string $position = null
+        ?string $position = null,
+        ?Villa $villa = null
     ): Invitation {
         return $this->createInvitation(
             $email,
             $firstName,
             $lastName,
             $position,
-            true // skipOnboarding = true
+            true, // skipOnboarding = true
+            $villa
         );
     }
 

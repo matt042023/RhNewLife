@@ -41,6 +41,14 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
             ->setRoles(['ROLE_ADMIN'])
             ->setCguAcceptedAt(new \DateTime('-30 days'));
 
+        $adminHealth = $admin->getHealth();
+        $adminHealth->setMutuelleEnabled(true)
+            ->setMutuelleNom('Harmonie Mutuelle')
+            ->setMutuelleFormule('Formule Bronze')
+            ->setMutuelleDateFin(new \DateTime('2026-12-31'))
+            ->setPrevoyanceEnabled(true)
+            ->setPrevoyanceNom('AXA Prévoyance');
+
         $hashedPassword = $this->passwordHasher->hashPassword($admin, 'Admin123!@#');
         $admin->setPassword($hashedPassword);
 
@@ -67,6 +75,11 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
             ->setRoles(['ROLE_DIRECTOR'])
             ->setCguAcceptedAt(new \DateTime('-25 days'));
 
+        $directorHealth = $director->getHealth();
+        $directorHealth->setMutuelleEnabled(false)
+            ->setPrevoyanceEnabled(true)
+            ->setPrevoyanceNom('AXA Prévoyance');
+
         $hashedPassword = $this->passwordHasher->hashPassword($director, 'Director123!@#');
         $director->setPassword($hashedPassword);
 
@@ -92,6 +105,13 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
             ->setStatus(User::STATUS_ACTIVE)
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt(new \DateTime('-20 days'));
+
+        $educatorHealth = $educator->getHealth();
+        $educatorHealth->setMutuelleEnabled(true)
+            ->setMutuelleNom('Alan')
+            ->setMutuelleFormule('Formule Or')
+            ->setMutuelleDateFin(new \DateTime('2027-01-01'))
+            ->setPrevoyanceEnabled(false);
 
         $hashedPassword = $this->passwordHasher->hashPassword($educator, 'Educator123!@#');
         $educator->setPassword($hashedPassword);

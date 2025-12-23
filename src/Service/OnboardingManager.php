@@ -23,8 +23,7 @@ class OnboardingManager
         private LoggerInterface $logger,
         private string $senderEmail = 'noreply@rhnewlife.fr',
         private string $senderName = 'RH NewLife'
-    ) {
-    }
+    ) {}
 
     /**
      * Active un compte utilisateur depuis une invitation
@@ -174,6 +173,15 @@ class OnboardingManager
 
         if (isset($profileData['bic'])) {
             $user->setBic($profileData['bic']);
+        }
+
+        // Health information initialization
+        $health = $user->getHealth();
+        if (isset($profileData['mutuelleEnabled'])) {
+            $health->setMutuelleEnabled((bool) $profileData['mutuelleEnabled']);
+        }
+        if (isset($profileData['prevoyanceEnabled'])) {
+            $health->setPrevoyanceEnabled((bool) $profileData['prevoyanceEnabled']);
         }
 
         $this->entityManager->flush();

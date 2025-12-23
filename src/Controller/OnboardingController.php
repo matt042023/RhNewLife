@@ -21,8 +21,7 @@ class OnboardingController extends AbstractController
         private OnboardingManager $onboardingManager,
         private Security $security,
         private LoggerInterface $logger
-    ) {
-    }
+    ) {}
 
     /**
      * Page d'activation du compte via le token d'invitation
@@ -128,6 +127,8 @@ class OnboardingController extends AbstractController
                 'children' => $request->request->get('children'),
                 'iban' => $request->request->get('iban'),
                 'bic' => $request->request->get('bic'),
+                'mutuelle_enabled' => $request->request->get('mutuelle_enabled') === '1',
+                'prevoyance_enabled' => $request->request->get('prevoyance_enabled') === '1',
             ];
 
             try {
@@ -138,6 +139,8 @@ class OnboardingController extends AbstractController
                     'children' => $formData['children'],
                     'iban' => $formData['iban'],
                     'bic' => $formData['bic'],
+                    'mutuelleEnabled' => $formData['mutuelle_enabled'],
+                    'prevoyanceEnabled' => $formData['prevoyance_enabled'],
                 ]);
                 $this->addFlash('success', 'Vos informations ont été enregistrées.');
 

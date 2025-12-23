@@ -22,8 +22,7 @@ class UserManager
         private MatriculeGenerator $matriculeGenerator,
         private InvitationManager $invitationManager,
         private LoggerInterface $logger
-    ) {
-    }
+    ) {}
 
     /**
      * Crée un utilisateur manuellement (par l'admin)
@@ -81,6 +80,27 @@ class UserManager
             $user->setVilla($data['villa']);
         }
 
+        // Health information initialization if provided
+        $health = $user->getHealth();
+        if (isset($data['mutuelleEnabled'])) {
+            $health->setMutuelleEnabled((bool) $data['mutuelleEnabled']);
+        }
+        if (isset($data['mutuelleNom'])) {
+            $health->setMutuelleNom($data['mutuelleNom']);
+        }
+        if (isset($data['mutuelleFormule'])) {
+            $health->setMutuelleFormule($data['mutuelleFormule']);
+        }
+        if (isset($data['mutuelleDateFin'])) {
+            $health->setMutuelleDateFin($data['mutuelleDateFin']);
+        }
+        if (isset($data['prevoyanceEnabled'])) {
+            $health->setPrevoyanceEnabled((bool) $data['prevoyanceEnabled']);
+        }
+        if (isset($data['prevoyanceNom'])) {
+            $health->setPrevoyanceNom($data['prevoyanceNom']);
+        }
+
         // Générer le matricule
         $this->matriculeGenerator->assignToUser($user);
 
@@ -98,7 +118,7 @@ class UserManager
                 $user->getFirstName(),
                 $user->getLastName(),
                 $user->getPosition(),
-                $user->getVilla()?->getNom()
+                $user->getVilla()
             );
         }
 
@@ -146,6 +166,33 @@ class UserManager
         }
         if (array_key_exists('villa', $data)) {
             $user->setVilla($data['villa']);
+        }
+
+        // Health information update
+        $health = $user->getHealth();
+        if (isset($data['mutuelleEnabled'])) {
+            $health->setMutuelleEnabled((bool) $data['mutuelleEnabled']);
+        }
+        if (isset($data['mutuelleNom'])) {
+            $health->setMutuelleNom($data['mutuelleNom']);
+        }
+        if (isset($data['mutuelleFormule'])) {
+            $health->setMutuelleFormule($data['mutuelleFormule']);
+        }
+        if (isset($data['mutuelleDateFin'])) {
+            if ($data['mutuelleDateFin'] instanceof \DateTimeInterface || $data['mutuelleDateFin'] === null) {
+                $health->setMutuelleDateFin($data['mutuelleDateFin']);
+            } elseif (is_string($data['mutuelleDateFin']) && $data['mutuelleDateFin'] !== '') {
+                $health->setMutuelleDateFin(new \DateTime($data['mutuelleDateFin']));
+            } else {
+                $health->setMutuelleDateFin(null);
+            }
+        }
+        if (isset($data['prevoyanceEnabled'])) {
+            $health->setPrevoyanceEnabled((bool) $data['prevoyanceEnabled']);
+        }
+        if (isset($data['prevoyanceNom'])) {
+            $health->setPrevoyanceNom($data['prevoyanceNom']);
         }
 
         $this->entityManager->flush();

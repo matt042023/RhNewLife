@@ -50,6 +50,13 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt($this->randomDateInPast(90, 180));
 
+        $educator1->getHealth()->setMutuelleEnabled(true)
+            ->setMutuelleNom('Mutuelle Pro')
+            ->setMutuelleFormule('Double Effet')
+            ->setMutuelleDateFin(new \DateTime('+1 year'))
+            ->setPrevoyanceEnabled(true)
+            ->setPrevoyanceNom('AXA');
+
         $educator1->setPassword($this->passwordHasher->hashPassword($educator1, $commonPassword));
         $manager->persist($educator1);
         $this->addReference('educator-1', $educator1);
@@ -71,6 +78,12 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setStatus(User::STATUS_ACTIVE)
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt($this->randomDateInPast(90, 180));
+
+        $educator2->getHealth()->setMutuelleEnabled(true)
+            ->setMutuelleNom('MGEN')
+            ->setMutuelleFormule('Référence')
+            ->setMutuelleDateFin(new \DateTime('+2 years'))
+            ->setPrevoyanceEnabled(false);
 
         $educator2->setPassword($this->passwordHasher->hashPassword($educator2, $commonPassword));
         $manager->persist($educator2);
@@ -94,6 +107,10 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt($this->randomDateInPast(90, 180));
 
+        $educator3->getHealth()->setMutuelleEnabled(false)
+            ->setPrevoyanceEnabled(true)
+            ->setPrevoyanceNom('Malakoff Humanis');
+
         $educator3->setPassword($this->passwordHasher->hashPassword($educator3, $commonPassword));
         $manager->persist($educator3);
         $this->addReference('educator-3', $educator3);
@@ -115,6 +132,13 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setStatus(User::STATUS_ACTIVE)
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt($this->randomDateInPast(90, 180));
+
+        $educator4->getHealth()->setMutuelleEnabled(true)
+            ->setMutuelleNom('Swiss Life')
+            ->setMutuelleFormule('Santé Retraite')
+            ->setMutuelleDateFin(new \DateTime('+1 year'))
+            ->setPrevoyanceEnabled(true)
+            ->setPrevoyanceNom('Swiss Life Prévoyance');
 
         $educator4->setPassword($this->passwordHasher->hashPassword($educator4, $commonPassword));
         $manager->persist($educator4);
@@ -142,6 +166,12 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt($this->randomDateInPast(90, 180));
 
+        $educator5->getHealth()->setMutuelleEnabled(true)
+            ->setMutuelleNom('Alan')
+            ->setMutuelleFormule('Blue')
+            ->setMutuelleDateFin(new \DateTime('+1 year'))
+            ->setPrevoyanceEnabled(false);
+
         $educator5->setPassword($this->passwordHasher->hashPassword($educator5, $commonPassword));
         $manager->persist($educator5);
         $this->addReference('educator-5', $educator5);
@@ -163,6 +193,9 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setStatus(User::STATUS_ACTIVE)
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt($this->randomDateInPast(90, 180));
+
+        $educator6->getHealth()->setMutuelleEnabled(false)
+            ->setPrevoyanceEnabled(false);
 
         $educator6->setPassword($this->passwordHasher->hashPassword($educator6, $commonPassword));
         $manager->persist($educator6);
@@ -186,6 +219,13 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt($this->randomDateInPast(90, 180));
 
+        $educator7->getHealth()->setMutuelleEnabled(true)
+            ->setMutuelleNom('Generali')
+            ->setMutuelleFormule('Hospi 100')
+            ->setMutuelleDateFin(new \DateTime('+6 months'))
+            ->setPrevoyanceEnabled(true)
+            ->setPrevoyanceNom('Generali Prévoyance');
+
         $educator7->setPassword($this->passwordHasher->hashPassword($educator7, $commonPassword));
         $manager->persist($educator7);
         $this->addReference('educator-7', $educator7);
@@ -207,6 +247,13 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setStatus(User::STATUS_ACTIVE)
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt($this->randomDateInPast(90, 180));
+
+        $educator8->getHealth()->setMutuelleEnabled(true)
+            ->setMutuelleNom('Apicil')
+            ->setMutuelleFormule('Sereinis')
+            ->setMutuelleDateFin(new \DateTime('+1 year'))
+            ->setPrevoyanceEnabled(true)
+            ->setPrevoyanceNom('Apicil Prévoyance');
 
         $educator8->setPassword($this->passwordHasher->hashPassword($educator8, $commonPassword));
         $manager->persist($educator8);

@@ -147,6 +147,47 @@
             </div>
         </div>
 
+        {# Mutuelle et Prévoyance #}
+        <div class="space-y-6">
+            <h3 class="text-lg font-semibold text-gray-900">🏥 Mutuelle et Prévoyance</h3>
+
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Mutuelle d'entreprise</p>
+                        <p class="text-xs text-gray-500 italic">Souscription optionnelle</p>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="mutuelle_enabled" value="1" class="sr-only peer" {{ (formData.mutuelle_enabled ?? user.health.isMutuelleEnabled ?? false) ? 'checked' : '' }}>
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Prévoyance</p>
+                        <p class="text-xs text-gray-500 italic">Souscription optionnelle</p>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="prevoyance_enabled" value="1" class="sr-only peer" {{ (formData.prevoyance_enabled ?? user.health.isPrevoyanceEnabled ?? false) ? 'checked' : '' }}>
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                </label>
+            </div>
+        </div>
+
         <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
             <div class="flex items-start">
                 <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">

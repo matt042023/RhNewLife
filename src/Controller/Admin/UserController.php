@@ -28,8 +28,7 @@ class UserController extends AbstractController
         private DocumentManager $documentManager,
         private ContractManager $contractManager,
         private VillaRepository $villaRepository
-    ) {
-    }
+    ) {}
 
     /**
      * Liste des utilisateurs
@@ -240,6 +239,12 @@ class UserController extends AbstractController
                     'children' => $request->request->get('children'),
                     'iban' => $request->request->get('iban'),
                     'bic' => $request->request->get('bic'),
+                    'mutuelleEnabled' => $request->request->get('mutuelle_enabled') === '1',
+                    'mutuelleNom' => $request->request->get('mutuelle_nom'),
+                    'mutuelleFormule' => $request->request->get('mutuelle_formule'),
+                    'mutuelleDateFin' => $request->request->get('mutuelle_date_fin'),
+                    'prevoyanceEnabled' => $request->request->get('prevoyance_enabled') === '1',
+                    'prevoyanceNom' => $request->request->get('prevoyance_nom'),
                 ];
 
                 $hiringDate = $request->request->get('hiring_date');
