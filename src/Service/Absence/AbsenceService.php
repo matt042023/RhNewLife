@@ -281,6 +281,7 @@ class AbsenceService
         \DateTimeInterface $absenceStart,
         TypeAbsence $absenceType
     ): \DateTimeInterface {
+        /** @var \DateTime $deadline */
         $deadline = clone $absenceStart;
         $days = $absenceType->getJustificationDeadlineDays() ?? 2;
         $deadline->modify("+{$days} days");

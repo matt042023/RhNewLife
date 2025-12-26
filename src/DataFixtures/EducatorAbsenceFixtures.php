@@ -23,9 +23,8 @@ class EducatorAbsenceFixtures extends Fixture implements DependentFixtureInterfa
 
         // Récupérer les types d'absence
         $typeCP = $this->typeAbsenceRepository->findOneBy(['code' => 'CP']);
-        $typeRTT = $this->typeAbsenceRepository->findOneBy(['code' => 'RTT']);
         $typeMAL = $this->typeAbsenceRepository->findOneBy(['code' => 'MAL']);
-        $typeABSAUT = $this->typeAbsenceRepository->findOneBy(['code' => 'ABSAUT']);
+        $typeCPSS = $this->typeAbsenceRepository->findOneBy(['code' => 'CPSS']);
 
         // Récupérer l'admin pour validation
         /** @var User $admin */
@@ -40,15 +39,15 @@ class EducatorAbsenceFixtures extends Fixture implements DependentFixtureInterfa
 
             echo "Génération absences pour {$educator->getFullName()}...\n";
 
-            // A. Congés Payés et RTT (5 semaines = 25 jours)
-            $totalAbsences += $this->generateVacations($manager, $educator, $i, $typeCP, $typeRTT, $admin);
+            // A. Congés Payés (5 semaines = 25 jours)
+            $totalAbsences += $this->generateVacations($manager, $educator, $i, $typeCP, $admin);
 
             // B. Arrêts Maladie (3 par éducateur)
             $totalAbsences += $this->generateSickLeaves($manager, $educator, $typeMAL, $admin);
 
-            // C. Quelques absences autorisées (1-2 par éducateur)
+            // C. Quelques congés sans solde (1-2 par éducateur)
             if (mt_rand(0, 1) === 1) {
-                $totalAbsences += $this->generateAuthorizedAbsences($manager, $educator, $typeABSAUT, $admin);
+                $totalAbsences += $this->generateUnpaidLeaves($manager, $educator, $typeCPSS, $admin);
             }
         }
 
@@ -58,14 +57,13 @@ class EducatorAbsenceFixtures extends Fixture implements DependentFixtureInterfa
     }
 
     /**
-     * Génère les congés payés et RTT pour un éducateur
+     * Génère les congés payés pour un éducateur
      */
     private function generateVacations(
         ObjectManager $manager,
         User $educator,
         int $educatorNum,
         TypeAbsence $typeCP,
-        TypeAbsence $typeRTT,
         User $admin
     ): int {
         $count = 0;
@@ -87,14 +85,14 @@ class EducatorAbsenceFixtures extends Fixture implements DependentFixtureInterfa
                     'Congés de fin d\'année', $admin);
                 break;
 
-            case 3: // Éducateur 3 : 1 semaine Pâques + 2 semaines été + pont novembre
+            case 3: // Éducateur 3 : 1 semaine Pâques + 2 semaines été + 1 jour novembre
                 $count += $this->createAbsence($manager, $educator, $typeCP,
                     new \DateTime('2024-04-08'), new \DateTime('2024-04-14'),
                     'Congés de printemps', $admin);
                 $count += $this->createAbsence($manager, $educator, $typeCP,
                     new \DateTime('2024-07-22'), new \DateTime('2024-08-11'),
                     'Congés d\'été', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeRTT,
+                $count += $this->createAbsence($manager, $educator, $typeCP,
                     new \DateTime('2024-11-01'), new \DateTime('2024-11-01'),
                     'Pont de la Toussaint', $admin);
                 break;
@@ -109,28 +107,28 @@ class EducatorAbsenceFixtures extends Fixture implements DependentFixtureInterfa
                 break;
 
             case 5: // Éducateur 5 : Répartition régulière (4 x 1 semaine)
-                $count += $this->createAbsence($manager, $educator, $typeRTT,
+                $count += $this->createAbsence($manager, $educator, $typeCP,
                     new \DateTime('2024-03-11'), new \DateTime('2024-03-15'),
-                    'RTT mars', $admin);
+                    'Congés mars', $admin);
                 $count += $this->createAbsence($manager, $educator, $typeCP,
                     new \DateTime('2024-06-10'), new \DateTime('2024-06-16'),
                     'Congés juin', $admin);
                 $count += $this->createAbsence($manager, $educator, $typeCP,
                     new \DateTime('2024-09-02'), new \DateTime('2024-09-08'),
                     'Congés septembre', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeRTT,
+                $count += $this->createAbsence($manager, $educator, $typeCP,
                     new \DateTime('2024-10-28'), new \DateTime('2024-11-03'),
-                    'RTT octobre-novembre', $admin);
+                    'Congés octobre-novembre', $admin);
                 break;
 
             case 6: // Éducateur 6 : 3 semaines été + ponts
                 $count += $this->createAbsence($manager, $educator, $typeCP,
                     new \DateTime('2024-07-29'), new \DateTime('2024-08-18'),
                     'Congés d\'été', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeRTT,
+                $count += $this->createAbsence($manager, $educator, $typeCP,
                     new \DateTime('2024-05-09'), new \DateTime('2024-05-10'),
                     'Pont de l\'Ascension', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeRTT,
+                $count += $this->createAbsence($manager, $educator, $typeCP,
                     new \DateTime('2024-11-11'), new \DateTime('2024-11-11'),
                     '11 novembre', $admin);
                 break;
@@ -204,20 +202,19 @@ class EducatorAbsenceFixtures extends Fixture implements DependentFixtureInterfa
     }
 
     /**
-     * Génère 1-2 absences autorisées
+     * Génère 1-2 congés sans solde
      */
-    private function generateAuthorizedAbsences(
+    private function generateUnpaidLeaves(
         ObjectManager $manager,
         User $educator,
-        TypeAbsence $typeABSAUT,
+        TypeAbsence $typeCPSS,
         User $admin
     ): int {
         $count = 0;
         $absences = [
-            ['Rendez-vous médical', 0.5], // demi-journée
-            ['Démarches administratives', 1],
-            ['Formation externe', 2],
-            ['Convocation administrative', 1],
+            ['Raisons personnelles', 1],
+            ['Convenance personnelle', 2],
+            ['Projet personnel', 3],
         ];
 
         $numAbsences = mt_rand(1, 2);
@@ -228,16 +225,9 @@ class EducatorAbsenceFixtures extends Fixture implements DependentFixtureInterfa
 
             $startDate = $this->randomWorkingDate(2024);
             $endDate = clone $startDate;
+            $endDate->modify("+{$durationDays} days");
 
-            if ($durationDays < 1) {
-                // Demi-journée
-                $startDate->setTime(8, 0);
-                $endDate->setTime(12, 0);
-            } else {
-                $endDate->modify("+{$durationDays} days");
-            }
-
-            $count += $this->createAbsence($manager, $educator, $typeABSAUT,
+            $count += $this->createAbsence($manager, $educator, $typeCPSS,
                 $startDate, $endDate, $reason, $admin);
         }
 
@@ -282,6 +272,7 @@ class EducatorAbsenceFixtures extends Fixture implements DependentFixtureInterfa
     private function calculateWorkingDays(\DateTimeInterface $start, \DateTimeInterface $end): float
     {
         $workingDays = 0;
+        /** @var \DateTime $current */
         $current = clone $start;
 
         while ($current <= $end) {

@@ -10,12 +10,9 @@ use Doctrine\Persistence\ObjectManager;
 class TypeAbsenceFixtures extends Fixture
 {
     public const TYPE_CP = 'CP';
-    public const TYPE_RTT = 'RTT';
     public const TYPE_MAL = 'MAL';
     public const TYPE_AT = 'AT';
     public const TYPE_CPSS = 'CPSS';
-    public const TYPE_ABSAUT = 'ABSAUT';
-    public const TYPE_ABSNJ = 'ABSNJ';
     public const TYPE_REUNION = 'REUNION';
 
     public function load(ObjectManager $manager): void
@@ -24,16 +21,6 @@ class TypeAbsenceFixtures extends Fixture
             [
                 'code' => self::TYPE_CP,
                 'label' => 'Congés payés',
-                'affectsPlanning' => true,
-                'deductFromCounter' => true,
-                'requiresJustification' => false,
-                'justificationDeadlineDays' => null,
-                'documentType' => null,
-                'active' => true,
-            ],
-            [
-                'code' => self::TYPE_RTT,
-                'label' => 'RTT',
                 'affectsPlanning' => true,
                 'deductFromCounter' => true,
                 'requiresJustification' => false,
@@ -72,26 +59,6 @@ class TypeAbsenceFixtures extends Fixture
                 'active' => true,
             ],
             [
-                'code' => self::TYPE_ABSAUT,
-                'label' => 'Absence autorisée',
-                'affectsPlanning' => true,
-                'deductFromCounter' => false,
-                'requiresJustification' => false,
-                'justificationDeadlineDays' => null,
-                'documentType' => null,
-                'active' => true,
-            ],
-            [
-                'code' => self::TYPE_ABSNJ,
-                'label' => 'Absence non justifiée',
-                'affectsPlanning' => true,
-                'deductFromCounter' => false,
-                'requiresJustification' => false,
-                'justificationDeadlineDays' => null,
-                'documentType' => null,
-                'active' => true,
-            ],
-            [
                 'code' => self::TYPE_REUNION,
                 'label' => 'Réunion',
                 'affectsPlanning' => true,
@@ -99,7 +66,7 @@ class TypeAbsenceFixtures extends Fixture
                 'requiresJustification' => false,
                 'justificationDeadlineDays' => null,
                 'documentType' => null,
-                'active' => true,
+                'active' => false, // Non sélectionnable dans les formulaires, créé automatiquement
             ],
         ];
 
