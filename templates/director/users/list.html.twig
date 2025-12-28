@@ -1,0 +1,168 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des salariés - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div class="container mx-auto px-4 py-8">
+        {# Header #}
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Liste des salariés</h1>
+                    <p class="text-gray-600 dark:text-gray-400 mt-2">Vue d'ensemble des salariés (consultation)</p>
+                </div>
+                <a href="{{ path('app_dashboard') }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Retour au tableau de bord
+                </a>
+            </div>
+
+            {# Stats cards #}
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Total</div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="text-sm text-green-600 dark:text-green-400">Actifs</div>
+                    <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ stats.active }}</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="text-sm text-blue-600 dark:text-blue-400">Onboarding</div>
+                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stats.onboarding }}</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="text-sm text-yellow-600 dark:text-yellow-400">Invités</div>
+                    <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ stats.invited }}</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Archivés</div>
+                    <div class="text-2xl font-bold text-gray-600 dark:text-gray-400">{{ stats.archived }}</div>
+                </div>
+            </div>
+        </div>
+
+        {# Filters #}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+            <form method="GET" class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rechercher</label>
+                    <input type="text" name="search" id="search" value="{{ search }}" placeholder="Nom, prénom, email, matricule..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div class="w-full md:w-48">
+                    <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Statut</label>
+                    <select name="status" id="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="all" {{ currentStatus == 'all' ? 'selected' : '' }}>Tous</option>
+                        <option value="active" {{ currentStatus == 'active' ? 'selected' : '' }}>Actifs</option>
+                        <option value="onboarding" {{ currentStatus == 'onboarding' ? 'selected' : '' }}>Onboarding</option>
+                        <option value="invited" {{ currentStatus == 'invited' ? 'selected' : '' }}>Invités</option>
+                        <option value="archived" {{ currentStatus == 'archived' ? 'selected' : '' }}>Archivés</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700">
+                        Filtrer
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {# Users list #}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            {% if users is empty %}
+                <div class="text-center py-12">
+                    <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <p class="text-gray-500 dark:text-gray-400">Aucun salarié trouvé</p>
+                </div>
+            {% else %}
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Salarié</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Matricule</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Poste</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Structure</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Statut</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {% for user in users %}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-10 w-10">
+                                                <div class="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+                                                    {{ user.firstName|slice(0, 1)|upper }}{{ user.lastName|slice(0, 1)|upper }}
+                                                </div>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {{ user.firstName }} {{ user.lastName }}
+                                                </div>
+                                                <div class="text-sm text-gray-500 dark:text-gray-400">
+                                                    {{ user.email }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900 dark:text-white">{{ user.matricule ?? '-' }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900 dark:text-white">{{ user.position ?? '-' }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900 dark:text-white">
+                                            {% if user.villa %}
+                                                <span class="inline-flex items-center gap-1.5">
+                                                    {% if user.villa.color %}
+                                                        <span class="w-2 h-2 rounded-full" style="background-color: {{ user.villa.color }}"></span>
+                                                    {% endif %}
+                                                    {{ user.villa.nom }}
+                                                </span>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        {% if user.status == 'active' %}
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                                Actif
+                                            </span>
+                                        {% elseif user.status == 'onboarding' %}
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                                Onboarding
+                                            </span>
+                                        {% elseif user.status == 'invited' %}
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
+                                                Invité
+                                            </span>
+                                        {% elseif user.status == 'archived' %}
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+                                                Archivé
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <a href="{{ path('app_director_users_view', {id: user.id}) }}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                                            Consulter
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

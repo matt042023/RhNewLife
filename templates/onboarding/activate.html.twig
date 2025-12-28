@@ -1,0 +1,122 @@
+{% extends 'layouts/auth.html.twig' %}
+
+{% block title %}Activer votre compte - RH NewLife{% endblock %}
+
+{% block page_title %}Bienvenue {{ invitation.firstName }} !{% endblock %}
+
+{% block page_subtitle %}
+    <p class="mt-2 text-sm text-gray-600">Créez votre mot de passe pour accéder à votre espace</p>
+{% endblock %}
+
+{% block content %}
+    {% if errors is not empty %}
+        <div class="alert alert-error mb-4">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <ul class="list-disc list-inside">
+                {% for error in errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <div class="ml-3">
+                <p class="text-sm text-blue-800">
+                    <strong>Votre invitation :</strong><br>
+                    Email : {{ invitation.email }}<br>
+                    Poste : {{ invitation.position ?? 'Non spécifié' }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="space-y-6" data-controller="password-strength">
+
+        <div>
+            <label for="password" class="form-label">
+                Mot de passe
+                <span class="text-red-500">*</span>
+            </label>
+            <input
+                type="password"
+                name="password"
+                id="password"
+                class="form-input"
+                required
+                data-password-strength-target="input"
+                data-action="input->password-strength#check"
+                placeholder="Minimum 12 caractères"
+            >
+            <p class="form-help">
+                Le mot de passe doit contenir au moins 12 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.
+            </p>
+
+            {# Barre de force du mot de passe #}
+            <div class="mt-2">
+                <div class="flex justify-between text-xs text-gray-600 mb-1">
+                    <span>Force du mot de passe</span>
+                    <span data-password-strength-target="label">Faible</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" data-password-strength-target="bar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <label for="password_confirm" class="form-label">
+                Confirmez le mot de passe
+                <span class="text-red-500">*</span>
+            </label>
+            <input
+                type="password"
+                name="password_confirm"
+                id="password_confirm"
+                class="form-input"
+                required
+                placeholder="Retapez votre mot de passe"
+            >
+        </div>
+
+        <div class="flex items-start">
+            <div class="flex items-center h-5">
+                <input
+                    type="checkbox"
+                    name="accept_cgu"
+                    id="accept_cgu"
+                    value="1"
+                    class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    required
+                >
+            </div>
+            <div class="ml-3 text-sm">
+                <label for="accept_cgu" class="text-gray-700">
+                    J'accepte les <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold">Conditions Générales d'Utilisation</a> et la <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold">Politique de Confidentialité</a>
+                    <span class="text-red-500">*</span>
+                </label>
+            </div>
+        </div>
+
+        <div>
+            <button type="submit" class="btn btn-success w-full justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Activer mon compte
+            </button>
+        </div>
+    </form>
+
+    <div class="mt-6 text-center">
+        <p class="text-xs text-gray-500">
+            Ce lien est valide jusqu'au {{ invitation.expiresAt|date('d/m/Y à H:i') }}
+        </p>
+    </div>
+{% endblock %}

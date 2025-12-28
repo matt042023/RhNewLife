@@ -1,0 +1,166 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier {{ user.fullName }} - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-8">
+    <div class="max-w-4xl mx-auto">
+
+        {# Header #}
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Modifier le profil</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">{{ user.fullName }} - {{ user.matricule }}</p>
+        </div>
+
+        {# Errors #}
+        {% if errors is not empty %}
+            <div class="glass-card glass-card-danger mb-6 p-4">
+                <ul class="list-disc list-inside text-red-800 dark:text-red-200">
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {# Form #}
+        <form method="post" class="glass-card p-8 space-y-6">
+
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Prénom</label>
+                    <input type="text" name="first_name" value="{{ user.firstName }}" class="glass-input w-full" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nom</label>
+                    <input type="text" name="last_name" value="{{ user.lastName }}" class="glass-input w-full" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Poste</label>
+                    <input type="text" name="position" value="{{ user.position }}" class="glass-input w-full">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Villa</label>
+                    <select name="villa_id" class="glass-input w-full">
+                        <option value="">Aucune villa</option>
+                        {% for villa in villas %}
+                            <option value="{{ villa.id }}" {{ user.villa and user.villa.id == villa.id ? 'selected' : '' }}>
+                                {{ villa.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Téléphone</label>
+                    <input type="tel" name="phone" value="{{ user.phone }}" class="glass-input w-full">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Date d'embauche</label>
+                    <input type="date" name="hiring_date" value="{{ user.hiringDate ? user.hiringDate|date('Y-m-d') : '' }}" class="glass-input w-full">
+                </div>
+
+                <div class="col-span-2">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Adresse</label>
+                    <textarea name="address" class="glass-input w-full" rows="2">{{ user.address }}</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Situation familiale</label>
+                    <select name="family_status" class="glass-input w-full">
+                        <option value="">Non renseigné</option>
+                        <option value="single" {{ user.familyStatus == 'single' ? 'selected' : '' }}>Célibataire</option>
+                        <option value="married" {{ user.familyStatus == 'married' ? 'selected' : '' }}>Marié(e)</option>
+                        <option value="divorced" {{ user.familyStatus == 'divorced' ? 'selected' : '' }}>Divorcé(e)</option>
+                        <option value="widowed" {{ user.familyStatus == 'widowed' ? 'selected' : '' }}>Veuf(ve)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nombre d'enfants</label>
+                    <input type="number" name="children" value="{{ user.children ?? 0 }}" min="0" class="glass-input w-full">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">IBAN</label>
+                    <input type="text" name="iban" value="{{ user.iban }}" class="glass-input w-full">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">BIC</label>
+                    <input type="text" name="bic" value="{{ user.bic }}" class="glass-input w-full">
+                </div>
+            </div>
+
+            {# Section Santé #}
+            <div class="pt-6 border-t border-white/10 space-y-6">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Santé (Mutuelle & Prévoyance)</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {# Mutuelle #}
+                    <div class="space-y-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-gray-800 dark:text-gray-200">Mutuelle</h4>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="mutuelle_enabled" value="1" class="sr-only peer" {{ user.health.mutuelleEnabled ? 'checked' : '' }}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Nom de la mutuelle</label>
+                                <input type="text" name="mutuelle_nom" value="{{ user.health.mutuelleNom }}" class="glass-input w-full text-sm" placeholder="ex: Harmonie Mutuelle">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Formule</label>
+                                <input type="text" name="mutuelle_formule" value="{{ user.health.mutuelleFormule }}" class="glass-input w-full text-sm" placeholder="ex: Formule Bronze">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Date fin validité</label>
+                                <input type="date" name="mutuelle_date_fin" value="{{ user.health.mutuelleDateFin ? user.health.mutuelleDateFin|date('Y-m-d') : '' }}" class="glass-input w-full text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Prévoyance #}
+                    <div class="space-y-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-gray-800 dark:text-gray-200">Prévoyance</h4>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="prevoyance_enabled" value="1" class="sr-only peer" {{ user.health.prevoyanceEnabled ? 'checked' : '' }}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                            </label>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Nom de la prévoyance</label>
+                                <input type="text" name="prevoyance_nom" value="{{ user.health.prevoyanceNom }}" class="glass-input w-full text-sm" placeholder="ex: AXA Prévoyance">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Actions #}
+            <div class="flex items-center justify-between pt-6 mt-6 border-t border-white/10">
+                <a href="{{ path('app_admin_users_view', {id: user.id}) }}" class="glass-btn px-4 py-2">
+                    Annuler
+                </a>
+                <button type="submit" class="glass-btn glass-btn-primary inline-flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Enregistrer les modifications
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock %}

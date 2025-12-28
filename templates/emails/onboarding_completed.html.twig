@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Nouveau dossier à valider - RH NewLife</title>
+    <style>
+        body { font-family: sans-serif; background: #f9fafb; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; }
+        .button { display: inline-block; background: #3b82f6; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; }
+        .info-box { background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Nouveau dossier d'onboarding</h1>
+        </div>
+        <div class="content">
+            <h2>Un nouveau dossier est prêt pour validation</h2>
+            <div class="info-box">
+                <strong>Salarié :</strong> {{ user.firstName }} {{ user.lastName }}<br>
+                <strong>Email :</strong> {{ user.email }}<br>
+                <strong>Poste :</strong> {{ user.position }}<br>
+                {% if user.villa %}
+                <strong>Villa :</strong> {{ user.villa.nom }}<br>
+                {% endif %}
+            </div>
+            <p>Le salarié a terminé son parcours d'onboarding. Vous pouvez maintenant valider son dossier.</p>
+            <p><strong>⚠️ Action requise :</strong> Vérifiez les documents et informations avant validation.</p>
+        </div>
+    </div>
+</body>
+</html>

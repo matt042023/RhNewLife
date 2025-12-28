@@ -1,0 +1,114 @@
+{# Document Viewer Fragment - Loaded via AJAX in modal #}
+<div class="space-y-4">
+    {# Document Information #}
+    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Type</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ document.typeLabel }}</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Statut</p>
+                <p class="text-sm">
+                    {% if document.status == 'validated' %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            ✓ Validé
+                        </span>
+                    {% elseif document.status == 'rejected' %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                            ✗ Rejeté
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                            ⏳ En attente
+                        </span>
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Nom du fichier</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ document.originalName }}</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Taille</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ document.fileSizeFormatted }}</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Téléversé le</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ document.uploadedAt|date('d/m/Y à H:i') }}</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Version</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">v{{ document.version }}</p>
+            </div>
+        </div>
+
+        {% if document.comment %}
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Commentaire</p>
+                <p class="text-sm text-gray-700 dark:text-gray-300">{{ document.comment }}</p>
+            </div>
+        {% endif %}
+
+        {% if document.status == 'rejected' and document.commentaire %}
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p class="text-xs text-red-500 dark:text-red-400 uppercase tracking-wide mb-1">Raison du rejet</p>
+                <p class="text-sm text-red-700 dark:text-red-300">{{ document.commentaire }}</p>
+            </div>
+        {% endif %}
+    </div>
+
+    {# Document Preview #}
+    <div class="bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden" style="min-height: 500px;">
+        {% set extension = document.fileName|split('.')|last|lower %}
+
+        {% if extension in ['pdf'] %}
+            {# PDF Preview using iframe #}
+            <iframe
+                src="{{ path('app_profile_documents_preview', {id: document.id}) }}"
+                class="w-full h-[600px] border-0"
+                title="Aperçu du document PDF">
+            </iframe>
+        {% elseif extension in ['jpg', 'jpeg', 'png', 'gif'] %}
+            {# Image Preview #}
+            <div class="flex items-center justify-center p-4">
+                <img
+                    src="{{ path('app_profile_documents_preview', {id: document.id}) }}"
+                    alt="{{ document.originalName }}"
+                    class="max-w-full h-auto rounded shadow-lg">
+            </div>
+        {% else %}
+            {# Unsupported format - show download button #}
+            <div class="flex items-center justify-center h-[500px]">
+                <div class="text-center">
+                    <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
+                        Aperçu non disponible pour ce type de fichier
+                    </p>
+                    <a href="{{ path('app_profile_documents_download', {id: document.id}) }}"
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                       download="{{ document.originalName }}">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Télécharger le fichier
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    {# Actions #}
+    <div class="flex justify-end gap-3">
+        <a href="{{ path('app_profile_documents_download', {id: document.id}) }}"
+           class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+           download="{{ document.originalName }}">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            Télécharger
+        </a>
+    </div>
+</div>

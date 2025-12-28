@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Justificatif téléversé</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; background-color: #f9fafb; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 40px 30px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+        .content { padding: 40px 30px; }
+        .content h2 { color: #1f2937; font-size: 22px; margin-top: 0; }
+        .info-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 8px; }
+        .button { display: inline-block; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; text-decoration: none; padding: 16px 32px; border-radius: 10px; font-weight: 600; margin: 20px 0; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+        .footer { background: #f9fafb; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Justificatif reçu</h1>
+        </div>
+
+        <div class="content">
+            <h2>Service RH,</h2>
+
+            <p>Un nouveau justificatif médical a été téléversé par <strong>{{ absence.user.fullName }}</strong> pour son absence.</p>
+
+            <div class="info-box">
+                <strong>📋 Informations de l'absence :</strong><br>
+                <strong>Employé :</strong> {{ absence.user.fullName }}<br>
+                <strong>Type :</strong> {{ absence.absenceType.label }}<br>
+                <strong>Période :</strong> Du {{ absence.startAt|date('d/m/Y') }} au {{ absence.endAt|date('d/m/Y') }}<br>
+                <strong>Document :</strong> {{ document.fileName }}<br>
+                <strong>Téléversé le :</strong> {{ document.uploadedAt|date('d/m/Y à H:i') }}
+            </div>
+
+            <p>Ce justificatif est en attente de validation. Merci de le vérifier et de prendre une décision (valider ou rejeter) dans les meilleurs délais.</p>
+
+            <center>
+                <a href="{{ adminAbsenceUrl }}" class="button">
+                    🔍 Valider le justificatif
+                </a>
+            </center>
+
+            <p style="font-size: 14px; color: #6b7280;">
+                Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br>
+                <a href="{{ adminAbsenceUrl }}" style="color: #3b82f6; word-break: break-all;">{{ adminAbsenceUrl }}</a>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p style="margin-top: 20px; font-size: 12px;">© {{ "now"|date("Y") }} RH NewLife. Tous droits réservés.</p>
+        </div>
+    </div>
+</body>
+</html>

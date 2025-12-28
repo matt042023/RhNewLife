@@ -1,0 +1,102 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Contrat signé - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+	<div class="w-full">
+
+		{# Success message #}
+		<div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+			<div class="mb-6">
+				<svg class="w-20 h-20 mx-auto text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+				</svg>
+			</div>
+
+			<h1 class="text-3xl font-bold text-gray-900 mb-4">Contrat uploadé avec succès !</h1>
+
+			<p class="text-lg text-gray-600 mb-6">
+				Merci {{ employee.firstName }}, votre contrat de travail signé a bien été reçu.
+			</p>
+
+			{# Informations #}
+			<div class="bg-green-50 p-6 rounded-lg mb-6">
+				<h2 class="font-bold text-lg mb-4">Prochaines étapes</h2>
+				<div class="text-left space-y-3">
+					<div class="flex items-start gap-3">
+						<svg class="w-6 h-6 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+						</svg>
+						<div>
+							<p class="font-semibold">Validation par l'administration</p>
+							<p class="text-sm text-gray-600">Votre contrat sera examiné et validé par le service RH</p>
+						</div>
+					</div>
+
+					<div class="flex items-start gap-3">
+						<svg class="w-6 h-6 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+						</svg>
+						<div>
+							<p class="font-semibold">Notification par email</p>
+							<p class="text-sm text-gray-600">Vous recevrez un email de confirmation une fois le contrat validé</p>
+						</div>
+					</div>
+
+					<div class="flex items-start gap-3">
+						<svg class="w-6 h-6 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+						</svg>
+						<div>
+							<p class="font-semibold">Accès au contrat signé</p>
+							<p class="text-sm text-gray-600">Le PDF signé sera disponible dans votre espace personnel</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{# Détails upload #}
+			<div class="bg-gray-50 p-4 rounded-lg mb-6">
+				<h3 class="font-bold mb-2">Détails de l'upload</h3>
+				<dl class="text-sm space-y-2">
+					<div class="flex justify-between">
+						<dt class="text-gray-600">Date et heure :</dt>
+						<dd class="font-semibold">{{ contract.signedAt|date('d/m/Y à H:i:s') }}</dd>
+					</div>
+					<div class="flex justify-between">
+						<dt class="text-gray-600">Type de contrat :</dt>
+						<dd class="font-semibold">{{ contract.typeLabel }}</dd>
+					</div>
+					<div class="flex justify-between">
+						<dt class="text-gray-600">Statut :</dt>
+						<dd><span class="badge badge-warning">En attente de validation</span></dd>
+					</div>
+				</dl>
+			</div>
+
+			{# Bouton télécharger le contrat uploadé #}
+			{% if contract.signedFileUrl %}
+			<div class="mb-6">
+				<a href="{{ asset('uploads/' ~ contract.signedFileUrl) }}" download class="btn btn-outline btn-primary gap-2">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+					</svg>
+					Télécharger le contrat que j'ai uploadé
+				</a>
+			</div>
+			{% endif %}
+
+			<div class="text-sm text-gray-600">
+				<p>Cette page peut être fermée en toute sécurité.</p>
+				<p class="mt-2">Pour toute question, contactez le service RH.</p>
+			</div>
+		</div>
+
+		{# Footer #}
+		<div class="text-center mt-8 text-sm text-gray-600">
+			<p>© {{ 'now'|date('Y') }} RH NewLife - Tous droits réservés</p>
+		</div>
+	</div>
+</div>
+{% endblock %}

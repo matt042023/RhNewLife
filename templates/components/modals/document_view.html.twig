@@ -1,0 +1,32 @@
+{#
+    Document View Modal Component
+
+    Usage:
+    {% include 'components/modals/document_view.html.twig' %}
+#}
+
+{# View Document Modal #}
+<div id="viewModal" data-document-modal-target="modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4"
+     onclick="if(event.target === this) { this.classList.add('hidden'); document.body.style.overflow = ''; }">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu du document</h3>
+            <button type="button"
+                    onclick="document.getElementById('viewModal').classList.add('hidden'); document.body.style.overflow = '';"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div data-modal-content class="flex-1 p-6 overflow-y-auto">
+            {# Content will be loaded dynamically #}
+            <div class="flex items-center justify-center h-full">
+                <div class="text-center">
+                    <div class="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-500">Chargement...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

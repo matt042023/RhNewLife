@@ -1,0 +1,278 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Upload de contrat signé - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+	<div class="w-full">
+
+		{# Header #}
+		<div class="text-center mb-8">
+			<h1 class="text-4xl font-bold text-gray-900 mb-2">Upload de votre contrat signé</h1>
+			<p class="text-gray-600">{{ employee.fullName }}</p>
+		</div>
+
+		{# Flash messages #}
+		{% for label, messages in app.flashes %}
+			{% for message in messages %}
+				<div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-6">
+					{{ message }}
+				</div>
+			{% endfor %}
+		{% endfor %}
+
+		{# Informations contrat #}
+		<div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+			<h2 class="text-xl font-bold mb-4">Informations du contrat</h2>
+			<dl class="grid grid-cols-2 gap-4">
+				<div>
+					<dt class="text-sm text-gray-600">Type de contrat</dt>
+					<dd class="font-semibold text-lg">{{ contract.typeLabel }}</dd>
+				</div>
+				<div>
+					<dt class="text-sm text-gray-600">Date de début</dt>
+					<dd class="font-semibold">{{ contract.startDate|date('d/m/Y') }}</dd>
+				</div>
+				{% if contract.endDate %}
+					<div>
+						<dt class="text-sm text-gray-600">Date de fin</dt>
+						<dd class="font-semibold">{{ contract.endDate|date('d/m/Y') }}</dd>
+					</div>
+				{% endif %}
+				<div>
+					<dt class="text-sm text-gray-600">Poste</dt>
+					<dd class="font-semibold">{{ employee.position }}</dd>
+				</div>
+			</dl>
+		</div>
+
+		{# Instructions #}
+		<div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-xl p-6 mb-6 text-white">
+			<h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+				</svg>
+				Procédure de signature
+			</h2>
+			<ol class="space-y-3">
+				<li class="flex items-start gap-3">
+					<span class="flex-shrink-0 w-8 h-8 bg-white text-blue-600 rounded-full flex items-center justify-center font-bold">1</span>
+					<span>Téléchargez le contrat PDF en cliquant sur le bouton ci-dessous</span>
+				</li>
+				<li class="flex items-start gap-3">
+					<span class="flex-shrink-0 w-8 h-8 bg-white text-blue-600 rounded-full flex items-center justify-center font-bold">2</span>
+					<span>Imprimez le contrat en 2 exemplaires</span>
+				</li>
+				<li class="flex items-start gap-3">
+					<span class="flex-shrink-0 w-8 h-8 bg-white text-blue-600 rounded-full flex items-center justify-center font-bold">3</span>
+					<span>Signez les 2 exemplaires de manière manuscrite (signature + paraphe sur chaque page)</span>
+				</li>
+				<li class="flex items-start gap-3">
+					<span class="flex-shrink-0 w-8 h-8 bg-white text-blue-600 rounded-full flex items-center justify-center font-bold">4</span>
+					<span>Scannez ou photographiez un exemplaire signé au format PDF</span>
+				</li>
+				<li class="flex items-start gap-3">
+					<span class="flex-shrink-0 w-8 h-8 bg-white text-blue-600 rounded-full flex items-center justify-center font-bold">5</span>
+					<span>Uploadez le PDF signé via le formulaire ci-dessous</span>
+				</li>
+			</ol>
+		</div>
+
+		{# Bouton téléchargement #}
+		{% if contract.draftFileUrl %}
+		<div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+			<h2 class="text-xl font-bold mb-4">Télécharger le contrat</h2>
+			<div class="text-center">
+				<a href="{{ path('app_contract_signature_download', {token: token}) }}" class="btn btn-lg btn-outline btn-primary gap-2">
+					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+					</svg>
+					Télécharger mon contrat PDF
+				</a>
+				<p class="text-sm text-gray-500 mt-2">Fichier : {{ contract.draftFileUrl|split('/')|last }}</p>
+			</div>
+		</div>
+		{% endif %}
+
+		{# Formulaire d'upload #}
+		<div class="bg-white rounded-2xl shadow-xl p-8">
+			<h2 class="text-xl font-bold mb-6">Uploader le contrat signé</h2>
+
+			<form method="post" action="{{ path('app_contract_signature_upload', {token: token}) }}" enctype="multipart/form-data" id="uploadForm">
+				<div class="space-y-6">
+
+					{# Zone d'upload #}
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text font-semibold">Fichier PDF signé</span>
+						</label>
+
+						<div id="dropZone" class="border-3 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer">
+							<input
+								type="file"
+								name="signed_contract"
+								id="fileInput"
+								accept="application/pdf,.pdf"
+								class="hidden"
+								required
+							/>
+
+							<div id="dropZoneContent">
+								<svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+								</svg>
+								<p class="text-lg font-semibold mb-2">Glissez-déposez votre fichier PDF ici</p>
+								<p class="text-sm text-gray-500 mb-4">ou</p>
+								<button type="button" onclick="document.getElementById('fileInput').click()" class="btn btn-outline btn-primary">
+									Parcourir mes fichiers
+								</button>
+							</div>
+
+							<div id="filePreview" class="hidden">
+								<svg class="w-16 h-16 mx-auto mb-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+								</svg>
+								<p id="fileName" class="text-lg font-semibold mb-2"></p>
+								<p id="fileSize" class="text-sm text-gray-500 mb-4"></p>
+								<button type="button" onclick="resetFileInput()" class="btn btn-sm btn-ghost">
+									Choisir un autre fichier
+								</button>
+							</div>
+						</div>
+
+						<label class="label">
+							<span class="label-text-alt text-gray-500">Format : PDF uniquement • Taille max : 10 Mo</span>
+						</label>
+					</div>
+
+					{# Informations légales #}
+					<div class="bg-gray-50 p-4 rounded-lg text-sm text-gray-600">
+						<p class="mb-2"><strong>À propos de l'upload :</strong></p>
+						<ul class="list-disc list-inside space-y-1">
+							<li>Votre upload sera horodaté et tracé (adresse IP, date/heure)</li>
+							<li>Le contrat sera ensuite vérifié et validé par l'administration RH</li>
+							<li>Vous recevrez une notification une fois le contrat validé</li>
+							<li>Assurez-vous que toutes les pages sont signées et paraphées</li>
+						</ul>
+					</div>
+
+					{# Expiration token #}
+					<div class="alert alert-warning">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+						</svg>
+						<span class="text-sm">
+							Ce lien d'upload expire le <strong>{{ contract.tokenExpiresAt|date('d/m/Y à H:i') }}</strong>
+						</span>
+					</div>
+
+					{# Bouton submit #}
+					<div class="pt-4">
+						<button type="submit" id="submitBtn" class="btn btn-primary btn-lg w-full" disabled>
+							<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+							</svg>
+							Uploader mon contrat signé
+						</button>
+					</div>
+
+					<p class="text-xs text-center text-gray-500">
+						En uploadant ce document, vous certifiez qu'il s'agit bien de votre contrat signé de manière manuscrite.
+					</p>
+				</div>
+			</form>
+		</div>
+
+		{# Footer #}
+		<div class="text-center mt-8 text-sm text-gray-600">
+			<p>© {{ 'now'|date('Y') }} RH NewLife - Tous droits réservés</p>
+		</div>
+	</div>
+</div>
+
+<script>
+// Gestion du drag & drop et de la sélection de fichier
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const dropZoneContent = document.getElementById('dropZoneContent');
+const filePreview = document.getElementById('filePreview');
+const fileName = document.getElementById('fileName');
+const fileSize = document.getElementById('fileSize');
+const submitBtn = document.getElementById('submitBtn');
+
+// Clic sur la zone de drop
+dropZone.addEventListener('click', (e) => {
+	if (e.target.type !== 'file' && e.target.tagName !== 'BUTTON') {
+		fileInput.click();
+	}
+});
+
+// Drag & Drop
+dropZone.addEventListener('dragover', (e) => {
+	e.preventDefault();
+	dropZone.classList.add('border-blue-500', 'bg-blue-50');
+});
+
+dropZone.addEventListener('dragleave', (e) => {
+	e.preventDefault();
+	dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+});
+
+dropZone.addEventListener('drop', (e) => {
+	e.preventDefault();
+	dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+
+	const files = e.dataTransfer.files;
+	if (files.length > 0) {
+		fileInput.files = files;
+		handleFileSelect(files[0]);
+	}
+});
+
+// Sélection de fichier
+fileInput.addEventListener('change', (e) => {
+	if (e.target.files.length > 0) {
+		handleFileSelect(e.target.files[0]);
+	}
+});
+
+function handleFileSelect(file) {
+	// Vérifier le type
+	if (file.type !== 'application/pdf') {
+		alert('Le fichier doit être au format PDF');
+		resetFileInput();
+		return;
+	}
+
+	// Vérifier la taille (10 Mo max)
+	const maxSize = 10 * 1024 * 1024;
+	if (file.size > maxSize) {
+		alert('Le fichier est trop volumineux. Taille maximum : 10 Mo');
+		resetFileInput();
+		return;
+	}
+
+	// Afficher l'aperçu
+	fileName.textContent = file.name;
+	fileSize.textContent = formatFileSize(file.size);
+	dropZoneContent.classList.add('hidden');
+	filePreview.classList.remove('hidden');
+	submitBtn.disabled = false;
+}
+
+function resetFileInput() {
+	fileInput.value = '';
+	dropZoneContent.classList.remove('hidden');
+	filePreview.classList.add('hidden');
+	submitBtn.disabled = true;
+}
+
+function formatFileSize(bytes) {
+	if (bytes === 0) return '0 Bytes';
+	const k = 1024;
+	const sizes = ['Bytes', 'Ko', 'Mo', 'Go'];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+</script>
+{% endblock %}

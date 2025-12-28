@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Justificatif rejeté</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; background-color: #f9fafb; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 40px 30px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+        .content { padding: 40px 30px; }
+        .content h2 { color: #1f2937; font-size: 22px; margin-top: 0; }
+        .warning-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 8px; }
+        .error-box { background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 8px; }
+        .button { display: inline-block; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; text-decoration: none; padding: 16px 32px; border-radius: 10px; font-weight: 600; margin: 20px 0; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+        .footer { background: #f9fafb; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Justificatif rejeté</h1>
+        </div>
+
+        <div class="content">
+            <h2>Bonjour {{ absence.user.firstName }},</h2>
+
+            <p>Nous vous informons que le justificatif médical que vous avez fourni pour votre absence n'a pas été accepté par le service RH.</p>
+
+            <div class="error-box">
+                <strong>Motif du rejet :</strong><br>
+                {{ rejectionReason }}
+            </div>
+
+            <div class="warning-box">
+                <strong>⏰ Nouvelle échéance :</strong><br>
+                Vous devez fournir un nouveau justificatif médical valide avant le <strong>{{ absence.justificationDeadline|date('d/m/Y à H:i') }}</strong>.
+            </div>
+
+            <p><strong>Actions à effectuer :</strong></p>
+            <ol>
+                <li>Vérifiez que votre document répond aux critères requis</li>
+                <li>Téléversez un nouveau justificatif médical valide</li>
+                <li>Respectez la nouvelle échéance pour éviter tout problème</li>
+            </ol>
+
+            <center>
+                <a href="{{ absenceUrl }}" class="button">
+                    📤 Envoyer un nouveau justificatif
+                </a>
+            </center>
+
+            <p style="font-size: 14px; color: #6b7280;">
+                Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br>
+                <a href="{{ absenceUrl }}" style="color: #3b82f6; word-break: break-all;">{{ absenceUrl }}</a>
+            </p>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="font-size: 14px; color: #6b7280;">
+                <strong>Critères d'un justificatif valide :</strong><br>
+                • Document lisible et de bonne qualité<br>
+                • Informations complètes (dates, cachet médical, signature)<br>
+                • Format accepté : PDF, JPG, PNG (max 10MB)<br>
+                • Période couverte correspondant à l'absence
+            </p>
+        </div>
+
+        <div class="footer">
+            <p><strong>Besoin d'aide ?</strong><br>Contactez le service RH : <a href="mailto:rh@rhnewlife.com" style="color: #3b82f6;">rh@rhnewlife.com</a></p>
+            <p style="margin-top: 20px; font-size: 12px;">© {{ "now"|date("Y") }} RH NewLife. Tous droits réservés.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,92 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Nouvelle visite médicale{% endblock %}
+
+{% block admin_title %}Nouvelle visite médicale{% endblock %}
+{% block admin_subtitle %}Enregistrer une visite médicale{% endblock %}
+
+{% block admin_content %}
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="mb-6">
+                <a href="{{ path('admin_visite_medicale_index') }}" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Retour à la liste
+                </a>
+            </div>
+
+            {{ form_start(form) }}
+                <div class="space-y-6">
+                    {# User selection #}
+                    <div>
+                        {{ form_label(form.user, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                        {{ form_widget(form.user, {'attr': {'class': 'form-select w-full'}}) }}
+                        {{ form_errors(form.user) }}
+                    </div>
+
+                    {# Type and dates row #}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            {{ form_label(form.type, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                            {{ form_widget(form.type, {'attr': {'class': 'form-select w-full'}}) }}
+                            {{ form_errors(form.type) }}
+                        </div>
+                        <div>
+                            {{ form_label(form.visitDate, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                            {{ form_widget(form.visitDate, {'attr': {'class': 'form-control w-full'}}) }}
+                            {{ form_errors(form.visitDate) }}
+                        </div>
+                        <div>
+                            {{ form_label(form.expiryDate, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                            {{ form_widget(form.expiryDate, {'attr': {'class': 'form-control w-full'}}) }}
+                            {{ form_errors(form.expiryDate) }}
+                            <p class="mt-1 text-xs text-gray-500">{{ form_help(form.expiryDate) }}</p>
+                        </div>
+                    </div>
+
+                    {# Medical organization #}
+                    <div>
+                        {{ form_label(form.medicalOrganization, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                        {{ form_widget(form.medicalOrganization, {'attr': {'class': 'form-control w-full'}}) }}
+                        {{ form_errors(form.medicalOrganization) }}
+                    </div>
+
+                    {# Aptitude #}
+                    <div>
+                        {{ form_label(form.aptitude, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                        {{ form_widget(form.aptitude, {'attr': {'class': 'form-select w-full'}}) }}
+                        {{ form_errors(form.aptitude) }}
+                    </div>
+
+                    {# Observations #}
+                    <div>
+                        {{ form_label(form.observations, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                        {{ form_widget(form.observations, {'attr': {'class': 'form-control w-full'}}) }}
+                        {{ form_errors(form.observations) }}
+                        <p class="mt-1 text-xs text-gray-500">{{ form_help(form.observations) }}</p>
+                    </div>
+
+                    {# Certificate file upload #}
+                    <div>
+                        {{ form_label(form.certificateFile, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                        {{ form_widget(form.certificateFile, {'attr': {'class': 'form-control w-full'}}) }}
+                        {{ form_errors(form.certificateFile) }}
+                        <p class="mt-1 text-xs text-gray-500">{{ form_help(form.certificateFile) }}</p>
+                    </div>
+
+                    {# Form actions #}
+                    <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                        <a href="{{ path('admin_visite_medicale_index') }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                            Annuler
+                        </a>
+                        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                            Enregistrer la visite
+                        </button>
+                    </div>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

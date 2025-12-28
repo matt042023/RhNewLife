@@ -1,0 +1,101 @@
+{#
+    Document Grid Component
+
+    Affiche une grille de documents avec en-tête et progression
+
+    Parameters:
+    - title: Titre de la section (required)
+    - documents: Array de documents (alternative: items)
+    - items: Array d'items avec configuration type/label/uploaded
+    - documentsByType: Map des documents par type (si items utilisé)
+    - context: 'profile' | 'admin' (default: 'profile')
+    - showProgress: boolean (default: false)
+    - progressData: {required_total, required_completed, percentage}
+    - isRequired: boolean - tous les documents sont requis (default: false)
+    - emptyMessage: Message si aucun document (default: "Aucun document")
+
+    Usage:
+    {% include 'components/documents/_document_grid.html.twig' with {
+        'title': 'Documents requis',
+        'items': requiredItems,
+        'documentsByType': documentsByType,
+        'context': 'profile',
+        'showProgress': true,
+        'progressData': progressData,
+        'isRequired': true
+    } %}
+#}
+
+{% set context = context|default('profile') %}
+{% set showProgress = showProgress|default(false) %}
+{% set isRequired = isRequired|default(false) %}
+{% set emptyMessage = emptyMessage|default('Aucun document') %}
+
+{# Déterminer la source de données #}
+{% set hasItems = items is defined and items is not empty %}
+{% set hasDocuments = documents is defined and documents is not empty %}
+
+<div class="mb-6">
+    {# Section Header #}
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-2">
+            <span class="w-2 h-2 {{ isRequired ? 'bg-red-500' : 'bg-gray-400' }} rounded-full"></span>
+            {{ title }}
+        </h3>
+
+        {% if showProgress and progressData is defined %}
+            <div class="w-full md:w-64">
+                <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    <span class="font-medium">
+                        {{ progressData.required_completed|default(0) }}/{{ progressData.required_total|default(0) }}
+                    </span>
+                    <span class="font-semibold">{{ progressData.percentage|default(0) }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 overflow-hidden">
+                    <div class="bg-gradient-to-r from-emerald-500 to-green-600 h-2.5 rounded-full transition-all duration-500"
+                         style="width: {{ progressData.percentage|default(0) }}%"></div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    {# Document Grid #}
+    {% if hasItems or hasDocuments %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% if hasItems %}
+                {# Mode items (avec configuration type/label) #}
+                {% for item in items %}
+                    {% set docs = documentsByType[item.type]|default([]) %}
+                    {% set firstDoc = docs|first|default(null) %}
+                    {% include 'components/documents/_document_card.html.twig' with {
+                        'document': firstDoc,
+                        'item': item,
+                        'layout': 'grid',
+                        'context': context,
+                        'showActions': true,
+                        'isRequired': isRequired
+                    } %}
+                {% endfor %}
+            {% else %}
+                {# Mode documents (liste directe de documents) #}
+                {% for document in documents %}
+                    {% include 'components/documents/_document_card.html.twig' with {
+                        'document': document,
+                        'layout': 'grid',
+                        'context': context,
+                        'showActions': true,
+                        'isRequired': isRequired
+                    } %}
+                {% endfor %}
+            {% endif %}
+        </div>
+    {% else %}
+        {# Empty state #}
+        <div class="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ emptyMessage }}</p>
+        </div>
+    {% endif %}
+</div>

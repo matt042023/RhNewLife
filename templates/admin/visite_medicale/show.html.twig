@@ -1,0 +1,258 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Détails visite médicale - {{ visite.user.fullName }}{% endblock %}
+
+{% block admin_title %}Visite médicale - {{ visite.user.fullName }}{% endblock %}
+{% block admin_subtitle %}Détails et documents{% endblock %}
+
+{% block admin_actions %}
+    <div class="flex space-x-2">
+        <a href="{{ path('admin_visite_medicale_edit', {'id': visite.id}) }}" class="inline-flex items-center px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium shadow-sm">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            Modifier
+        </a>
+    </div>
+{% endblock %}
+
+{% block admin_content %}
+    <div class="space-y-6">
+        {# Flash messages #}
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="p-4 rounded-lg {{ type == 'success' ? 'bg-green-100 text-green-800' : (type == 'error' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800') }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        {# Breadcrumb #}
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <nav class="flex" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-2">
+                    <li>
+                        <a href="{{ path('admin_visite_medicale_index') }}" class="text-gray-500 hover:text-gray-700">
+                            Visites médicales
+                        </a>
+                    </li>
+                    <li>
+                        <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </li>
+                    <li>
+                        <span class="text-gray-700 font-medium">{{ visite.user.fullName }}</span>
+                    </li>
+                </ol>
+            </nav>
+        </div>
+
+        {# Expiry alert #}
+        {% if visite.isExpired %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">
+                            Visite médicale expirée
+                        </h3>
+                        <p class="text-sm text-red-700 mt-1">
+                            Cette visite a expiré le {{ visite.expiryDate|date('d/m/Y') }}. Une nouvelle visite doit être programmée.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% elseif visite.isExpiringSoon(30) %}
+            <div class="bg-orange-50 border-l-4 border-orange-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-orange-800">
+                            Renouvellement nécessaire
+                        </h3>
+                        <p class="text-sm text-orange-700 mt-1">
+                            Cette visite expire dans {{ visite.daysUntilExpiry }} jours ({{ visite.expiryDate|date('d/m/Y') }}). Pensez à programmer le renouvellement.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {# Main details #}
+            <div class="lg:col-span-2 space-y-6">
+                {# Visit details #}
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Informations de la visite</h3>
+                    </div>
+                    <div class="p-6">
+                        <dl class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Type de visite</dt>
+                                <dd class="mt-1">
+                                    <span class="inline-flex px-2 py-1 text-sm font-medium rounded-full
+                                        {% if visite.type == 'embauche' %}bg-green-100 text-green-800
+                                        {% elseif visite.type == 'periodique' %}bg-blue-100 text-blue-800
+                                        {% elseif visite.type == 'reprise' %}bg-purple-100 text-purple-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ visite.typeLabel }}
+                                    </span>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Date de la visite</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ visite.visitDate|date('d/m/Y') }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Date de validité</dt>
+                                <dd class="mt-1 text-sm text-gray-900">
+                                    {{ visite.expiryDate|date('d/m/Y') }}
+                                    {% if visite.isExpired %}
+                                        <span class="ml-2 text-xs text-red-600 font-medium">(Expirée)</span>
+                                    {% elseif visite.isExpiringSoon(30) %}
+                                        <span class="ml-2 text-xs text-orange-600 font-medium">({{ visite.daysUntilExpiry }}j restants)</span>
+                                    {% endif %}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Organisme médical</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ visite.medicalOrganization }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Aptitude médicale</dt>
+                                <dd class="mt-1">
+                                    <span class="inline-flex px-2 py-1 text-sm font-medium rounded-full
+                                        {% if visite.aptitude == 'apte' %}bg-green-100 text-green-800
+                                        {% elseif visite.aptitude == 'apte_avec_reserve' %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-red-100 text-red-800{% endif %}">
+                                        {{ visite.aptitudeLabel }}
+                                    </span>
+                                </dd>
+                            </div>
+                        </dl>
+
+                        {% if visite.observations %}
+                            <div class="mt-6 pt-6 border-t border-gray-200">
+                                <dt class="text-sm font-medium text-gray-500 mb-2">Observations / Restrictions</dt>
+                                <dd class="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 p-4 rounded-md">{{ visite.observations }}</dd>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Documents section #}
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Documents associés</h3>
+                    </div>
+                    <div class="p-6">
+                        {% if visite.documents is empty %}
+                            <div class="text-center py-8">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <p class="mt-2 text-sm text-gray-500">Aucun document associé</p>
+                            </div>
+                        {% else %}
+                            <ul class="divide-y divide-gray-200">
+                                {% for document in visite.documents %}
+                                    <li class="py-3 flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg class="h-8 w-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <div class="ml-3">
+                                                <p class="text-sm font-medium text-gray-900">{{ document.originalName }}</p>
+                                                <p class="text-xs text-gray-500">
+                                                    Ajouté le {{ document.uploadedAt|date('d/m/Y à H:i') }}
+                                                    {% if document.uploadedBy %} par {{ document.uploadedBy.fullName }}{% endif %}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full
+                                                {% if document.status == 'validated' %}bg-green-100 text-green-800
+                                                {% elseif document.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                                {{ document.status == 'validated' ? 'Validé' : (document.status == 'pending' ? 'En attente' : document.status) }}
+                                            </span>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# Sidebar - Employee info #}
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden sticky top-6">
+                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Salarié</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="text-center mb-4">
+                            <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-100 text-blue-600 rounded-full text-2xl font-bold">
+                                {{ visite.user.firstName|first }}{{ visite.user.lastName|first }}
+                            </div>
+                        </div>
+                        <dl class="space-y-4">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Nom complet</dt>
+                                <dd class="mt-1 text-sm text-gray-900 font-medium">{{ visite.user.fullName }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Email</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ visite.user.email }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Poste</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ visite.user.position ?? 'Éducateur' }}</dd>
+                            </div>
+                            {% if visite.user.villa %}
+                                <div>
+                                    <dt class="text-sm font-medium text-gray-500">Villa</dt>
+                                    <dd class="mt-1 text-sm text-gray-900">{{ visite.user.villa.nom }}</dd>
+                                </div>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Delete button #}
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <div class="ml-3 flex-1">
+                    <h3 class="text-sm font-medium text-gray-900">Supprimer cette visite médicale</h3>
+                    <p class="mt-2 text-sm text-gray-500">
+                        Attention : cette action est irréversible. Les documents associés ne seront pas supprimés.
+                    </p>
+                    <form method="post" action="{{ path('admin_visite_medicale_delete', {'id': visite.id}) }}" class="mt-4" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette visite médicale ?');">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete_visite_' ~ visite.id) }}">
+                        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">
+                            Supprimer la visite
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,331 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}{{ document.typeLabel ?? document.type }} - Mes documents{% endblock %}
+
+{% block page_header %}
+	<div class="px-4 py-6 lg:px-6">
+		<div class="flex flex-col md:flex-row md:items-center md:justify-between">
+			<div class="flex items-center gap-3">
+				<a href="{{ path('app_profile_documents') }}" class="text-blue-100 hover:text-white transition-colors">
+					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+					</svg>
+				</a>
+				<div class="flex-1 min-w-0">
+					<h1 class="text-2xl md:text-3xl font-bold text-white mb-1">
+						{{ document.typeLabel ?? document.type }}
+					</h1>
+					<p class="text-blue-100 text-sm md:text-base">
+						Consultation de votre document
+					</p>
+				</div>
+			</div>
+			<div class="mt-4 md:mt-0">
+				<a href="{{ downloadRoute }}" class="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors">
+					<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+					</svg>
+					Télécharger
+				</a>
+			</div>
+		</div>
+	</div>
+{% endblock %}
+
+{% block dashboard_content %}
+	<div data-controller="document" class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+		{# Left column: Document viewer (2/3 width on large screens) #}
+		<div class="lg:col-span-2">
+			<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+				{# Viewer header #}
+				<div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+					<div class="flex items-center gap-3">
+						{% include 'components/documents/_document_type_icon.html.twig' with {
+							'type': document.type,
+							'iconClass': 'w-6 h-6'
+						} %}
+						<div>
+							<h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+								{{ document.originalName }}
+							</h2>
+							<p class="text-sm text-gray-500 dark:text-gray-400">
+								{{ document.fileSizeFormatted }}
+								•
+								{{ document.mimeType|default('application/pdf') }}
+							</p>
+						</div>
+					</div>
+					{% include 'components/documents/_document_status_badge.html.twig' with {
+						'status': document.status,
+						'isArchived': document.isArchived
+					} %}
+				</div>
+
+				{# Document Viewer - PDF or Image based on mime type #}
+				{% set isImage = document.mimeType starts with 'image/' %}
+				{% set isPdf = document.mimeType == 'application/pdf' or document.fileName ends with '.pdf' %}
+
+				{% if isImage %}
+					{# Image Viewer for JPEG/PNG #}
+					{% include 'components/documents/_image_viewer.html.twig' with {
+						'document': document,
+						'imageUrl': downloadRoute,
+						'downloadRoute': downloadRoute,
+						'height': '600px'
+					} %}
+				{% elseif isPdf %}
+					{# PDF Viewer with PDF.js #}
+					{% include 'components/documents/_pdf_viewer_placeholder.html.twig' with {
+						'document': document,
+						'documentUrl': downloadRoute,
+						'downloadRoute': downloadRoute,
+						'height': '600px'
+					} %}
+				{% else %}
+					{# Fallback for other file types #}
+					<div class="bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center p-8" style="min-height: 600px;">
+						<div class="text-center max-w-md">
+							<svg class="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+							</svg>
+							<h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+								Aperçu non disponible
+							</h3>
+							<p class="text-gray-600 dark:text-gray-400 mb-2">
+								Type de fichier :
+								<span class="font-medium">{{ document.mimeType|default('Inconnu') }}</span>
+							</p>
+							<p class="text-gray-600 dark:text-gray-400 mb-6">
+								Ce type de fichier ne peut pas être visualisé en ligne.<br>
+								Veuillez télécharger le document pour le consulter.
+							</p>
+							<a href="{{ downloadRoute }}" class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm">
+								<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+								</svg>
+								Télécharger le fichier
+							</a>
+						</div>
+					</div>
+				{% endif %}
+			</div>
+
+			{# Document history timeline #}
+			{% if history is defined and history|length > 0 %}
+				<div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+					<div class="flex items-center justify-between mb-4">
+						<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+							Historique des actions
+						</h3>
+						<span class="text-sm text-gray-500 dark:text-gray-400">
+							{{ history|length }}
+							événement{{ history|length > 1 ? 's' : '' }}
+						</span>
+					</div>
+					<div class="space-y-4">
+						{% for event in history %}
+							<div class="flex gap-4">
+								{# Icon with color coding #}
+								<div class="flex-shrink-0">
+									{% set iconBgClass = event.color == 'green' ? 'bg-green-100 dark:bg-green-900' :
+										event.color == 'red' ? 'bg-red-100 dark:bg-red-900' :
+										event.color == 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900' :
+										event.color == 'gray' ? 'bg-gray-100 dark:bg-gray-700' :
+										'bg-blue-100 dark:bg-blue-900' %}
+									{% set iconTextClass = event.color == 'green' ? 'text-green-600 dark:text-green-300' :
+										event.color == 'red' ? 'text-red-600 dark:text-red-300' :
+										event.color == 'yellow' ? 'text-yellow-600 dark:text-yellow-300' :
+										event.color == 'gray' ? 'text-gray-600 dark:text-gray-300' :
+										'text-blue-600 dark:text-blue-300' %}
+
+									<div class="w-10 h-10 rounded-full {{ iconBgClass }} flex items-center justify-center">
+										{% if event.icon == 'upload' %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+											</svg>
+										{% elseif event.icon == 'check' %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+											</svg>
+										{% elseif event.icon == 'x' %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+											</svg>
+										{% elseif event.icon == 'archive' %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+											</svg>
+										{% else %}
+											<svg class="w-5 h-5 {{ iconTextClass }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+											</svg>
+										{% endif %}
+									</div>
+								</div>
+
+								{# Event details #}
+								<div class="flex-1">
+									<p class="font-medium text-gray-900 dark:text-white">
+										{{ event.action }}
+									</p>
+									<p class="text-sm text-gray-500 dark:text-gray-400">
+										{% if event.user %}
+											{{ event.user.fullName ?? event.user }}
+											•
+										{% endif %}
+										{{ event.date|date('d/m/Y à H:i') }}
+									</p>
+									{% if event.details %}
+										<p class="text-sm text-gray-600 dark:text-gray-300 mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+											{{ event.details }}
+										</p>
+									{% endif %}
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+			{% endif %}
+		</div>
+
+		{# Right column: Metadata & Actions (1/3 width) #}
+		<div class="space-y-6">
+			{# Metadata card #}
+			<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+				<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+						Informations
+					</h3>
+				</div>
+				<div class="px-6 py-4 space-y-4">
+					<div>
+						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Type de document</dt>
+						<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+							{{ document.typeLabel ?? document.type }}
+						</dd>
+					</div>
+
+					<div>
+						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Statut</dt>
+						<dd class="mt-1">
+							{% include 'components/documents/_document_status_badge.html.twig' with {
+								'status': document.status,
+								'isArchived': document.isArchived
+							} %}
+						</dd>
+					</div>
+
+					<div>
+						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Date d'upload</dt>
+						<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+							{{ document.uploadedAt ? document.uploadedAt|date('d/m/Y à H:i') : '—' }}
+						</dd>
+					</div>
+
+					<div>
+						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Taille du fichier</dt>
+						<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+							{{ document.fileSizeFormatted }}
+						</dd>
+					</div>
+
+					{% if document.version > 1 %}
+						<div>
+							<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Version</dt>
+							<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+								v{{ document.version }}
+							</dd>
+						</div>
+					{% endif %}
+
+					{% if document.validatedBy %}
+						<div>
+							<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Validé par</dt>
+							<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+								{{ document.validatedBy.fullName }}<br>
+								<span class="text-xs text-gray-500">{{ document.validatedAt|date('d/m/Y H:i') }}</span>
+							</dd>
+						</div>
+					{% endif %}
+
+					{% if document.comment %}
+						<div>
+							<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+								{% if document.status == 'rejected' %}
+									Motif du rejet
+								{% else %}
+									Commentaire
+								{% endif %}
+							</dt>
+							<dd class="mt-1 text-sm text-gray-900 dark:text-white p-3 {{ document.status == 'rejected' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' : 'bg-gray-50 dark:bg-gray-700/50' }} rounded-lg">
+								{{ document.comment }}
+							</dd>
+						</div>
+					{% endif %}
+				</div>
+			</div>
+
+			{# Quick actions card #}
+			<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+				<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+						Actions
+					</h3>
+				</div>
+				<div class="px-6 py-4 space-y-2">
+					{# Show Replace button for pending, rejected, or validated onboarding documents (if user has permission) #}
+					{% if document.status != 'archived' and canReplace %}
+						<button type="button"
+							data-action="click->document#replaceDocument"
+							data-document-id-param="{{ document.id }}"
+							data-document-label-param="{{ document.typeLabel ?? document.type }}"
+							class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+							</svg>
+							Remplacer le fichier
+						</button>
+					{% endif %}
+
+					{# Always show download button #}
+					<a href="{{ downloadRoute }}" class="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+						<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+						</svg>
+						Télécharger
+					</a>
+
+					{# Always show back to list button #}
+					<a href="{{ path('app_profile_documents') }}" class="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors">
+						<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+						</svg>
+						Retour à mes documents
+					</a>
+				</div>
+			</div>
+
+			{# Help card for rejected documents #}
+			{% if document.status == 'rejected' %}
+				<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+					<div class="flex gap-4">
+						<svg class="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+						</svg>
+						<div>
+							<h3 class="text-sm font-semibold text-red-900 dark:text-red-300 mb-2">
+								Document rejeté
+							</h3>
+							<p class="text-sm text-red-800 dark:text-red-400">
+								Ce document a été rejeté par l'équipe RH. Veuillez consulter le motif du rejet ci-dessus et remplacer le document par une version conforme.
+							</p>
+						</div>
+					</div>
+				</div>
+			{% endif %}
+		</div>
+	</div>
+
+	{# Include modals #}
+	{% include 'components/modals/document_replace.html.twig' %}
+{% endblock %}

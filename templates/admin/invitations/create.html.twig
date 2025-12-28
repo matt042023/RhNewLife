@@ -1,0 +1,137 @@
+{% extends 'layouts/auth.html.twig' %}
+
+{% block title %}Créer une invitation - RH NewLife{% endblock %}
+
+{% block page_title %}Nouvelle invitation{% endblock %}
+
+{% block page_subtitle %}
+    <p class="mt-2 text-sm text-gray-600">Invitez un nouveau salarié à rejoindre RH NewLife</p>
+{% endblock %}
+
+{% block content %}
+    {% if errors is not empty %}
+        <div class="alert alert-error mb-4">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <ul class="list-disc list-inside">
+                {% for error in errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" class="space-y-6">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="first_name" class="form-label">
+                    Prénom <span class="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    name="first_name"
+                    id="first_name"
+                    value="{{ formData.first_name ?? '' }}"
+                    class="form-input"
+                    required
+                    autofocus
+                >
+            </div>
+
+            <div>
+                <label for="last_name" class="form-label">
+                    Nom <span class="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    name="last_name"
+                    id="last_name"
+                    value="{{ formData.last_name ?? '' }}"
+                    class="form-input"
+                    required
+                >
+            </div>
+        </div>
+
+        <div>
+            <label for="email" class="form-label">
+                Adresse email <span class="text-red-500">*</span>
+            </label>
+            <input
+                type="email"
+                name="email"
+                id="email"
+                value="{{ formData.email ?? '' }}"
+                class="form-input"
+                required
+                placeholder="prenom.nom@example.com"
+            >
+            <p class="form-help">
+                Le salarié recevra un email d'invitation à cette adresse
+            </p>
+        </div>
+
+        <div>
+            <label for="position" class="form-label">
+                Poste
+            </label>
+            <input
+                type="text"
+                name="position"
+                id="position"
+                value="{{ formData.position ?? '' }}"
+                class="form-input"
+                placeholder="Ex: Éducateur spécialisé, Directeur..."
+            >
+        </div>
+
+        <div>
+            <label for="villa_id" class="form-label">
+                Villa
+            </label>
+            <select name="villa_id" id="villa_id" class="form-select">
+                <option value="">Aucune villa</option>
+                {% for villa in villas %}
+                    <option value="{{ villa.id }}" {{ (formData.villa_id ?? '') == villa.id ? 'selected' : '' }}>
+                        {{ villa.nom }}
+                    </option>
+                {% endfor %}
+            </select>
+            <p class="form-help">
+                Pour les éducateurs uniquement
+            </p>
+        </div>
+
+        <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-800">
+                        <strong>Que va-t-il se passer ?</strong><br>
+                        Un email sera envoyé au salarié avec un lien d'activation valide 7 jours.
+                        Il pourra créer son compte et compléter son dossier d'onboarding.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <a href="{{ path('app_admin_invitations_list') }}" class="btn btn-ghost">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Annuler
+            </a>
+            <button type="submit" class="btn btn-success flex-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Envoyer l'invitation
+            </button>
+        </div>
+    </form>
+{% endblock %}

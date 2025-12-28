@@ -1,0 +1,182 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Créer un salarié - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-8">
+    <div class="max-w-4xl mx-auto">
+
+        {# Header #}
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Créer un salarié</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Création manuelle pour les cas urgents (remplacements, réembauches)</p>
+        </div>
+
+        {# Errors #}
+        {% if errors is not empty %}
+            <div class="glass-card glass-card-danger mb-6 p-4">
+                <ul class="list-disc list-inside text-red-800 dark:text-red-200">
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {# Form #}
+        <form method="post" class="glass-card p-8 space-y-8">
+
+            {# Informations de base #}
+            <div class="space-y-4">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <div class="w-8 h-8 glass-card glass-card-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    Informations obligatoires
+                </h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Prénom *</label>
+                        <input type="text" name="first_name" value="{{ formData.first_name ?? '' }}" class="glass-input w-full" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nom *</label>
+                        <input type="text" name="last_name" value="{{ formData.last_name ?? '' }}" class="glass-input w-full" required>
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Email *</label>
+                        <input type="email" name="email" value="{{ formData.email ?? '' }}" class="glass-input w-full" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Poste *</label>
+                        <input type="text" name="position" value="{{ formData.position ?? '' }}" class="glass-input w-full" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Villa</label>
+                        <select name="villa_id" class="glass-input w-full">
+                            <option value="">Aucune villa</option>
+                            {% for villa in villas %}
+                                <option value="{{ villa.id }}" {{ (formData.villa_id ?? '') == villa.id ? 'selected' : '' }}>
+                                    {{ villa.nom }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Pour les éducateurs uniquement</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Informations complémentaires #}
+            <div class="space-y-4">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <div class="w-8 h-8 glass-card glass-card-success rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    Informations complémentaires (optionnel)
+                </h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Téléphone</label>
+                        <input type="tel" name="phone" value="{{ formData.phone ?? '' }}" class="glass-input w-full" placeholder="+33 6 12 34 56 78">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Date d'embauche</label>
+                        <input type="date" name="hiring_date" value="{{ formData.hiring_date ?? '' }}" class="glass-input w-full">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Adresse</label>
+                        <textarea name="address" class="glass-input w-full" rows="2">{{ formData.address ?? '' }}</textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Situation familiale</label>
+                        <select name="family_status" class="glass-input w-full">
+                            <option value="">Non renseigné</option>
+                            <option value="single" {{ (formData.family_status ?? '') == 'single' ? 'selected' : '' }}>Célibataire</option>
+                            <option value="married" {{ (formData.family_status ?? '') == 'married' ? 'selected' : '' }}>Marié(e)</option>
+                            <option value="divorced" {{ (formData.family_status ?? '') == 'divorced' ? 'selected' : '' }}>Divorcé(e)</option>
+                            <option value="widowed" {{ (formData.family_status ?? '') == 'widowed' ? 'selected' : '' }}>Veuf(ve)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nombre d'enfants</label>
+                        <input type="number" name="children" value="{{ formData.children ?? '0' }}" min="0" class="glass-input w-full">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">IBAN</label>
+                        <input type="text" name="iban" value="{{ formData.iban ?? '' }}" class="glass-input w-full" placeholder="FR76 1234 5678 9012 3456 7890 123">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">BIC</label>
+                        <input type="text" name="bic" value="{{ formData.bic ?? '' }}" class="glass-input w-full" placeholder="BNPAFRPPXXX">
+                    </div>
+                </div>
+            </div>
+
+            {# Options d'invitation #}
+            <div class="space-y-4">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <div class="w-8 h-8 glass-card rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(147, 51, 234, 0.05)); border: 1px solid rgba(147, 51, 234, 0.2);">
+                        <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    Invitation
+                </h2>
+
+                <div class="flex items-center gap-3 p-3 glass-card hover:bg-white/30 dark:hover:bg-white/5 transition-colors">
+                    <input type="checkbox" name="send_invitation" value="1" id="send_invitation" class="w-4 h-4 text-blue-600 dark:text-blue-400 rounded focus:ring-2 focus:ring-blue-500" {{ (formData.send_invitation ?? '1') == '1' ? 'checked' : '' }}>
+                    <label for="send_invitation" class="text-sm text-gray-700 dark:text-gray-300 font-medium cursor-pointer">
+                        Envoyer un email d'activation au salarié (lien pour définir son mot de passe)
+                    </label>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 ml-7">
+                    Si décoché, le salarié sera créé mais ne recevra pas d'email. Vous pourrez envoyer l'invitation plus tard.
+                </p>
+            </div>
+
+            {# Actions #}
+            <div class="flex items-center justify-between pt-6 border-t border-white/10">
+                <a href="{{ path('app_admin_users_list') }}" class="glass-btn px-4 py-2">
+                    Annuler
+                </a>
+                <button type="submit" class="glass-btn glass-btn-primary inline-flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Créer le salarié
+                </button>
+            </div>
+        </form>
+
+        {# Info box #}
+        <div class="mt-6 glass-card glass-card-primary p-4 animate-slide-in-glass">
+            <div class="flex gap-3">
+                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-sm text-blue-800 dark:text-blue-200">
+                    <p class="font-semibold mb-1">À propos de la création manuelle</p>
+                    <p>Le matricule sera généré automatiquement. Le salarié recevra un email avec un lien pour activer son compte sans passer par l'onboarding complet. Il pourra compléter ses informations personnelles et documents plus tard depuis son profil.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

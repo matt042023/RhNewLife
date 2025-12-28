@@ -58,7 +58,14 @@ Encore
         config.useBuiltIns = "usage";
         config.corejs = "3.38";
     })
-    .enablePostCssLoader();
+    .enablePostCssLoader()
+
+    // Copy PDF.js worker file to public build directory
+    .copyFiles({
+        from: './node_modules/pdfjs-dist/build',
+        to: 'pdfjs/[path][name].[ext]',
+        pattern: /pdf\.worker\.m?js$/
+    });
 
 // enables Sass/SCSS support
 //.enableSassLoader()

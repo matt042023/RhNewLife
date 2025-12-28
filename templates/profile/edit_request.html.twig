@@ -1,0 +1,275 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Demander une modification - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <a href="{{ path('app_profile_view') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">Mon profil</a>
+        </div>
+    </li>
+    <li aria-current="page">
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Demander une modification</span>
+        </div>
+    </li>
+{% endblock %}
+
+{% block page_header %}
+    <div class="px-4 py-6 lg:px-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">Demander une modification</h1>
+                <p class="text-blue-100">Les modifications seront soumises à validation RH</p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block dashboard_content %}
+    <div class="max-w-4xl mx-auto">
+
+        {# Info box #}
+        <div class="alert alert-info mb-6">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <p class="font-semibold">Comment ça marche ?</p>
+                    <p class="text-sm mt-1">Modifiez les champs que vous souhaitez mettre à jour et expliquez la raison. Votre demande sera examinée par le service RH.</p>
+                </div>
+            </div>
+        </div>
+
+        {# Formulaire #}
+        <form method="post" class="bg-white rounded-2xl shadow-lg p-8">
+
+            {# Section Coordonnées #}
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Coordonnées
+                </h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="form-label">Téléphone</label>
+                        <input
+                            type="tel"
+                            name="phone"
+                            value="{{ user.phone ?? '' }}"
+                            class="form-input"
+                            placeholder="06 12 34 56 78"
+                        >
+                        {% if user.phone %}
+                            <p class="text-xs text-gray-500 mt-1">Actuel : {{ user.phone }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="form-label">Adresse complète</label>
+                        <textarea
+                            name="address"
+                            rows="3"
+                            class="form-input"
+                            placeholder="Numéro, rue, code postal, ville"
+                        >{{ user.address ?? '' }}</textarea>
+                        {% if user.address %}
+                            <p class="text-xs text-gray-500 mt-1">Actuelle : {{ user.address }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# Section Situation familiale #}
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Situation familiale
+                </h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="form-label">Situation familiale</label>
+                        <select name="familyStatus" class="form-select">
+                            <option value="">- Sélectionnez -</option>
+                            <option value="Célibataire" {{ user.familyStatus == 'Célibataire' ? 'selected' : '' }}>Célibataire</option>
+                            <option value="Marié(e)" {{ user.familyStatus == 'Marié(e)' ? 'selected' : '' }}>Marié(e)</option>
+                            <option value="Pacsé(e)" {{ user.familyStatus == 'Pacsé(e)' ? 'selected' : '' }}>Pacsé(e)</option>
+                            <option value="Divorcé(e)" {{ user.familyStatus == 'Divorcé(e)' ? 'selected' : '' }}>Divorcé(e)</option>
+                            <option value="Veuf/Veuve" {{ user.familyStatus == 'Veuf/Veuve' ? 'selected' : '' }}>Veuf/Veuve</option>
+                            <option value="Concubinage" {{ user.familyStatus == 'Concubinage' ? 'selected' : '' }}>Concubinage</option>
+                        </select>
+                        {% if user.familyStatus %}
+                            <p class="text-xs text-gray-500 mt-1">Actuel : {{ user.familyStatus }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="form-label">Nombre d'enfants</label>
+                        <input
+                            type="number"
+                            name="children"
+                            value="{{ user.children ?? 0 }}"
+                            min="0"
+                            max="20"
+                            class="form-input"
+                        >
+                        {% if user.children is not null %}
+                            <p class="text-xs text-gray-500 mt-1">Actuel : {{ user.children }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# Section Informations bancaires #}
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    Informations bancaires
+                </h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="form-label">IBAN</label>
+                        <input
+                            type="text"
+                            name="iban"
+                            value="{{ user.iban ?? '' }}"
+                            class="form-input font-mono"
+                            placeholder="FR76 1234 5678 9012 3456 7890 123"
+                            maxlength="34"
+                        >
+                        {% if user.iban %}
+                            <p class="text-xs text-gray-500 mt-1">Actuel : {{ user.iban|slice(0, 10) }}...</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="form-label">BIC</label>
+                        <input
+                            type="text"
+                            name="bic"
+                            value="{{ user.bic ?? '' }}"
+                            class="form-input font-mono"
+                            placeholder="BNPAFRPPXXX"
+                            maxlength="11"
+                        >
+                </div>
+            </div>
+
+            {# Section Mutuelle et Prévoyance #}
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Mutuelle et Prévoyance
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <div>
+                            <p class="font-semibold text-gray-900">Mutuelle d'entreprise</p>
+                            <p class="text-xs text-gray-500 italic">Souscription optionnelle</p>
+                            <p class="text-xs text-blue-600 mt-1">Actuel : {{ user.health.mutuelleEnabled ? 'Oui' : 'Non' }}</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="mutuelleEnabled" value="1" class="sr-only peer" {{ user.health.mutuelleEnabled ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <div>
+                            <p class="font-semibold text-gray-900">Prévoyance</p>
+                            <p class="text-xs text-gray-500 italic">Souscription optionnelle</p>
+                            <p class="text-xs text-blue-600 mt-1">Actuel : {{ user.health.prevoyanceEnabled ? 'Oui' : 'Non' }}</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="prevoyanceEnabled" value="1" class="sr-only peer" {{ user.health.prevoyanceEnabled ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {# Section Raison #}
+            <div class="mb-8">
+                <label class="form-label required">Motif de la demande</label>
+                <textarea
+                    name="reason"
+                    rows="4"
+                    class="form-input"
+                    placeholder="Expliquez pourquoi vous demandez ces modifications..."
+                    required
+                ></textarea>
+                <p class="text-sm text-gray-600 mt-2">Ce message sera visible par le service RH lors de la validation.</p>
+            </div>
+
+            {# Validation errors #}
+            {% if errors is defined and errors is not empty %}
+                <div class="alert alert-error mb-6">
+                    <ul class="list-disc list-inside">
+                        {% for error in errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            {# Actions #}
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{{ path('app_profile_view') }}" class="text-gray-600 hover:text-gray-800 font-semibold">
+                    Annuler
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Soumettre la demande
+                </button>
+            </div>
+
+        </form>
+
+        {# Pending requests alert #}
+        {% if pendingRequests is defined and pendingRequests is not empty %}
+            <div class="alert alert-warning mt-6">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="flex-1">
+                        <p class="font-semibold">Demande en attente</p>
+                        <p class="text-sm mt-1">Vous avez déjà une demande de modification en cours de traitement. Veuillez attendre sa validation avant d'en soumettre une nouvelle.</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Retour profil #}
+        <div class="mt-6">
+            <a href="{{ path('app_profile_view') }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Retour au profil
+            </a>
+        </div>
+
+    </div>
+{% endblock %}

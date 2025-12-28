@@ -1,0 +1,219 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}{{ appointment.subject }}{% endblock %}
+
+{% block page_header %}
+<div class="px-4 py-6 lg:px-6">
+    <div class="flex items-center mb-2">
+        <a href="{{ path('app_appointment_index') }}" class="text-white/80 hover:text-white mr-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+        </a>
+        <h1 class="text-2xl md:text-3xl font-bold text-white">{{ appointment.subject }}</h1>
+    </div>
+
+    {# Badges statut et type #}
+    <div class="flex gap-2">
+        {% set typeColors = {
+            'CONVOCATION': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+            'DEMANDE': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+            'VISITE_MEDICALE': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+        } %}
+        {% set statusColors = {
+            'EN_ATTENTE': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+            'CONFIRME': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+            'REFUSE': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+            'ANNULE': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+            'TERMINE': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+        } %}
+
+        <span class="px-3 py-1 text-sm font-semibold rounded {{ typeColors[appointment.type] ?? 'bg-gray-100 text-gray-800' }}">
+            {{ appointment.typeLabel }}
+        </span>
+        <span class="px-3 py-1 text-sm font-semibold rounded {{ statusColors[appointment.statut] ?? 'bg-gray-100 text-gray-800' }}">
+            {% if appointment.statut == 'EN_ATTENTE' %}En attente
+            {% elseif appointment.statut == 'CONFIRME' %}Confirmé
+            {% elseif appointment.statut == 'REFUSE' %}Refusé
+            {% elseif appointment.statut == 'ANNULE' %}Annulé
+            {% elseif appointment.statut == 'TERMINE' %}Terminé
+            {% else %}{{ appointment.statut }}
+            {% endif %}
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {# Colonne principale #}
+        <div class="lg:col-span-2 space-y-6">
+            {# Informations principales #}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Informations</h2>
+
+                <dl class="space-y-4">
+                    {# Date et heure #}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Date et heure</dt>
+                        <dd class="mt-1 flex items-center text-lg text-gray-900 dark:text-white">
+                            <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            {{ appointment.startAt|date('l d F Y à H:i') }}
+                        </dd>
+                    </div>
+
+                    {# Durée #}
+                    {% if appointment.durationMinutes %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Durée</dt>
+                        <dd class="mt-1 flex items-center text-gray-900 dark:text-white">
+                            <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ appointment.durationMinutes }} minutes
+                        </dd>
+                    </div>
+                    {% endif %}
+
+                    {# Lieu #}
+                    {% if appointment.location %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Lieu</dt>
+                        <dd class="mt-1 flex items-center text-gray-900 dark:text-white">
+                            <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            </svg>
+                            {{ appointment.location }}
+                        </dd>
+                    </div>
+                    {% endif %}
+
+                    {# Organisateur #}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Organisé par</dt>
+                        <dd class="mt-1 flex items-center text-gray-900 dark:text-white">
+                            <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                            {{ appointment.organizer.fullName }}
+                        </dd>
+                    </div>
+                </dl>
+
+                {# Description #}
+                {% if appointment.description %}
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Description</h3>
+                    <p class="text-gray-900 dark:text-white whitespace-pre-line">{{ appointment.description }}</p>
+                </div>
+                {% endif %}
+
+                {# Motif de refus #}
+                {% if appointment.statut == 'REFUSE' and appointment.refusalReason %}
+                <div class="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <h3 class="text-sm font-medium text-red-800 dark:text-red-200 mb-2">Motif du refus</h3>
+                    <p class="text-sm text-red-700 dark:text-red-300">{{ appointment.refusalReason }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            {# Participants #}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Participants ({{ appointment.appointmentParticipants|length }})
+                </h2>
+
+                <div class="space-y-3">
+                    {% for participant in appointment.appointmentParticipants %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                                    {{ participant.user.firstName|slice(0, 1)|upper }}{{ participant.user.lastName|slice(0, 1)|upper }}
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900 dark:text-white">
+                                        {{ participant.user.fullName }}
+                                    </p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ participant.user.email }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {# Badge statut présence #}
+                            <div>
+                                {% if participant.presenceStatus == 'PENDING' %}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                        ⏳ À confirmer
+                                    </span>
+                                {% elseif participant.presenceStatus == 'CONFIRMED' %}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                        ✅ Confirmé
+                                    </span>
+                                {% elseif participant.presenceStatus == 'ABSENT' %}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                        ❌ Absent
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# Colonne latérale - Actions #}
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 sticky top-4">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h2>
+
+                <div class="space-y-3">
+                    {# Bouton confirmer présence #}
+                    {% if currentParticipant and currentParticipant.presenceStatus == 'PENDING' and appointment.statut == 'CONFIRME' %}
+                        <form method="post" action="{{ path('app_appointment_confirm_presence', {id: appointment.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('confirm-presence-' ~ appointment.id) }}">
+                            <button type="submit" class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">
+                                ✅ Confirmer ma présence
+                            </button>
+                        </form>
+
+                        <form method="post" action="{{ path('app_appointment_signal_absence', {id: appointment.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('signal-absence-' ~ appointment.id) }}">
+                            <button type="submit" class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition">
+                                ❌ Signaler mon absence
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    {# Lien vers absence liée #}
+                    {% if currentParticipant and currentParticipant.linkedAbsence %}
+                        <a href="{{ path('app_absence_show', {id: currentParticipant.linkedAbsence.id}) }}"
+                           class="block w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition text-center">
+                            📄 Voir l'absence liée
+                        </a>
+                    {% endif %}
+                </div>
+
+                {# Informations complémentaires #}
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <dl class="space-y-2 text-sm">
+                        <div>
+                            <dt class="text-gray-500 dark:text-gray-400">Créé le</dt>
+                            <dd class="text-gray-900 dark:text-white">{{ appointment.createdAt|date('d/m/Y à H:i') }}</dd>
+                        </div>
+                        {% if appointment.createsAbsence %}
+                        <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
+                            <p class="text-xs text-blue-700 dark:text-blue-300">
+                                ℹ️ Une absence automatique a été créée pour ce rendez-vous
+                            </p>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

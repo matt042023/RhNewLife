@@ -1,0 +1,168 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Template {{ template.name }} - RH NewLife{% endblock %}
+
+{% block admin_title %}{{ template.name }}{% endblock %}
+{% block admin_subtitle %}
+	{{ template.description }}
+	{% if template.active %}
+		<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-3">Actif</span>
+	{% else %}
+		<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 ml-3">Inactif</span>
+	{% endif %}
+{% endblock %}
+
+{% block admin_actions %}
+	<div class="flex gap-2">
+		<a href="{{ path('app_admin_contract_templates_list') }}" class="inline-flex items-center px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg shadow hover:bg-blue-50 transition">
+			<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+			</svg>
+			Retour
+		</a>
+		<a href="{{ path('app_admin_contract_templates_edit', {id: template.id}) }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition">
+			<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+			</svg>
+			Éditer
+		</a>
+	</div>
+{% endblock %}
+
+{% block admin_content %}
+<div class="px-4 py-6 lg:px-8">
+	<div class="max-w-7xl mx-auto">
+
+		{# Flash messages #}
+		{% for label, messages in app.flashes %}
+			{% for message in messages %}
+				<div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-6">
+					{{ message }}
+				</div>
+			{% endfor %}
+		{% endfor %}
+
+		{# Actions rapides #}
+		<div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+			<h2 class="text-lg font-bold mb-4">Actions rapides</h2>
+			<div class="flex flex-wrap gap-3">
+				<a href="{{ path('app_admin_contract_templates_preview', {id: template.id}) }}" class="btn btn-secondary" target="_blank">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+					</svg>
+					Prévisualiser
+				</a>
+
+				{% if template.active %}
+					<form method="post" action="{{ path('app_admin_contract_templates_deactivate', {id: template.id}) }}">
+						<button type="submit" class="btn btn-warning">
+							Désactiver
+						</button>
+					</form>
+				{% else %}
+					<form method="post" action="{{ path('app_admin_contract_templates_activate', {id: template.id}) }}">
+						<button type="submit" class="btn btn-success">
+							Activer
+						</button>
+					</form>
+				{% endif %}
+			</div>
+		</div>
+
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			{# Informations #}
+			<div class="lg:col-span-2 space-y-6">
+				{# Statistiques #}
+				<div class="bg-white rounded-2xl shadow-lg p-6">
+					<h2 class="text-lg font-bold mb-4">Statistiques</h2>
+					<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+						<div class="stat bg-gray-50 rounded-lg p-4">
+							<div class="stat-title text-xs">Contrats créés</div>
+							<div class="stat-value text-2xl">{{ stats.contractCount }}</div>
+						</div>
+						<div class="stat bg-gray-50 rounded-lg p-4">
+							<div class="stat-title text-xs">Variables utilisées</div>
+							<div class="stat-value text-2xl">{{ stats.usedVariables|length }}</div>
+						</div>
+						<div class="stat bg-gray-50 rounded-lg p-4">
+							<div class="stat-title text-xs">Taille HTML</div>
+							<div class="stat-value text-2xl">{{ (stats.htmlLength / 1024)|round(1) }}kb</div>
+						</div>
+						<div class="stat bg-gray-50 rounded-lg p-4">
+							<div class="stat-title text-xs">Validité</div>
+							<div class="stat-value text-2xl">
+								{% if stats.isValid %}
+									<span class="text-success">✓</span>
+								{% else %}
+									<span class="text-error">✗</span>
+								{% endif %}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{# Variables invalides (si existantes) #}
+				{% if stats.invalidVariables is not empty %}
+					<div class="alert alert-warning">
+						<h3 class="font-bold">⚠️ Variables invalides détectées</h3>
+						<ul class="list-disc list-inside mt-2">
+							{% for var in stats.invalidVariables %}
+								<li><code>{{ var }}</code></li>
+							{% endfor %}
+						</ul>
+					</div>
+				{% endif %}
+
+				{# Contenu HTML #}
+				<div class="bg-white rounded-2xl shadow-lg p-6">
+					<h2 class="text-lg font-bold mb-4">Contenu du template</h2>
+					<pre class="bg-gray-50 p-4 rounded-lg overflow-x-auto text-xs font-mono">{{ template.contentHtml }}</pre>
+				</div>
+			</div>
+
+			{# Sidebar #}
+			<div class="space-y-6">
+				{# Métadonnées #}
+				<div class="bg-white rounded-2xl shadow-lg p-6">
+					<h3 class="text-lg font-bold mb-4">Métadonnées</h3>
+					<dl class="space-y-3 text-sm">
+						<div>
+							<dt class="text-gray-600">Créé le</dt>
+							<dd class="font-semibold">{{ template.createdAt|date('d/m/Y H:i') }}</dd>
+						</div>
+						<div>
+							<dt class="text-gray-600">Créé par</dt>
+							<dd class="font-semibold">{{ template.createdBy ? template.createdBy.fullName : 'N/A' }}</dd>
+						</div>
+						<div>
+							<dt class="text-gray-600">Modifié le</dt>
+							<dd class="font-semibold">{{ template.updatedAt|date('d/m/Y H:i') }}</dd>
+						</div>
+						<div>
+							<dt class="text-gray-600">Modifié par</dt>
+							<dd class="font-semibold">{{ template.modifiedBy ? template.modifiedBy.fullName : 'N/A' }}</dd>
+						</div>
+					</dl>
+				</div>
+
+				{# Variables utilisées #}
+				<div class="bg-white rounded-2xl shadow-lg p-6">
+					<h3 class="text-lg font-bold mb-4">Variables utilisées</h3>
+					{% if stats.usedVariables is empty %}
+						<p class="text-sm text-gray-600">Aucune variable utilisée</p>
+					{% else %}
+						<div class="space-y-1">
+							{% for var in stats.usedVariables %}
+								<div class="text-xs bg-gray-50 p-2 rounded">
+									<code class="text-primary">{{ '{{' }} {{ var }} {{ '}}' }}</code>
+								</div>
+							{% endfor %}
+						</div>
+					{% endif %}
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock admin_content %}

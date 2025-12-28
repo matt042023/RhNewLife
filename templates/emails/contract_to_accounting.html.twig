@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouveau contrat à traiter - RH NewLife</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .content h2 {
+            color: #1f2937;
+            font-size: 22px;
+            margin-top: 0;
+        }
+        .info-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #f9fafb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .data-table tr {
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .data-table tr:last-child {
+            border-bottom: none;
+        }
+        .data-table td {
+            padding: 12px 15px;
+        }
+        .data-table td:first-child {
+            font-weight: 600;
+            color: #6b7280;
+            width: 40%;
+        }
+        .data-table td:last-child {
+            color: #1f2937;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+        .footer {
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .highlight {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            padding: 12px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Nouveau contrat à traiter</h1>
+        </div>
+
+        <div class="content">
+            <h2>Service Comptabilité,</h2>
+
+            <p>
+                Un nouveau contrat de travail a été validé et est prêt pour traitement comptable.
+            </p>
+
+            <div class="info-box">
+                <strong>📄 Informations du salarié :</strong><br>
+                <strong>Nom complet :</strong> {{ contract.user.fullName }}<br>
+                <strong>Matricule :</strong> {{ contract.user.matricule }}<br>
+                <strong>Email :</strong> {{ contract.user.email }}<br>
+                {% if contract.user.position %}<strong>Poste :</strong> {{ contract.user.position }}<br>{% endif %}
+                {% if contract.user.villa %}<strong>Villa :</strong> {{ contract.user.villa.nom }}{% endif %}
+            </div>
+
+            <h3 style="color: #1f2937; margin-top: 30px;">Détails du contrat</h3>
+
+            <table class="data-table">
+                <tr>
+                    <td>Type de contrat</td>
+                    <td><strong>{{ contract.type }}</strong></td>
+                </tr>
+                <tr>
+                    <td>Date de début</td>
+                    <td>{{ contract.startDate|date('d/m/Y') }}</td>
+                </tr>
+                {% if contract.endDate %}
+                <tr>
+                    <td>Date de fin</td>
+                    <td>{{ contract.endDate|date('d/m/Y') }}</td>
+                </tr>
+                {% endif %}
+                {% if contract.essaiEndDate %}
+                <tr>
+                    <td>Fin période d'essai</td>
+                    <td>{{ contract.essaiEndDate|date('d/m/Y') }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td>Salaire brut mensuel</td>
+                    <td><strong style="color: #059669; font-size: 18px;">{{ contract.baseSalary|number_format(2, ',', ' ') }} €</strong></td>
+                </tr>
+                <tr>
+                    <td>Taux d'activité</td>
+                    <td>{{ contract.activityRate ?? 100 }}%</td>
+                </tr>
+                <tr>
+                    <td>Heures/semaine</td>
+                    <td>{{ contract.weeklyHours }}h</td>
+                </tr>
+                {% if contract.villa %}
+                <tr>
+                    <td>Villa</td>
+                    <td>{{ contract.villa.nom }}</td>
+                </tr>
+                {% endif %}
+                {% if contract.workingDays %}
+                <tr>
+                    <td>Jours travaillés</td>
+                    <td>{{ contract.workingDays|join(', ') }}</td>
+                </tr>
+                {% endif %}
+            </table>
+
+            {% if contract.user.iban %}
+            <div class="highlight">
+                <strong>💳 Informations bancaires :</strong><br>
+                <strong>IBAN :</strong> {{ contract.user.iban }}<br>
+                {% if contract.user.bic %}<strong>BIC :</strong> {{ contract.user.bic }}{% endif %}
+            </div>
+            {% endif %}
+
+            {% if adminUrl %}
+            <p style="margin-top: 30px;">
+                Pour consulter le contrat complet dans le système :
+            </p>
+
+            <center>
+                <a href="{{ adminUrl }}" class="button">
+                    📂 Voir le contrat complet
+                </a>
+            </center>
+            {% endif %}
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="font-size: 14px; color: #6b7280;">
+                <strong>Actions à effectuer :</strong><br>
+                ✅ Intégrer les données dans le système de paie<br>
+                ✅ Créer le dossier comptable du salarié<br>
+                ✅ Configurer les virements mensuels<br>
+                ✅ Paramétrer les cotisations sociales
+            </p>
+
+            <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
+                <strong>Note :</strong> Une fois le contrat signé par le salarié, une copie PDF vous sera transmise automatiquement.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>
+                <strong>Questions ?</strong><br>
+                Contactez le service RH à <a href="mailto:rh@newlife.com" style="color: #f59e0b;">rh@newlife.com</a>
+            </p>
+            <p style="margin-top: 20px; font-size: 12px;">
+                © {{ "now"|date("Y") }} RH NewLife. Tous droits réservés.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

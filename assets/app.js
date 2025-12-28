@@ -4,7 +4,10 @@ import "./styles/app.css";
 import "./bootstrap";
 
 // enable the interactive UI components from Flowbite
-import "flowbite/dist/flowbite.turbo.js";
+import "flowbite";
+
+// Modal close helper for global Escape key handling
+import "./js/modal-close-helper";
 
 /*
  * Welcome to your app's main JavaScript file!

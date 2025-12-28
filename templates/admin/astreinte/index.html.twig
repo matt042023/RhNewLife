@@ -1,0 +1,317 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Gestion des Astreintes{% endblock %}
+
+{% block admin_title %}Gestion des Astreintes{% endblock %}
+{% block admin_subtitle %}{{ monthName }} • {{ stats.total }} période{{ stats.total > 1 ? 's' : '' }} • {{ stats.unassigned }} non affectée{{ stats.unassigned > 1 ? 's' : '' }}{% endblock %}
+
+{% block admin_actions %}
+    <div class="flex gap-3">
+        <a href="{{ path('admin_astreinte_export', {year: year, month: month}) }}"
+           class="inline-flex items-center px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium shadow-sm border border-gray-200">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Exporter
+        </a>
+
+        <form method="post" action="{{ path('admin_astreinte_generate', {year: year, month: month}) }}"
+              onsubmit="return confirm('Générer les astreintes hebdomadaires pour ce mois ?')" class="inline">
+            <input type="hidden" name="_token" value="{{ csrf_token('generate') }}">
+            <button type="submit"
+                    class="inline-flex items-center px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium shadow-sm border border-blue-200">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Générer le mois
+            </button>
+        </form>
+
+        <a href="{{ path('admin_astreinte_create') }}"
+           class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Nouvelle astreinte
+        </a>
+    </div>
+{% endblock %}
+
+{% block admin_stats %}
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        {# Assigned astreintes #}
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-green-500 rounded-lg p-3">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-blue-100">Astreintes affectées</p>
+                    <p class="text-2xl font-bold text-white">{{ stats.assigned }}/{{ stats.total }}</p>
+                    {% if stats.total > 0 %}
+                        <p class="text-xs text-blue-100 mt-1">{{ (stats.assigned / stats.total * 100)|round }}% du mois couvert</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Unassigned astreintes #}
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-red-500 rounded-lg p-3">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-blue-100">Non affectées</p>
+                    <p class="text-2xl font-bold text-white">{{ stats.unassigned }}</p>
+                </div>
+            </div>
+        </div>
+
+        {# Total replacements #}
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-500 rounded-lg p-3">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-blue-100">Remplacements</p>
+                    <p class="text-2xl font-bold text-white">{{ stats.totalReplacements }}</p>
+                    <p class="text-xs text-blue-100 mt-1">Ce mois-ci</p>
+                </div>
+            </div>
+        </div>
+
+        {# Available educators #}
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-purple-500 rounded-lg p-3">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-blue-100">Éducateurs disponibles</p>
+                    <p class="text-2xl font-bold text-white">{{ stats.availableEducateurs }}</p>
+                    <p class="text-xs text-blue-100 mt-1">Tous actifs</p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block admin_content %}
+    <div class="space-y-6">
+        {# Info banner #}
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded-xl p-5 flex items-start gap-4">
+            <span class="text-3xl">💡</span>
+            <div>
+                <h3 class="font-bold text-blue-900 mb-1">À propos des astreintes</h3>
+                <p class="text-sm text-blue-800 leading-relaxed">
+                    <strong>L'éducateur d'astreinte</strong> est le référent disponible pour gérer les imprévus de la semaine (absences, urgences).
+                    <strong>Recommandation :</strong> Affecter un éducateur différent chaque semaine pour équilibrer la charge.
+                </p>
+            </div>
+        </div>
+
+        {# Flash messages #}
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="p-4 rounded-lg {{ type == 'success' ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300' }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        {# Calendar table #}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <span>📅</span> Planning des astreintes
+                </h2>
+
+                {# Month navigation #}
+                <div class="flex gap-2">
+                    <a href="{{ path('admin_astreinte_index', {year: previousMonth|date('Y'), month: previousMonth|date('m')}) }}"
+                       class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        ◀
+                    </a>
+                    <span class="px-4 py-2 bg-gray-100 rounded-lg font-medium text-gray-700">
+                        {{ monthName }}
+                    </span>
+                    <a href="{{ path('admin_astreinte_index', {year: nextMonth|date('Y'), month: nextMonth|date('m')}) }}"
+                       class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        ▶
+                    </a>
+                </div>
+            </div>
+
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b-2 border-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider" style="width: 20%;">Semaine</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider" style="width: 30%;">Éducateur d'astreinte</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider" style="width: 20%;">Statut</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider" style="width: 15%;">Remplacements</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider" style="width: 15%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for astreinte in astreintes %}
+                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors
+                            {{ astreinte.status == 'unassigned' ? 'bg-red-50' : '' }}
+                            {{ astreinte.status == 'alert' ? 'bg-yellow-50' : '' }}">
+                            {# Week column #}
+                            <td class="px-4 py-4">
+                                <div class="text-lg font-bold text-blue-600">{{ astreinte.periodLabel }}</div>
+                                <div class="text-sm text-gray-500">
+                                    {{ astreinte.startAt|date('d/m') }} → {{ astreinte.endAt|date('d/m') }}
+                                </div>
+                            </td>
+
+                            {# Educator selector #}
+                            <td class="px-4 py-4">
+                                <select class="educateur-select w-full px-3 py-2 border rounded-lg transition-colors
+                                    {{ astreinte.educateur ? 'bg-green-50 border-green-500 font-semibold text-green-700' : 'border-gray-300' }}"
+                                    data-astreinte-id="{{ astreinte.id }}"
+                                    onchange="assignEducateur({{ astreinte.id }}, this.value)">
+                                    <option value="">-- Sélectionner --</option>
+                                    {% for educateur in educateurs %}
+                                        <option value="{{ educateur.id }}"
+                                            {{ astreinte.educateur and astreinte.educateur.id == educateur.id ? 'selected' : '' }}>
+                                            {{ educateur.fullName }}{% if educateur.villa %} ({{ educateur.villa.nom }}){% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+
+                                {% if astreinte.status == 'unassigned' %}
+                                    <div class="mt-2 bg-yellow-50 border border-yellow-300 rounded-lg px-3 py-2 text-xs text-yellow-800 flex items-center gap-2">
+                                        ⚠️ <strong>Aucun éducateur d'astreinte</strong> pour cette période
+                                    </div>
+                                {% elseif astreinte.status == 'alert' %}
+                                    <div class="mt-2 bg-red-50 border border-red-300 rounded-lg px-3 py-2 text-xs text-red-800 flex items-center gap-2">
+                                        ⚠️ <strong>{{ astreinte.educateur.fullName }}</strong> est absent pendant cette période
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            {# Status badge #}
+                            <td class="px-4 py-4">
+                                {% if astreinte.status == 'assigned' %}
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded uppercase">
+                                        ✅ Affecté
+                                    </span>
+                                {% elseif astreinte.status == 'unassigned' %}
+                                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded uppercase">
+                                        ❌ Non affecté
+                                    </span>
+                                {% elseif astreinte.status == 'alert' %}
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded uppercase">
+                                        ⚠️ Alerte
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            {# Replacements count #}
+                            <td class="px-4 py-4 text-center">
+                                <strong class="{{ astreinte.replacementCount > 0 ? 'text-green-600' : 'text-gray-400' }} text-lg">
+                                    {{ astreinte.replacementCount }}
+                                </strong>
+                                <div class="text-xs text-gray-500">
+                                    {{ astreinte.replacementCount <= 1 ? 'remplacement' : 'remplacements' }}
+                                </div>
+                            </td>
+
+                            {# Actions #}
+                            <td class="px-4 py-4">
+                                <div class="flex gap-2">
+                                    {% if astreinte.educateur %}
+                                        <button onclick="clearAstreinte({{ astreinte.id }})"
+                                                class="px-3 py-1 bg-white border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-semibold"
+                                                title="Retirer l'affectation">
+                                            🗑️
+                                        </button>
+                                    {% endif %}
+                                    <a href="{{ path('admin_astreinte_edit', {id: astreinte.id}) }}"
+                                       class="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-semibold">
+                                        ✏️ Modifier
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                                Aucune astreinte pour ce mois.
+                                <button onclick="document.querySelector('form').submit()"
+                                        class="text-blue-600 underline hover:text-blue-800 ml-2">
+                                    Générer les astreintes
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function assignEducateur(astreinteId, educateurId) {
+            fetch(`/admin/astreintes/${astreinteId}/assigner`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `educateur_id=${educateurId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', data.message);
+                    location.reload();
+                } else {
+                    showToast('error', data.message);
+                }
+            })
+            .catch(error => {
+                showToast('error', 'Erreur réseau');
+                console.error(error);
+            });
+        }
+
+        function clearAstreinte(astreinteId) {
+            if (!confirm('Retirer l\'affectation de cette astreinte ?')) {
+                return;
+            }
+
+            fetch(`/admin/astreintes/${astreinteId}/retirer`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', data.message);
+                    location.reload();
+                } else {
+                    showToast('error', data.message);
+                }
+            });
+        }
+
+        function showToast(type, message) {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-20 right-6 px-6 py-3 rounded-lg shadow-lg z-50
+                ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+{% endblock %}

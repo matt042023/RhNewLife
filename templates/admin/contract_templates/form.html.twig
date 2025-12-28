@@ -1,0 +1,154 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}{{ isEdit ? 'Éditer' : 'Créer' }} un Template - RH NewLife{% endblock %}
+
+{% block admin_title %}{{ isEdit ? 'Éditer le template' : 'Créer un nouveau template' }}{% endblock %}
+{% block admin_subtitle %}{% if isEdit %}{{ template.name }}{% else %}Templates de contrat{% endif %}{% endblock %}
+
+{% block admin_actions %}
+	<a href="{{ path('app_admin_contract_templates_list') }}" class="inline-flex items-center px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg shadow hover:bg-blue-50 transition">
+		<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+		</svg>
+		Retour à la liste
+	</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="px-4 py-6 lg:px-8">
+	<div class="max-w-7xl mx-auto">
+
+		{# Errors #}
+		{% if errors is not empty %}
+			<div class="alert alert-error mb-6">
+				<ul class="list-disc list-inside">
+					{% for error in errors %}
+						<li>{{ error }}</li>
+					{% endfor %}
+				</ul>
+			</div>
+		{% endif %}
+
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			{# Formulaire principal #}
+			<div class="lg:col-span-2">
+				<form method="post" class="bg-white rounded-2xl shadow-lg p-6">
+					<div class="space-y-6">
+						{# Nom #}
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text font-semibold">Nom du template *</span>
+							</label>
+							<input
+								type="text"
+								name="name"
+								value="{{ formData.name ?? (template ? template.name : '') }}"
+								class="input input-bordered w-full"
+								placeholder="Ex: CDI Éducateur"
+								required
+							/>
+						</div>
+
+						{# Description #}
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text font-semibold">Description</span>
+							</label>
+							<textarea
+								name="description"
+								rows="3"
+								class="textarea textarea-bordered w-full"
+								placeholder="Description du template..."
+							>{{ formData.description ?? (template ? template.description : '') }}</textarea>
+						</div>
+
+						{# Contenu HTML #}
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text font-semibold">Contenu HTML *</span>
+								<span class="label-text-alt">Utilisez les variables ci-contre</span>
+							</label>
+							<textarea
+								name="content_html"
+								rows="20"
+								class="textarea textarea-bordered w-full font-mono text-sm"
+								placeholder="<div>...</div>"
+								required
+							>{{ formData.content_html ?? (template ? template.contentHtml : '') }}</textarea>
+							<label class="label">
+								<span class="label-text-alt">Supports Twig: {{ '{{' }} variable {{ '}}' }}</span>
+							</label>
+						</div>
+
+						{# Actif #}
+						<div class="form-control">
+							<label class="label cursor-pointer justify-start gap-4">
+								<input
+									type="checkbox"
+									name="active"
+									value="1"
+									class="checkbox"
+									{{ (formData.active ?? (template ? template.active : true)) ? 'checked' : '' }}
+								/>
+								<span class="label-text font-semibold">Template actif</span>
+							</label>
+							<label class="label">
+								<span class="label-text-alt">Les templates inactifs ne peuvent pas être utilisés pour créer de nouveaux contrats</span>
+							</label>
+						</div>
+
+						{# Buttons #}
+						<div class="flex gap-4 pt-4 border-t">
+							<button type="submit" class="btn btn-primary">
+								{{ isEdit ? 'Mettre à jour' : 'Créer le template' }}
+							</button>
+							<a href="{{ path('app_admin_contract_templates_list') }}" class="btn btn-ghost">
+								Annuler
+							</a>
+						</div>
+					</div>
+				</form>
+			</div>
+
+			{# Aide - Variables disponibles #}
+			<div class="space-y-6">
+				{# Variables disponibles #}
+				<div class="bg-white rounded-2xl shadow-lg p-6">
+					<h3 class="text-lg font-bold mb-4">Variables disponibles</h3>
+					<div class="space-y-4 text-sm">
+						{% for category, variables in availableVariables %}
+							<div>
+								<h4 class="font-semibold text-gray-700 mb-2">{{ category }}</h4>
+								<div class="space-y-1">
+									{% for variable, description in variables %}
+										<div class="bg-gray-50 p-2 rounded">
+											<code class="text-xs text-primary">{{ variable }}</code>
+											<p class="text-xs text-gray-600 mt-1">{{ description }}</p>
+										</div>
+									{% endfor %}
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+
+				{# Template d'exemple #}
+				<div class="bg-white rounded-2xl shadow-lg p-6">
+					<h3 class="text-lg font-bold mb-4">Template d'exemple</h3>
+					<button
+						type="button"
+						onclick="document.querySelector('[name=content_html]').value = this.nextElementSibling.textContent"
+						class="btn btn-sm btn-outline w-full mb-4"
+					>
+						Charger l'exemple
+					</button>
+					<textarea class="hidden">{{ exampleTemplate }}</textarea>
+					<p class="text-xs text-gray-600">
+						Cliquez sur le bouton ci-dessus pour charger un template d'exemple dans le formulaire.
+					</p>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock admin_content %}

@@ -1,0 +1,141 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Créer une convocation{% endblock %}
+
+{% block page_header %}
+<div class="px-4 py-6 lg:px-6">
+    <div class="flex items-center mb-2">
+        <a href="{{ path('admin_appointment_index') }}" class="text-white/80 hover:text-white mr-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+        </a>
+        <h1 class="text-2xl md:text-3xl font-bold text-white">Créer une convocation</h1>
+    </div>
+    <p class="text-blue-100 text-sm md:text-base">Remplissez le formulaire ci-dessous pour créer une nouvelle convocation</p>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-4xl mx-auto">
+
+    {# Formulaire #}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        {{ form_start(form, {'attr': {'data-controller': 'appointment-form'}}) }}
+
+        {# Objet #}
+        <div class="mb-6">
+            {{ form_label(form.subject, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}
+            {{ form_widget(form.subject) }}
+            {{ form_errors(form.subject) }}
+        </div>
+
+        {# Date et heure + Durée #}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+                {{ form_label(form.startAt, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                {{ form_widget(form.startAt) }}
+                {{ form_errors(form.startAt) }}
+            </div>
+            <div>
+                {{ form_label(form.durationMinutes, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                {{ form_widget(form.durationMinutes) }}
+                {{ form_errors(form.durationMinutes) }}
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Entre 15 et 480 minutes (8 heures)
+                </p>
+            </div>
+        </div>
+
+        {# Participants #}
+        <div class="mb-6">
+            {{ form_label(form.participants, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}
+            {{ form_widget(form.participants) }}
+            {{ form_errors(form.participants) }}
+            {{ form_help(form.participants) }}
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Sélectionnez un ou plusieurs participants (maintenir Ctrl/Cmd pour sélection multiple)
+            </p>
+        </div>
+
+        {# Lieu #}
+        <div class="mb-6">
+            {{ form_label(form.location, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}
+            {{ form_widget(form.location) }}
+            {{ form_errors(form.location) }}
+        </div>
+
+        {# Description #}
+        <div class="mb-6">
+            {{ form_label(form.description, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}
+            {{ form_widget(form.description) }}
+            {{ form_errors(form.description) }}
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Ordre du jour, informations complémentaires...
+            </p>
+        </div>
+
+        {# Créer absence automatique #}
+        <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div class="flex items-start">
+                <div class="flex items-center h-5">
+                    {{ form_widget(form.createsAbsence) }}
+                </div>
+                <div class="ml-3 text-sm">
+                    {{ form_label(form.createsAbsence, null, {'label_attr': {'class': 'font-medium text-gray-700 dark:text-gray-300'}}) }}
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {{ form_help(form.createsAbsence) }}
+                    </p>
+                </div>
+            </div>
+            {{ form_errors(form.createsAbsence) }}
+        </div>
+
+        {# Zone de conflit (affichée dynamiquement par Stimulus) #}
+        <div id="conflict-warning" class="hidden mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <div class="flex">
+                <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                    <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">Conflit détecté</h3>
+                    <div id="conflict-details" class="text-sm text-yellow-700 dark:text-yellow-300"></div>
+                </div>
+            </div>
+        </div>
+
+        {# Informations importantes #}
+        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
+            <div class="flex">
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">À savoir</h3>
+                    <ul class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+                        <li>La convocation sera confirmée automatiquement (statut CONFIRMÉ)</li>
+                        <li>Tous les participants recevront une notification par email</li>
+                        <li>Les participants pourront confirmer leur présence</li>
+                        <li>Si activé, une absence de type "Réunion" sera créée automatiquement</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {# Boutons d'action #}
+        <div class="flex gap-3">
+            <button type="submit" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
+                <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Créer la convocation
+            </button>
+            <a href="{{ path('admin_appointment_index') }}" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition">
+                Annuler
+            </a>
+        </div>
+
+        {{ form_end(form) }}
+    </div>
+</div>
+{% endblock %}

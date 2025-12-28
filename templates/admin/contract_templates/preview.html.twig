@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Prévisualisation - {{ template.name }}</title>
+	<style>
+		body {
+			font-family: 'DejaVu Sans', Arial, sans-serif;
+			margin: 0;
+			padding: 20px;
+			background-color: #f5f5f5;
+		}
+		.preview-container {
+			max-width: 21cm;
+			margin: 0 auto;
+			background: white;
+			padding: 2cm;
+			box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+		}
+		.preview-note {
+			background: #fef3c7;
+			border-left: 4px solid #f59e0b;
+			padding: 12px 16px;
+			margin-bottom: 20px;
+			font-size: 14px;
+		}
+	</style>
+</head>
+<body>
+	<div class="preview-container">
+		<div class="preview-note">
+			<strong>Note :</strong> Ceci est une prévisualisation du template HTML brut.
+			Les variables comme <code>{{ '{{' }} employee.firstName {{ '}}' }}</code> seront remplacées lors de la génération du contrat réel.
+		</div>
+
+		{{ template.contentHtml|raw }}
+	</div>
+</body>
+</html>

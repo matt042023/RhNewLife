@@ -1,0 +1,231 @@
+<div class="h-full px-3 py-4 overflow-y-auto">
+    {# Logo and branding with metallic emerald glass effect #}
+    <div class="flex items-center mb-5 px-3 py-2">
+        <a href="{{ path('app_dashboard') }}" class="flex items-center p-3 rounded-lg transition-all duration-300 relative overflow-hidden group">
+            {# Metallic emerald background with blue reflections #}
+            <div class="absolute inset-0 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 dark:from-emerald-600 dark:via-emerald-700 dark:to-emerald-800 rounded-lg"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-cyan-300/15 to-transparent dark:from-blue-500/30 dark:via-cyan-400/20 rounded-lg"></div>
+            <div class="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-black/20 dark:from-white/20 dark:to-black/30 rounded-lg"></div>
+            <div class="absolute inset-0 backdrop-blur-[1px] bg-white/5 dark:bg-white/3 rounded-lg"></div>
+
+            {# Content #}
+            <div class="relative flex items-center">
+                <svg class="w-8 h-8 mr-3 text-white drop-shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"></path>
+                </svg>
+                <span class="text-xl font-bold text-white drop-shadow-md">RH NewLife</span>
+            </div>
+        </a>
+    </div>
+
+    {# User info card with metallic emerald glass effect #}
+    <div class="mb-5 px-3 py-3 relative overflow-hidden rounded-lg group">
+        {# Metallic emerald background #}
+        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/20 via-emerald-500/15 to-emerald-600/20 dark:from-emerald-600/30 dark:via-emerald-700/25 dark:to-emerald-800/30"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-blue-400/10 via-cyan-300/5 to-transparent dark:from-blue-500/15 dark:via-cyan-400/10"></div>
+        <div class="absolute inset-0 backdrop-blur-md bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-lg"></div>
+
+        <a href="{{ path('app_profile_view') }}" class="relative flex items-center p-2 rounded-lg transition-all duration-300 hover:bg-white/10 dark:hover:bg-white/5 {{ app.request.get('_route') starts with 'app_profile' ? 'bg-white/15 dark:bg-white/10' : '' }}">
+            <div class="flex items-center w-full">
+                <div class="flex-shrink-0">
+                    {# Avatar with metallic emerald effect #}
+                    <div class="w-10 h-10 rounded-full relative overflow-hidden shadow-lg">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 dark:from-emerald-500 dark:via-emerald-600 dark:to-emerald-700"></div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-400/30 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/30 to-black/20"></div>
+                        <div class="relative w-full h-full flex items-center justify-center text-white font-bold text-sm">
+                            {{ app.user.firstName|slice(0, 1)|upper }}{{ app.user.lastName|slice(0, 1)|upper }}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-1 ml-3 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                        {{ app.user.firstName }} {{ app.user.lastName }}
+                    </p>
+                    <p class="text-xs text-emerald-700 dark:text-emerald-300 truncate font-medium">
+                        {{ app.user.position ?? 'Employé' }}
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    {# Navigation menu #}
+    <ul class="space-y-2 font-medium">
+        {# Dashboard - visible to all #}
+        <li>
+            <a href="{{ path('app_dashboard') }}" class="sidebar-menu-item flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_dashboard' ? 'sidebar-menu-active' : '' }}">
+                <svg class="relative w-5 h-5 z-10 {{ app.request.get('_route') starts with 'app_dashboard' ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-500 dark:text-gray-400' }} transition duration-75" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 22 21">
+                    <path d="M16.975 11H10V4.025a1 1 0 0 0-1.066-.998 8.5 8.5 0 1 0 9.039 9.039.999.999 0 0 0-1-1.066h.002 Z"/>
+                    <path d="M12.5 0c-.157 0-.311.01-.565.027A1 1 0 0 0 11 1.02V10h8.975a1 1 0 0 0 1-.935c.013-.188.028-.374.028-.565A8.51 8.51 0 0 0 12.5 0Z"/>
+                </svg>
+                <span class="relative ml-3 z-10 {{ app.request.get('_route') starts with 'app_dashboard' ? 'font-bold text-emerald-900 dark:text-emerald-50' : '' }}">Tableau de bord</span>
+            </a>
+        </li>
+
+        {# Mon profil - visible to all #}
+        <li>
+            <a href="{{ path('app_profile_view') }}" class="sidebar-menu-item flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_profile' ? 'sidebar-menu-active' : '' }}">
+                <svg class="relative w-5 h-5 z-10 {{ app.request.get('_route') starts with 'app_profile' ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-500 dark:text-gray-400' }} transition duration-75" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 18">
+                    <path d="M14 2a3.963 3.963 0 0 0-1.4.267 6.439 6.439 0 0 1-1.331 6.638A4 4 0 1 0 14 2Zm1 9h-1.264A6.957 6.957 0 0 1 15 15v2a2.97 2.97 0 0 1-.184 1H19a1 1 0 0 0 1-1v-1a5.006 5.006 0 0 0-5-5ZM6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Z"/>
+                </svg>
+                <span class="relative ml-3 z-10 {{ app.request.get('_route') starts with 'app_profile' ? 'font-bold text-emerald-900 dark:text-emerald-50' : '' }}">Mon profil</span>
+            </a>
+        </li>
+
+        {# Mes documents - visible to all #}
+        <li>
+            <a href="{{ path('app_profile_documents') }}" class="sidebar-menu-item flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:scale-[1.02] {{ app.request.get('_route') == 'app_profile_documents' ? 'sidebar-menu-active' : '' }}">
+                <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 18">
+                    <path d="M14 2a3.963 3.963 0 0 0-1.4.267 6.439 6.439 0 0 1-1.331 6.638A4 4 0 1 0 14 2Zm1 9h-1.264A6.957 6.957 0 0 1 15 15v2a2.97 2.97 0 0 1-.184 1H19a1 1 0 0 0 1-1v-1a5.006 5.006 0 0 0-5-5ZM6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Z"/>
+                </svg>
+                <span class="ml-3">Mon profil</span>
+            </a>
+        </li>
+
+        {# Mes documents - visible to all #}
+        <li>
+            <a href="{{ path('app_profile_documents') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') == 'app_profile_documents' ? 'glass-card glass-card-primary' : '' }}">
+                <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M5 5V.13a2.96 2.96 0 0 0-1.293.749L.879 3.707A2.96 2.96 0 0 0 .13 5H5Z"/>
+                    <path d="M6.737 11.061a2.961 2.961 0 0 1 .81-1.515l6.117-6.116A4.839 4.839 0 0 1 16 2.141V2a1.97 1.97 0 0 0-1.933-2H7v5a2 2 0 0 1-2 2H0v11a1.969 1.969 0 0 0 1.933 2h12.134A1.97 1.97 0 0 0 16 18v-3.093l-1.546 1.546c-.413.413-.94.695-1.513.81l-3.4.679a2.947 2.947 0 0 1-1.85-.227 2.96 2.96 0 0 1-1.635-3.257l.681-3.397Z"/>
+                    <path d="M8.961 16a.93.93 0 0 0 .189-.019l3.4-.679a.961.961 0 0 0 .49-.263l6.118-6.117a2.884 2.884 0 0 0-4.079-4.078l-6.117 6.117a.96.96 0 0 0-.263.491l-.679 3.4A.961.961 0 0 0 8.961 16Zm7.477-9.8a.958.958 0 0 1 .68-.281.961.961 0 0 1 .682 1.644l-.315.315-1.36-1.36.313-.318Zm-5.911 5.911 4.236-4.236 1.359 1.359-4.236 4.237-1.7.339.341-1.699Z"/>
+                </svg>
+                <span class="ml-3">Mes documents</span>
+            </a>
+        </li>
+
+        {# Mes absences - visible to all #}
+        <li>
+            <a href="{{ path('app_absence_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_absence' ? 'glass-card glass-card-primary' : '' }}">
+                <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm14-7.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm0 4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm-5-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm0 4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm-5-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm0 4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4Z"/>
+                </svg>
+                <span class="ml-3">Mes absences</span>
+            </a>
+        </li>
+
+        {# Mes rendez-vous - visible to all #}
+        <li>
+            <a href="{{ path('app_appointment_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_appointment' ? 'glass-card glass-card-primary' : '' }}">
+                <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0Zm3.982 13.982a1 1 0 0 1-1.414 0l-3.274-3.274A1.012 1.012 0 0 1 9 10V6a1 1 0 0 1 2 0v3.586l2.982 2.982a1 1 0 0 1 0 1.414Z"/>
+                </svg>
+                <span class="ml-3">Mes rendez-vous</span>
+            </a>
+        </li>
+
+        {# Divider #}
+        <li class="pt-4 mt-4 space-y-2 border-t border-white/10">
+            {# Admin section #}
+            {% if is_granted('ROLE_ADMIN') %}
+                <li>
+                    <span class="flex items-center px-2 text-xs font-semibold text-gray-500 uppercase dark:text-gray-400">
+                        Administration
+                    </span>
+                </li>
+                <li>
+                    <a href="{{ path('app_admin_users_list') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_admin_users' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 18">
+                            <path d="M14 2a3.963 3.963 0 0 0-1.4.267 6.439 6.439 0 0 1-1.331 6.638A4 4 0 1 0 14 2Zm1 9h-1.264A6.957 6.957 0 0 1 15 15v2a2.97 2.97 0 0 1-.184 1H19a1 1 0 0 0 1-1v-1a5.006 5.006 0 0 0-5-5ZM6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Z"/>
+                        </svg>
+                        <span class="ml-3">Gestion salariés</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('app_admin_villas_list') }}"
+                       class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_admin_villas' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        <span class="ml-3">Gestion villas</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('app_admin_onboarding_list') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_admin_onboarding' or app.request.get('_route') starts with 'app_admin_invitations' or app.request.get('_route') starts with 'app_admin_validation' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0Zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm0 13a8.949 8.949 0 0 1-4.951-1.488A3.987 3.987 0 0 1 9 13h2a3.987 3.987 0 0 1 3.951 3.512A8.949 8.949 0 0 1 10 18Z"/>
+                        </svg>
+                        <span class="ml-3">Gestion Onboardings</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('app_admin_documents_list') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_admin_documents' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 5V.13a2.96 2.96 0 0 0-1.293.749L.879 3.707A2.96 2.96 0 0 0 .13 5H5Z"/>
+                            <path d="M14.066 0H7v5a2 2 0 0 1-2 2H0v11a1.97 1.97 0 0 0 1.934 2h12.132A1.97 1.97 0 0 0 16 18V2a1.97 1.97 0 0 0-1.934-2ZM9 13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2Zm4 .382a1 1 0 0 1-1.447.894L10 13.618V12a1 1 0 0 1 2 0v1.382ZM11 9V8h2a1 1 0 0 1 0 2h-2Z"/>
+                        </svg>
+                        <span class="ml-3">Documents</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('admin_absence_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'admin_absence' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm14-7.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm0 4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm-5-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm0 4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm-5-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm0 4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4Z"/>
+                        </svg>
+                        <span class="ml-3">Gestion absences</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('admin_appointment_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'admin_appointment' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0Zm3.982 13.982a1 1 0 0 1-1.414 0l-3.274-3.274A1.012 1.012 0 0 1 9 10V6a1 1 0 0 1 2 0v3.586l2.982 2.982a1 1 0 0 1 0 1.414Z"/>
+                        </svg>
+                        <span class="ml-3">Gestion rendez-vous</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('admin_visite_medicale_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'admin_visite_medicale' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                        </svg>
+                        <span class="ml-3">Visites médicales</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('admin_astreinte_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'admin_astreinte' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0Zm3.982 13.982a1 1 0 0 1-1.414 0l-3.274-3.274A1.012 1.012 0 0 1 9 10V6a1 1 0 0 1 2 0v3.586l2.982 2.982a1 1 0 0 1 0 1.414Z"/>
+                        </svg>
+                        <span class="ml-3">Gestion astreintes</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('app_admin_contract_templates_list') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_admin_contract_templates' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M18 5h-.7c.229-.467.349-.98.351-1.5a3.5 3.5 0 0 0-3.5-3.5c-1.717 0-3.215 1.2-4.331 2.481C8.4.842 6.949 0 5.5 0A3.5 3.5 0 0 0 2 3.5c.003.52.123 1.033.351 1.5H2a2 2 0 0 0-2 2v3a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V7a2 2 0 0 0-2-2ZM8.058 5H5.5a1.5 1.5 0 0 1 0-3c.9 0 2 .754 3.092 2.122-.219.337-.392.635-.534.878Zm6.1 0h-3.742c.933-1.368 2.371-3 3.739-3a1.5 1.5 0 0 1 0 3h.003ZM11 13H9v7h2v-7Zm-4 0H2v5a2 2 0 0 0 2 2h3v-7Zm6 0v7h3a2 2 0 0 0 2-2v-5h-5Z"/>
+                        </svg>
+                        <span class="ml-3">Templates de contrat</span>
+                    </a>
+                </li>
+            {% endif %}
+
+            {# Director section #}
+            {% if is_granted('ROLE_DIRECTOR') and not is_granted('ROLE_ADMIN') %}
+                <li>
+                    <span class="flex items-center px-2 text-xs font-semibold text-gray-500 uppercase dark:text-gray-400">
+                        Direction
+                    </span>
+                </li>
+                <li>
+                    <a href="{{ path('app_director_users_list') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'app_director_users' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 18">
+                            <path d="M14 2a3.963 3.963 0 0 0-1.4.267 6.439 6.439 0 0 1-1.331 6.638A4 4 0 1 0 14 2Zm1 9h-1.264A6.957 6.957 0 0 1 15 15v2a2.97 2.97 0 0 1-.184 1H19a1 1 0 0 0 1-1v-1a5.006 5.006 0 0 0-5-5ZM6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Z"/>
+                        </svg>
+                        <span class="ml-3">Équipes</span>
+                    </a>
+                </li>
+            {% endif %}
+        </li>
+
+        {# Logout #}
+        <li class="pt-4 mt-4 border-t border-white/10">
+            <a href="{{ path('app_logout') }}" class="flex items-center p-2 text-red-600 rounded-lg dark:text-red-500 transition-all duration-300 hover:bg-red-50/50 dark:hover:bg-red-900/20 hover:scale-[1.02]">
+                <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 16">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 8h11m0 0L8 4m4 4-4 4m4-11h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3"/>
+                </svg>
+                <span class="ml-3">Déconnexion</span>
+            </a>
+        </li>
+    </ul>
+</div>

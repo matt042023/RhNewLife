@@ -1,0 +1,131 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    {# Sidebar with glass effect #}
+    <aside id="sidebar" class="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full md:translate-x-0 glass-sidebar" aria-label="Sidebar">
+        {% include 'components/_sidebar.html.twig' %}
+    </aside>
+
+    {# Mobile sidebar backdrop with blur #}
+    <div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-gray-900/50 backdrop-blur-sm hidden md:hidden"></div>
+
+    {# Main content area #}
+    <div class="md:ml-64">
+        {# Header with glass effect #}
+        <header class="sticky top-0 z-20 glass-card rounded-none border-0 border-b border-white/10">
+            <div class="px-4 py-3 lg:px-6">
+                {# Mobile menu button #}
+                <button id="sidebar-toggle" type="button" class="inline-flex items-center p-2 text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600">
+                    <span class="sr-only">Ouvrir le menu</span>
+                    <svg class="w-6 h-6" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path clip-rule="evenodd" fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
+                    </svg>
+                </button>
+
+                {# Breadcrumb #}
+                <div class="mt-2 md:mt-0">
+                    {% include 'components/_breadcrumb.html.twig' %}
+                </div>
+            </div>
+        </header>
+
+        {# Page header banner with metallic emerald glass effect #}
+        <div class="relative overflow-hidden">
+            {# Base metallic emerald gradient - cylindrical effect #}
+            <div class="absolute inset-0 bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-600 dark:from-emerald-600 dark:via-emerald-700 dark:to-emerald-800"></div>
+
+            {# Cylindrical lighting - top highlight #}
+            <div class="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-transparent" style="mask-image: linear-gradient(to bottom, white 0%, transparent 30%);"></div>
+
+            {# Cylindrical shadow - bottom shadow #}
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30 dark:to-black/50" style="mask-image: linear-gradient(to bottom, transparent 70%, white 100%);"></div>
+
+            {# Blue metallic reflections - left to right shimmer #}
+            <div class="absolute inset-0 bg-gradient-to-r from-blue-400/30 via-cyan-300/20 to-transparent dark:from-blue-500/40 dark:via-cyan-400/30 dark:to-transparent"></div>
+
+            {# Secondary blue reflection - right side #}
+            <div class="absolute inset-0 bg-gradient-to-l from-blue-500/20 via-transparent to-transparent dark:from-blue-600/30"></div>
+
+            {# Metallic shine streak - diagonal #}
+            <div class="absolute inset-0 bg-gradient-to-br from-transparent via-white/20 to-transparent dark:via-white/15" style="mask-image: linear-gradient(135deg, transparent 40%, white 48%, white 52%, transparent 60%);"></div>
+
+            {# Glass frosted overlay for depth #}
+            <div class="absolute inset-0 backdrop-blur-[2px] bg-white/5 dark:bg-white/3"></div>
+
+            {# Noise texture for metallic grain #}
+            <div class="absolute inset-0 opacity-20 dark:opacity-30" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 400 400%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 /%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E'); background-size: 200px 200px;"></div>
+
+            {# Content layer #}
+            <div class="relative z-10">
+                {% block page_header %}
+                    {% include 'components/_page_header.html.twig' %}
+                {% endblock %}
+            </div>
+        </div>
+
+        {# Main content #}
+        <main class="p-4 lg:p-6">
+            {# Flash messages with glass effect #}
+            {% for label, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="mb-4 glass-card {% if label == 'success' %}glass-card-success{% elseif label == 'error' %}glass-card-danger{% elseif label == 'warning' %}glass-card-warning{% else %}glass-card-primary{% endif %} animate-slide-in-glass" role="alert">
+                        <div class="flex items-center p-4">
+                            <svg class="flex-shrink-0 w-5 h-5 mr-3 {% if label == 'success' %}text-green-600 dark:text-green-400{% elseif label == 'error' %}text-red-600 dark:text-red-400{% elseif label == 'warning' %}text-yellow-600 dark:text-yellow-400{% else %}text-blue-600 dark:text-blue-400{% endif %}" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="font-medium {% if label == 'success' %}text-green-800 dark:text-green-200{% elseif label == 'error' %}text-red-800 dark:text-red-200{% elseif label == 'warning' %}text-yellow-800 dark:text-yellow-200{% else %}text-blue-800 dark:text-blue-200{% endif %}">{{ message }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+
+            {# Dashboard content #}
+            {% block dashboard_content %}{% endblock %}
+        </main>
+
+        {# Footer with glass effect #}
+        <footer class="glass-card rounded-none border-0 border-t border-white/10 mt-8">
+            <div class="px-4 py-6 lg:px-6">
+                <div class="md:flex md:items-center md:justify-between">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                        © {{ "now"|date("Y") }} <a href="{{ path('app_dashboard') }}" class="hover:underline text-glass-primary font-semibold">RH NewLife</a>. Tous droits réservés.
+                    </span>
+                    <div class="flex mt-4 space-x-6 md:mt-0">
+                        <a href="#" class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors">
+                            <span class="sr-only">Aide</span>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path>
+                            </svg>
+                        </a>
+                        <a href="mailto:rh@newlife.com" class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors">
+                            <span class="sr-only">Contact</span>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+</div>
+
+{# Sidebar toggle script #}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            sidebarBackdrop.classList.toggle('hidden');
+        }
+
+        sidebarToggle?.addEventListener('click', toggleSidebar);
+        sidebarBackdrop?.addEventListener('click', toggleSidebar);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Prévisualisation Contrat - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+	<li>
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<a href="{{ path('app_admin_users_view', {id: contract.user.id}) }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2">{{ contract.user.fullName }}</a>
+		</div>
+	</li>
+	<li>
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<a href="{{ path('app_admin_contracts_view', {id: contract.id}) }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2">Contrat {{ contract.type }}</a>
+		</div>
+	</li>
+	<li aria-current="page">
+		<div class="flex items-center">
+			<svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+			</svg>
+			<span class="ml-1 text-sm font-medium text-gray-500 md:ml-2">Prévisualisation</span>
+		</div>
+	</li>
+{% endblock %}
+
+{% block page_header %}
+	<div class="px-4 py-6 lg:px-6">
+		<div class="flex flex-col md:flex-row md:items-start md:justify-between">
+			<div>
+				<h1 class="text-2xl md:text-3xl font-bold text-white mb-1">Prévisualisation du contrat</h1>
+				<p class="text-blue-100">{{ contract.user.fullName }} - {{ contract.typeLabel }}</p>
+			</div>
+		</div>
+	</div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="p-4 lg:p-6">
+	<div class="max-w-5xl mx-auto">
+
+		{# Actions #}
+		<div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+			<div class="flex flex-wrap gap-3">
+				{% if contract.status == 'DRAFT' %}
+					<form method="post" action="{{ path('app_admin_contracts_send_for_signature', {id: contract.id}) }}">
+						<button type="submit" class="btn btn-primary">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+							</svg>
+							Envoyer pour signature
+						</button>
+					</form>
+					<a href="{{ path('app_admin_contracts_edit', {id: contract.id}) }}" class="btn btn-secondary">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+						</svg>
+						Modifier le contrat
+					</a>
+				{% elseif contract.status == 'SIGNED_PENDING_VALIDATION' %}
+					<form method="post" action="{{ path('app_admin_contracts_validate_signed', {id: contract.id}) }}">
+						<button type="submit" class="btn btn-primary">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+							</svg>
+							Valider le contrat
+						</button>
+					</form>
+					<form method="post" action="{{ path('app_admin_contracts_reject_signed', {id: contract.id}) }}">
+						<button type="submit" class="btn btn-danger">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+							</svg>
+							Rejeter
+						</button>
+					</form>
+				{% endif %}
+
+				<a href="{{ path('app_admin_contracts_view', {id: contract.id}) }}" class="btn btn-secondary">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+					</svg>
+					Retour au contrat
+				</a>
+			</div>
+		</div>
+
+		{# Contenu du contrat #}
+		<div class="bg-white rounded-2xl shadow-lg p-8">
+			{# PDF Viewer #}
+			{% set fullFileUrl = asset('uploads/' ~ fileUrl) %}
+			{% include 'components/documents/_pdf_viewer_placeholder.html.twig' with {
+				'documentUrl': fullFileUrl,
+				'downloadRoute': fullFileUrl,
+				'height': '800px'
+			} %}
+		</div>
+	</div>
+</div>
+{% endblock %}

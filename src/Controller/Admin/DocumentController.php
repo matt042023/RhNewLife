@@ -1,0 +1,492 @@
+<?php
+
+namespace App\Controller\Admin;
+
+use App\Entity\Document;
+use App\Repository\DocumentRepository;
+use App\Repository\UserRepository;
+use App\Security\Voter\DocumentVoter;
+use App\Service\DocumentManager;
+use Psr\Log\LoggerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+
+#[Route('/admin/documents', name: 'app_admin_documents_')]
+class DocumentController extends AbstractController
+{
+    public function __construct(
+        private readonly DocumentRepository $documentRepository,
+        private readonly UserRepository $userRepository,
+        private readonly DocumentManager $documentManager,
+        private readonly LoggerInterface $logger
+    ) {
+    }
+
+    #[Route('/', name: 'list', methods: ['GET'])]
+    public function list(Request $request): Response
+    {
+        $this->assertAdminOrDirector();
+
+        $filters = $this->extractFilters($request);
+        $documents = $this->documentRepository->searchForAdmin($filters);
+
+        $stats = [
+            'total' => count($documents),
+            'pending' => $this->countByStatus($documents, Document::STATUS_PENDING),
+            'validated' => $this->countByStatus($documents, Document::STATUS_VALIDATED),
+            'rejected' => $this->countByStatus($documents, Document::STATUS_REJECTED),
+        ];
+
+        return $this->render('admin/documents/list.html.twig', [
+            'documents' => $documents,
+            'filters' => $filters,
+            'stats' => $stats,
+            'types' => Document::TYPES,
+            'statuses' => [
+                Document::STATUS_PENDING => 'En attente',
+                Document::STATUS_VALIDATED => 'Validé',
+                Document::STATUS_REJECTED => 'Rejeté',
+            ],
+            'isArchiveView' => false,
+        ]);
+    }
+
+    #[Route('/archives', name: 'archives', methods: ['GET'])]
+    public function archives(Request $request): Response
+    {
+        $this->assertAdminOrDirector();
+
+        $filters = $this->extractFilters($request);
+        $filters['archived'] = true;
+
+        $documents = $this->documentRepository->searchForAdmin($filters);
+
+        $stats = [
+            'total' => count($documents),
+            'pending' => $this->countByStatus($documents, Document::STATUS_PENDING),
+            'validated' => $this->countByStatus($documents, Document::STATUS_VALIDATED),
+            'rejected' => $this->countByStatus($documents, Document::STATUS_REJECTED),
+        ];
+
+        return $this->render('admin/documents/list.html.twig', [
+            'documents' => $documents,
+            'filters' => $filters,
+            'stats' => $stats,
+            'types' => Document::TYPES,
+            'statuses' => [
+                Document::STATUS_PENDING => 'En attente',
+                Document::STATUS_VALIDATED => 'Validé',
+                Document::STATUS_REJECTED => 'Rejeté',
+            ],
+            'isArchiveView' => true,
+        ]);
+    }
+
+    #[Route('/{id}', name: 'view', methods: ['GET'])]
+    public function view(Document $document): Response
+    {
+        if ($document->isArchived()) {
+            $this->denyAccessUnlessGranted(DocumentVoter::VIEW_ARCHIVED, $document);
+        } else {
+            $this->denyAccessUnlessGranted(DocumentVoter::VIEW, $document);
+        }
+
+        $history = $this->documentManager->getDocumentHistory($document);
+
+        return $this->render('admin/documents/view.html.twig', [
+            'document' => $document,
+            'history' => $history,
+            'canValidate' => $this->isGranted(DocumentVoter::VALIDATE, $document),
+            'canArchive' => $this->isGranted(DocumentVoter::ARCHIVE, $document),
+            'canRestore' => $this->isGranted(DocumentVoter::RESTORE, $document),
+            'canReplace' => $this->isGranted(DocumentVoter::REPLACE, $document),
+            'canDelete' => $this->isGranted(DocumentVoter::DELETE, $document),
+            'downloadRoute' => $this->generateUrl('app_documents_download', ['id' => $document->getId()]),
+        ]);
+    }
+
+    #[Route('/upload', name: 'upload', methods: ['POST'])]
+    public function upload(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $userId = $request->request->getInt('user_id');
+        $type = (string) $request->request->get('type');
+        $comment = $request->request->get('comment');
+
+        /** @var UploadedFile|null $file */
+        $file = $request->files->get('file');
+
+        if (!$userId || !$file) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur et fichier obligatoires.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $user = $this->userRepository->find($userId);
+
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur introuvable.',
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->denyAccessUnlessGranted(DocumentVoter::UPLOAD, $user);
+
+        try {
+            /** @var \App\Entity\User $currentAdmin */
+            $currentAdmin = $this->getUser();
+
+            // L'admin upload pour un utilisateur, donc uploadedBy = admin
+            $document = $this->documentManager->uploadDocument($file, $user, $type, $comment, $currentAdmin);
+
+            // Envoyer notification email aux admins
+            $this->documentManager->sendDocumentUploadedNotification($document);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], Response::HTTP_BAD_REQUEST);
+        } catch (\Throwable $exception) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'upload du document.',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return $this->json([
+            'success' => true,
+            'document' => [
+                'id' => $document->getId(),
+                'type' => $document->getType(),
+                'typeLabel' => $document->getTypeLabel(),
+                'status' => $document->getStatus(),
+                'uploadedAt' => $document->getUploadedAt()?->format('Y-m-d H:i:s'),
+                'uploadedBy' => $document->getUploadedBy()?->getFullName(),
+            ],
+        ], Response::HTTP_CREATED);
+    }
+
+    #[Route('/{id}/validate', name: 'validate', methods: ['POST'])]
+    public function validate(Document $document, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::VALIDATE, $document);
+
+        $comment = $request->request->get('commentaire');
+        /** @var \App\Entity\User|null $currentUser */
+        $currentUser = $this->getUser();
+        $this->documentManager->validateDocument($document, $comment, $currentUser);
+
+        // Envoyer notification email au salarié
+        $this->documentManager->sendDocumentValidatedNotification($document, $currentUser, $comment);
+
+        // Si requête AJAX, retourner JSON
+        if ($request->isXmlHttpRequest()) {
+            return $this->json(['success' => true]);
+        }
+
+        // Sinon, rediriger avec message flash
+        $this->addFlash('success', 'Document validé avec succès.');
+        return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
+    }
+
+    #[Route('/{id}/reject', name: 'reject', methods: ['POST'])]
+    public function reject(Document $document, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::VALIDATE, $document);
+
+        $reason = trim((string) $request->request->get('reason'));
+
+        if ($reason === '') {
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Merci de préciser un motif de rejet.',
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            // Sinon, rediriger avec message flash
+            $this->addFlash('error', 'Merci de préciser un motif de rejet.');
+            return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
+        }
+
+        $this->documentManager->rejectDocument($document, $reason);
+
+        // Envoyer notification email au salarié
+        $this->documentManager->sendDocumentRejectedNotification($document, $reason);
+
+        // Si requête AJAX, retourner JSON
+        if ($request->isXmlHttpRequest()) {
+            return $this->json(['success' => true]);
+        }
+
+        // Sinon, rediriger avec message flash
+        $this->addFlash('success', 'Document rejeté avec succès.');
+        return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
+    }
+
+    #[Route('/{id}/archive', name: 'archive', methods: ['POST'])]
+    public function archive(Document $document, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::ARCHIVE, $document);
+
+        $reason = trim((string) $request->request->get('commentaire', ''));
+        $retentionYears = $request->request->getInt('retention_years', 0);
+
+        if ($retentionYears <= 0) {
+            $retentionYears = $this->documentManager->getSuggestedRetentionYears($document->getType());
+        }
+
+        $this->documentManager->archiveDocument($document, $reason, $retentionYears);
+
+        // Si requête AJAX, retourner JSON
+        if ($request->isXmlHttpRequest()) {
+            return $this->json(['success' => true]);
+        }
+
+        // Sinon, rediriger avec message flash
+        $this->addFlash('success', 'Document archivé avec succès.');
+        return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
+    }
+
+    #[Route('/{id}/restore', name: 'restore', methods: ['POST'])]
+    public function restore(Document $document): JsonResponse
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::RESTORE, $document);
+
+        $this->documentManager->restoreDocument($document);
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/{id}/replace', name: 'replace', methods: ['POST'])]
+    public function replace(Document $document, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::REPLACE, $document);
+
+        /** @var UploadedFile|null $file */
+        $file = $request->files->get('file');
+        $comment = $request->request->get('commentaire');
+
+        if (!$file) {
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Veuillez sélectionner un fichier.',
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $this->addFlash('error', 'Veuillez sélectionner un fichier.');
+            return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
+        }
+
+        try {
+            /** @var \App\Entity\User $currentAdmin */
+            $currentAdmin = $this->getUser();
+
+            // L'admin remplace le document, donc uploadedBy = admin
+            $newDocument = $this->documentManager->replaceDocument($document, $file, $comment, $currentAdmin);
+
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => true,
+                    'message' => 'Le document a été remplacé avec succès.',
+                    'document' => [
+                        'id' => $newDocument->getId(),
+                        'type' => $newDocument->getType(),
+                        'typeLabel' => $newDocument->getTypeLabel(),
+                        'status' => $newDocument->getStatus(),
+                        'uploadedAt' => $newDocument->getUploadedAt()?->format('Y-m-d H:i:s'),
+                        'uploadedBy' => $newDocument->getUploadedBy()?->getFullName(),
+                    ],
+                ], Response::HTTP_OK);
+            }
+
+            $this->addFlash('success', 'Le document a été remplacé avec succès.');
+            return $this->redirectToRoute('app_admin_documents_view', ['id' => $newDocument->getId()]);
+        } catch (\InvalidArgumentException $exception) {
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => $exception->getMessage(),
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $this->addFlash('error', $exception->getMessage());
+        } catch (\Throwable $exception) {
+            $this->logger->error('Error replacing document', [
+                'document_id' => $document->getId(),
+                'error' => $exception->getMessage(),
+            ]);
+
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Erreur lors du remplacement du document.',
+                ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
+            $this->addFlash('error', 'Erreur lors du remplacement du document.');
+        }
+
+        return $this->redirectToRoute('app_admin_documents_view', ['id' => $document->getId()]);
+    }
+
+    #[Route('/{id}', name: 'delete', methods: ['DELETE', 'POST'])]
+    public function delete(Document $document, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted(DocumentVoter::DELETE, $document);
+
+        $userId = $document->getUser()->getId();
+
+        try {
+            $this->documentManager->deleteDocument($document);
+        } catch (\Throwable $exception) {
+            // Si requête AJAX, retourner JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de la suppression du document.',
+                ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
+            // Sinon, rediriger avec message flash
+            $this->addFlash('error', 'Erreur lors de la suppression du document.');
+            return $this->redirectToRoute('app_admin_users_view', ['id' => $userId]);
+        }
+
+        // Si requête AJAX, retourner JSON
+        if ($request->isXmlHttpRequest()) {
+            return $this->json(['success' => true]);
+        }
+
+        // Sinon, rediriger avec message flash vers la liste des documents de l'utilisateur
+        $this->addFlash('success', 'Document supprimé avec succès.');
+        return $this->redirectToRoute('app_admin_users_view', ['id' => $userId]);
+    }
+
+    #[Route('/{id}/download', name: 'download', methods: ['GET'])]
+    public function download(Document $document): Response
+    {
+        if ($document->isArchived()) {
+            $this->denyAccessUnlessGranted(DocumentVoter::VIEW_ARCHIVED, $document);
+        } else {
+            $this->denyAccessUnlessGranted(DocumentVoter::DOWNLOAD, $document);
+        }
+
+        $filePath = $this->documentManager->getDocumentPath($document);
+
+        if (!file_exists($filePath)) {
+            throw $this->createNotFoundException('Le fichier demandé est introuvable.');
+        }
+
+        // Log téléchargement pour audit
+        /** @var \App\Entity\User|null $currentUser */
+        $currentUser = $this->getUser();
+        $this->logger->info('Document downloaded', [
+            'document_id' => $document->getId(),
+            'document_type' => $document->getType(),
+            'document_name' => $document->getOriginalName(),
+            'owner_id' => $document->getUser()->getId(),
+            'owner_name' => $document->getUser()->getFullName(),
+            'downloader_id' => $currentUser?->getId(),
+            'downloader_name' => $currentUser?->getFullName(),
+            'is_archived' => $document->isArchived(),
+        ]);
+
+        return new BinaryFileResponse($filePath);
+    }
+
+    #[Route('/export/user/{userId}', name: 'export_user', methods: ['GET'])]
+    public function exportUserDocuments(int $userId): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $user = $this->userRepository->find($userId);
+
+        if (!$user) {
+            throw $this->createNotFoundException('Utilisateur introuvable.');
+        }
+
+        $filePath = $this->documentManager->exportDocumentsList($user);
+
+        return $this->file($filePath, basename($filePath), ResponseHeaderBag::DISPOSITION_ATTACHMENT);
+    }
+
+    private function assertAdminOrDirector(): void
+    {
+        if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_DIRECTOR')) {
+            throw $this->createAccessDeniedException('Accès réservé aux administrateurs et directeurs.');
+        }
+    }
+
+    /**
+     * @return array{
+     *     status: string|null,
+     *     type: string|null,
+     *     archived: bool|null,
+     *     user: int|null,
+     *     search: string|null,
+     *     from: \DateTimeImmutable|null,
+     *     to: \DateTimeImmutable|null,
+     *     limit: int|null,
+     *     min_size: int|null,
+     *     max_size: int|null
+     * }
+     */
+    private function extractFilters(Request $request): array
+    {
+        $archived = $request->query->get('archived');
+        $from = $this->parseDate($request->query->get('from'));
+        $to = $this->parseDate($request->query->get('to'));
+
+        return [
+            'status' => $request->query->get('status') ?: null,
+            'type' => $request->query->get('type') ?: null,
+            'archived' => $archived === null ? null : filter_var($archived, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE),
+            'user' => $request->query->getInt('user_id') ?: null,
+            'search' => $request->query->get('search') ?: null,
+            'from' => $from,
+            'to' => $to,
+            'limit' => $request->query->getInt('limit') ?: 100,
+            'min_size' => $request->query->getInt('min_size') ?: null,
+            'max_size' => $request->query->getInt('max_size') ?: null,
+        ];
+    }
+
+    private function parseDate(?string $value): ?\DateTimeImmutable
+    {
+        if (!$value) {
+            return null;
+        }
+
+        try {
+            return new \DateTimeImmutable($value);
+        } catch (\Exception) {
+            return null;
+        }
+    }
+
+    /**
+     * @param Document[] $documents
+     */
+    private function countByStatus(array $documents, string $status): int
+    {
+        return count(array_filter($documents, static function (Document $document) use ($status): bool {
+            return $document->getStatus() === $status;
+        }));
+    }
+}

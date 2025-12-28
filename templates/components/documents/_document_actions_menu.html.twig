@@ -1,0 +1,151 @@
+{# Reusable document actions dropdown menu
+   Usage:
+   {% include 'components/documents/_document_actions_menu.html.twig' with {
+       'document': documentObject,
+       'canValidate': true|false,
+       'canArchive': true|false,
+       'canDelete': true|false,
+       'canReplace': true|false,
+       'canRestore': true|false
+   } %}
+#}
+
+<div class="relative inline-block text-left" x-data="{ open: false }">
+    {# Dropdown button #}
+    <button type="button"
+            @click="open = !open"
+            @click.away="open = false"
+            class="inline-flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+        </svg>
+        <span class="ml-2 text-sm">Actions</span>
+    </button>
+
+    {# Dropdown menu #}
+    <div x-show="open"
+         x-transition:enter="transition ease-out duration-100"
+         x-transition:enter-start="transform opacity-0 scale-95"
+         x-transition:enter-end="transform opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-75"
+         x-transition:leave-start="transform opacity-100 scale-100"
+         x-transition:leave-end="transform opacity-0 scale-95"
+         class="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 z-10"
+         style="display: none;">
+
+        {# View & Download section #}
+        <div class="py-1">
+            <a href="{{ path('admin_documents_view', {id: document.id}) }}"
+               class="group flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+                Consulter
+            </a>
+            <a href="{{ path('admin_documents_download', {id: document.id}) }}"
+               class="group flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                Télécharger
+            </a>
+        </div>
+
+        {# Validation actions #}
+        {% if canValidate|default(false) %}
+        <div class="py-1">
+            <button type="button"
+                    onclick="openValidateModal({{ document.id }})"
+                    class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Valider
+            </button>
+            <button type="button"
+                    onclick="openRejectModal({{ document.id }})"
+                    class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Rejeter
+            </button>
+        </div>
+        {% endif %}
+
+        {# Replace action #}
+        {% if canReplace|default(false) %}
+        <div class="py-1">
+            <button type="button"
+                    onclick="openReplaceModal({{ document.id }})"
+                    class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Remplacer le fichier
+            </button>
+        </div>
+        {% endif %}
+
+        {# Archive / Restore actions #}
+        <div class="py-1">
+            {% if canArchive|default(false) %}
+                <button type="button"
+                        onclick="archiveDocument({{ document.id }})"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                    </svg>
+                    Archiver
+                </button>
+            {% elseif canRestore|default(false) %}
+                <button type="button"
+                        onclick="restoreDocument({{ document.id }})"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Restaurer
+                </button>
+            {% endif %}
+        </div>
+
+        {# Delete action #}
+        {% if canDelete|default(false) %}
+        <div class="py-1">
+            <button type="button"
+                    onclick="deleteDocument({{ document.id }})"
+                    class="group flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                <svg class="w-5 h-5 mr-3 text-red-400 group-hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                Supprimer définitivement
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Note: This component uses Alpine.js for dropdown interaction.
+   In Phase 9, this will be migrated to Stimulus controllers.
+   For now, you can use vanilla JS alternative: #}
+
+<script>
+    // Fallback vanilla JS if Alpine.js is not loaded
+    if (typeof Alpine === 'undefined') {
+        document.querySelectorAll('[x-data]').forEach(el => {
+            const btn = el.querySelector('button');
+            const menu = el.querySelector('[x-show]');
+
+            btn?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            });
+
+            document.addEventListener('click', () => {
+                menu.style.display = 'none';
+            });
+        });
+    }
+</script>

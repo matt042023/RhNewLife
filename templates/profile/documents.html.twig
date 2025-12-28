@@ -1,0 +1,189 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Mes documents - RH NewLife
+{% endblock %}
+
+{% block page_header %}
+	<div class="px-4 py-6 lg:px-6">
+		<div class="flex flex-col md:flex-row md:items-center md:justify-between">
+			<div class="flex-1 min-w-0">
+				<h1 class="text-2xl md:text-3xl font-bold text-white mb-1">
+					Mes documents
+				</h1>
+				<p class="text-blue-100 text-sm md:text-base">
+					Consultez et téléversez vos justificatifs personnels
+				</p>
+			</div>
+		</div>
+	</div>
+{% endblock %}
+
+{% block dashboard_content %}
+	<div class="max-w-7xl mx-auto space-y-6" data-controller="document">
+		{% set completionPercent = completion.percentage ?? 0 %}
+		{# Global Completion Card #}
+		<section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+			<div class="flex items-center justify-between mb-4">
+				<div>
+					<p class="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Progression globale</p>
+					<p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ completionPercent }}%</p>
+				</div>
+				<div class="text-right">
+					<p class="text-sm text-gray-500 dark:text-gray-400">
+						{{ completion.completed_required ?? 0 }}/{{ completion.total_required ?? 0 }}
+					</p>
+					<p class="text-xs text-gray-400 dark:text-gray-500">
+						documents requis
+					</p>
+				</div>
+			</div>
+			<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+				<div class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500" style="width: {{ completionPercent }}%"></div>
+			</div>
+
+			{% if missingDocuments is not empty %}
+				<div class="mt-4 border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded">
+					<div class="flex items-start gap-3">
+						<svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+						</svg>
+						<div class="flex-1">
+							<p class="font-medium text-yellow-800 dark:text-yellow-300">Documents à fournir en priorité:</p>
+							<ul class="mt-2 space-y-1">
+								{% for item in missingDocuments %}
+									<li class="text-sm text-yellow-700 dark:text-yellow-400 flex items-center gap-2">
+										<svg class="w-4 h-4" fill="currentColor" viewbox="0 0 20 20">
+											<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd"></path>
+										</svg>
+										<span>{{ item.label }}</span>
+										{% if item.priority %}
+											<span class="text-xs px-2 py-0.5 bg-yellow-200 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-200 rounded-full font-medium">{{ item.priority }}</span>
+										{% endif %}
+									</li>
+								{% endfor %}
+							</ul>
+						</div>
+					</div>
+				</div>
+			{% endif %}
+		</section>
+
+		{# Categories with document cards #}
+		{% for category in categories %}
+			{% set requiredTotal = category.completion.required_total ?? 0 %}
+			{% set requiredDone = category.completion.required_completed ?? 0 %}
+			{% set categoryPercent = category.completion.percentage ?? (requiredTotal ? (requiredDone / requiredTotal * 100)|round(1) : 100) %}
+
+			<section
+				class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+				{# Category header #}
+				<div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700">
+					<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+						<div class="flex-1">
+							<h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+								<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+								</svg>
+								{{ category.label }}
+							</h2>
+							<p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+								{{ requiredDone }}/{{ requiredTotal }}
+								documents requis complétés
+							</p>
+						</div>
+						<div class="w-full md:w-64">
+							<div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
+								<span class="font-medium">Progression</span>
+								<span class="font-semibold">{{ categoryPercent }}%</span>
+							</div>
+							<div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 overflow-hidden">
+								<div class="bg-gradient-to-r from-emerald-500 to-green-600 h-2.5 rounded-full transition-all duration-500" style="width: {{ categoryPercent }}%"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div
+					class="p-6">
+					{# Required documents - Card grid #}
+					{% if category.required is not empty %}
+						<div class="mb-6">
+							<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-4 flex items-center gap-2">
+								<span class="w-2 h-2 bg-red-500 rounded-full"></span>
+								Documents requis
+							</h3>
+							<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+								{% for item in category.required %}
+									{% set docs = documentsByType[item.type] ?? [] %}
+									{% set firstDoc = docs|first %}
+									{% include 'components/documents/_document_card.html.twig' with {
+										'document': firstDoc,
+										'item': item,
+										'layout': 'grid',
+										'context': 'profile',
+										'showActions': true,
+										'isRequired': true
+									} %}
+								{% endfor %}
+							</div>
+						</div>
+					{% endif %}
+
+					{# Optional documents - Card grid #}
+					{% if category.optional is not empty %}
+						<div>
+							<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-4 flex items-center gap-2">
+								<span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+								Documents optionnels
+							</h3>
+							<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+								{% for item in category.optional %}
+									{% set docs = documentsByType[item.type] ?? [] %}
+									{% set firstDoc = docs|first %}
+									{% include 'components/documents/_document_card.html.twig' with {
+										'document': firstDoc,
+										'item': item,
+										'layout': 'grid',
+										'context': 'profile',
+										'showActions': true,
+										'isRequired': false
+									} %}
+								{% endfor %}
+							</div>
+						</div>
+					{% endif %}
+				</div>
+			</section>
+		{% endfor %}
+
+		{# Help section #}
+		<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+			<div class="flex gap-4">
+				<svg class="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+				</svg>
+				<div>
+					<h3 class="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
+						Besoin d'aide ?
+					</h3>
+					<p class="text-sm text-blue-800 dark:text-blue-400">
+						Pour toute question concernant vos documents, contactez le service RH :
+						<a class="underline font-medium hover:text-blue-600" href="mailto:rh@newlife.com">rh@newlife.com</a>
+					</p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	{# Document Modals - Using Reusable Components #}
+	{% include 'components/modals/document_upload.html.twig' with {
+    'uploadUrl': path('app_profile_documents_upload'),
+    'types': types
+} %}
+
+	{% include 'components/modals/document_replace.html.twig' %}
+
+	{% include 'components/modals/document_delete.html.twig' %}
+
+
+{% endblock %}

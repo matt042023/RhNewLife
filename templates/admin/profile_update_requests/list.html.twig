@@ -1,0 +1,193 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Demandes de modification - RH NewLife{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gray-50 p-8">
+    <div class="max-w-7xl mx-auto">
+
+        {# Header #}
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Demandes de modification de profil</h1>
+                <p class="text-gray-600 mt-1">Gérez les demandes de changement d'informations personnelles</p>
+            </div>
+            {% if pendingCount > 0 %}
+                <span class="badge badge-warning badge-lg">{{ pendingCount }} en attente</span>
+            {% endif %}
+        </div>
+
+        {# Flash messages #}
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-4">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        {# Filtres #}
+        <div class="bg-white rounded-2xl p-6 shadow-lg mb-6">
+            <form method="get" class="flex gap-4">
+                <div>
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">Tous les statuts</option>
+                        <option value="pending" {{ currentStatus == 'pending' ? 'selected' : '' }}>En attente</option>
+                        <option value="approved" {{ currentStatus == 'approved' ? 'selected' : '' }}>Approuvé</option>
+                        <option value="rejected" {{ currentStatus == 'rejected' ? 'selected' : '' }}>Rejeté</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        {# Liste des demandes #}
+        {% if requests is empty %}
+            <div class="bg-white rounded-2xl p-12 shadow-lg text-center">
+                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Aucune demande</h3>
+                <p class="text-gray-600">Aucune demande de modification de profil pour le moment</p>
+            </div>
+        {% else %}
+            <div class="space-y-4">
+                {% for request in requests %}
+                    <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                        {{ request.user.firstName|first }}{{ request.user.lastName|first }}
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900">{{ request.user.fullName }}</h3>
+                                        <p class="text-sm text-gray-500">{{ request.user.email }}</p>
+                                    </div>
+                                    {% if request.status == 'pending' %}
+                                        <span class="badge badge-warning">En attente</span>
+                                    {% elseif request.status == 'approved' %}
+                                        <span class="badge badge-success">Approuvé</span>
+                                    {% elseif request.status == 'rejected' %}
+                                        <span class="badge badge-danger">Rejeté</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <p class="text-sm font-semibold text-gray-700 mb-2">Modifications demandées :</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% for field, value in request.requestedData %}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                </svg>
+                                                {{ field }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                {% if request.reason %}
+                                    <p class="text-sm text-gray-600 italic">
+                                        <span class="font-semibold">Raison :</span> {{ request.reason }}
+                                    </p>
+                                {% endif %}
+
+                                <div class="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                                    <span>Demandé le {{ request.requestedAt|date('d/m/Y à H:i') }}</span>
+                                    {% if request.processedBy %}
+                                        <span>•</span>
+                                        <span>Traité par {{ request.processedBy.fullName }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if request.status == 'pending' %}
+                                <div class="flex gap-2 ml-4">
+                                    <form method="post" action="{{ path('app_admin_profile_update_requests_approve', {id: request.id}) }}" class="inline">
+                                        <button type="submit" class="btn btn-success" onclick="return confirm('Approuver cette demande ?')">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Approuver
+                                        </button>
+                                    </form>
+
+                                    <button onclick="showRejectModal({{ request.id }})" class="btn btn-danger">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Rejeter
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# Détails des modifications #}
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <details class="cursor-pointer">
+                                <summary class="text-sm font-semibold text-blue-600 hover:text-blue-800">Voir les détails des modifications</summary>
+                                <div class="mt-3 space-y-2">
+                                    {% for field, newValue in request.requestedData %}
+                                        <div class="flex items-start gap-4 p-2 bg-gray-50 rounded">
+                                            <span class="text-sm font-medium text-gray-700 w-32">{{ field }} :</span>
+                                            <span class="text-sm text-gray-900 flex-1">{{ newValue }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Retour dashboard #}
+        <div class="mt-6">
+            <a href="{{ path('app_dashboard') }}" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Retour au dashboard
+            </a>
+        </div>
+
+    </div>
+</div>
+
+{# Modal de rejet #}
+<div id="reject-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold text-gray-900 mb-4">Rejeter la demande</h3>
+        <form id="reject-form" method="post" action="">
+            <div class="mb-6">
+                <label class="form-label">Raison du rejet *</label>
+                <textarea name="reason" class="form-input" rows="4" required placeholder="Expliquez pourquoi cette demande est rejetée..."></textarea>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" onclick="hideRejectModal()" class="btn btn-secondary">
+                    Annuler
+                </button>
+                <button type="submit" class="btn btn-danger">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Rejeter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showRejectModal(requestId) {
+    const modal = document.getElementById('reject-modal');
+    const form = document.getElementById('reject-form');
+    form.action = "{{ path('app_admin_profile_update_requests_reject', {id: '__ID__'}) }}".replace('__ID__', requestId);
+    modal.classList.remove('hidden');
+}
+
+function hideRejectModal() {
+    document.getElementById('reject-modal').classList.add('hidden');
+}
+</script>
+{% endblock %}

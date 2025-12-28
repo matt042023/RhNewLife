@@ -1,0 +1,121 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Templates de Contrat - RH NewLife{% endblock %}
+
+{% block admin_title %}Templates de Contrat{% endblock %}
+{% block admin_subtitle %}Gérer les modèles de contrats de travail{% endblock %}
+
+{% block admin_actions %}
+	<a href="{{ path('app_admin_contract_templates_create') }}" class="inline-flex items-center px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg shadow hover:bg-blue-50 transition">
+		<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+		</svg>
+		Créer un template
+	</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="px-4 py-6 lg:px-8">
+	<div class="max-w-7xl mx-auto">
+
+		{# Flash messages #}
+		{% for label, messages in app.flashes %}
+			{% for message in messages %}
+				<div class="alert alert-{{ label == 'error' ? 'error' : (label == 'success' ? 'success' : 'info') }} mb-6">
+					{{ message }}
+				</div>
+			{% endfor %}
+		{% endfor %}
+
+		{# Recherche #}
+		<div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+			<form method="get" class="flex gap-4">
+				<input
+					type="text"
+					name="search"
+					value="{{ search }}"
+					placeholder="Rechercher un template..."
+					class="input input-bordered flex-1"
+				/>
+				<button type="submit" class="btn btn-primary">Rechercher</button>
+				{% if search %}
+					<a href="{{ path('app_admin_contract_templates_list') }}" class="btn btn-ghost">Réinitialiser</a>
+				{% endif %}
+			</form>
+		</div>
+
+		{# Liste des templates #}
+		<div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+			{% if templates is empty %}
+				<div class="p-12 text-center text-gray-500">
+					<svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+					</svg>
+					<p class="text-lg font-medium">Aucun template trouvé</p>
+					<p class="mt-2">Créez votre premier modèle de contrat</p>
+				</div>
+			{% else %}
+				<table class="table w-full">
+					<thead>
+						<tr>
+							<th>Nom</th>
+							<th>Description</th>
+							<th>Statut</th>
+							<th>Contrats créés</th>
+							<th>Dernière modification</th>
+							<th class="text-right">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for item in templates %}
+							{% set template = item[0] ?? item %}
+							{% set contractCount = item.contractCount ?? item[1] ?? 0 %}
+							<tr>
+								<td>
+									<a href="{{ path('app_admin_contract_templates_view', {id: template.id}) }}"
+									   class="font-semibold text-primary hover:underline">
+										{{ template.name }}
+									</a>
+								</td>
+								<td class="text-gray-600">
+									{{ template.description|length > 80 ? template.description|slice(0, 80) ~ '...' : template.description }}
+								</td>
+								<td>
+									{% if template.active %}
+										<span class="badge badge-success">Actif</span>
+									{% else %}
+										<span class="badge badge-ghost">Inactif</span>
+									{% endif %}
+								</td>
+								<td>
+									<span class="badge badge-neutral">{{ contractCount }}</span>
+								</td>
+								<td class="text-gray-600 text-sm">
+									{{ template.updatedAt|date('d/m/Y H:i') }}
+								</td>
+								<td class="text-right">
+									<div class="flex gap-2 justify-end">
+										<a href="{{ path('app_admin_contract_templates_view', {id: template.id}) }}"
+										   class="btn btn-sm btn-ghost" title="Voir">
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+											</svg>
+										</a>
+										<a href="{{ path('app_admin_contract_templates_edit', {id: template.id}) }}"
+										   class="btn btn-sm btn-ghost" title="Éditer">
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+											</svg>
+										</a>
+									</div>
+								</td>
+							</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			{% endif %}
+		</div>
+	</div>
+</div>
+{% endblock admin_content %}

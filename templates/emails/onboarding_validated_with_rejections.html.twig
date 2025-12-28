@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Compte activé - Action requise - RH NewLife</title>
+    <style>
+        body { font-family: sans-serif; background: #f9fafb; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 40px; text-align: center; }
+        .content { padding: 40px 30px; }
+        .warning-icon { text-align: center; font-size: 60px; margin: 20px 0; }
+        .warning-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .document-list { list-style: none; padding: 0; }
+        .document-item { background: #fef2f2; border-left: 3px solid #ef4444; padding: 15px; margin: 10px 0; border-radius: 6px; }
+        .document-type { font-weight: bold; color: #991b1b; }
+        .document-reason { color: #7f1d1d; margin-top: 5px; font-size: 0.9em; }
+        .success-box { background: #d1fae5; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .btn { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Compte activé - Action requise</h1>
+        </div>
+        <div class="content">
+            <div class="warning-icon">⚡</div>
+            <h2 style="text-align: center;">Bonjour {{ user.firstName }},</h2>
+
+            <div class="success-box">
+                <p><strong>✅ Bonne nouvelle !</strong></p>
+                <p>Votre compte RH NewLife a été activé. Vous pouvez dès maintenant accéder à votre espace personnel.</p>
+            </div>
+
+            <div class="warning-box">
+                <p><strong>⚠️ Attention - Documents à remplacer</strong></p>
+                <p>Certains de vos documents ont été rejetés lors de la validation et doivent être remplacés :</p>
+            </div>
+
+            <ul class="document-list">
+                {% for document in rejectedDocuments %}
+                <li class="document-item">
+                    <div class="document-type">{{ document.typeLabel }}</div>
+                    <div class="document-reason">
+                        <strong>Raison du rejet :</strong> {{ document.comment ?? 'Document non conforme' }}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <p><strong>Que faire maintenant ?</strong></p>
+            <ol>
+                <li>Connectez-vous à votre espace personnel</li>
+                <li>Accédez à la section "Mes documents"</li>
+                <li>Remplacez les documents rejetés par de nouvelles versions conformes</li>
+                <li>Nos équipes valideront les nouveaux documents sous 48h</li>
+            </ol>
+
+            <div style="text-align: center;">
+                <a href="{{ url('app_dashboard') }}" class="btn">Accéder à mon espace</a>
+            </div>
+
+            <p style="margin-top: 30px; font-size: 0.9em; color: #6b7280;">
+                <strong>Besoin d'aide ?</strong><br>
+                N'hésitez pas à contacter notre équipe RH si vous avez des questions concernant les documents à fournir.
+            </p>
+
+            <p style="margin-top: 20px;">À bientôt sur RH NewLife ! 🚀</p>
+        </div>
+    </div>
+</body>
+</html>

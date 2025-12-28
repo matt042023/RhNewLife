@@ -1,0 +1,202 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Upload de documents{% endblock %}
+
+{% block admin_title %}Upload de documents{% endblock %}
+{% block admin_subtitle %}Téléverser des fichiers pour un salarié{% endblock %}
+
+{% block admin_actions %}
+    <a href="{{ path('admin_documents_list') }}"
+       class="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Retour à la liste
+    </a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-4xl mx-auto" data-controller="document-upload">
+    {# Upload form card #}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                Informations du document
+            </h2>
+        </div>
+
+        <form method="post" action="{{ path('admin_documents_upload_process') }}" enctype="multipart/form-data"
+              data-document-upload-target="form"
+              data-action="submit->document-upload#submit">
+            <div class="px-6 py-6 space-y-6">
+                {# User selection #}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Salarié concerné <span class="text-red-500">*</span>
+                    </label>
+                    <select name="user_id" required
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        <option value="">Sélectionnez un salarié...</option>
+                        {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.fullName }} - {{ user.email }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# Document type #}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Type de document <span class="text-red-500">*</span>
+                    </label>
+                    <select name="type" required id="documentType"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        <option value="">Sélectionnez un type...</option>
+                        <optgroup label="Documents administratifs">
+                            <option value="cni">Carte Nationale d'Identité</option>
+                            <option value="rib">RIB</option>
+                            <option value="domicile">Justificatif de domicile</option>
+                            <option value="honorabilite">Attestation d'honorabilité</option>
+                        </optgroup>
+                        <optgroup label="Documents de formation">
+                            <option value="diplome">Diplôme</option>
+                            <option value="attestation_formation">Attestation de formation</option>
+                        </optgroup>
+                        <optgroup label="Documents contractuels">
+                            <option value="contrat_cdi">Contrat CDI</option>
+                            <option value="contrat_cdd">Contrat CDD</option>
+                            <option value="avenant">Avenant</option>
+                        </optgroup>
+                        <optgroup label="Documents de paie">
+                            <option value="bulletin">Bulletin de paie</option>
+                            <option value="note_frais">Note de frais</option>
+                        </optgroup>
+                        <optgroup label="Documents médicaux">
+                            <option value="visite_medicale">Visite médicale</option>
+                            <option value="arret_travail">Arrêt de travail</option>
+                        </optgroup>
+                        <optgroup label="Autres">
+                            <option value="attestation_travail">Attestation de travail</option>
+                            <option value="justificatif_absence">Justificatif d'absence</option>
+                            <option value="autre">Autre document</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                {# Drag and drop zone #}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Fichier <span class="text-red-500">*</span>
+                    </label>
+
+                    {# Drop zone #}
+                    <div data-document-upload-target="dropZone"
+                         class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors cursor-pointer">
+                        <input type="file" name="file" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                               data-document-upload-target="fileInput"
+                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+
+                        <div data-document-upload-target="dropZoneContent">
+                            <svg class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            <p class="text-lg font-medium text-gray-900 dark:text-white mb-1">
+                                Glissez-déposez votre fichier ici
+                            </p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                ou cliquez pour parcourir
+                            </p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">
+                                PDF, JPG, PNG, DOC, DOCX (max. 10 MB)
+                            </p>
+                        </div>
+
+                        {# File preview (hidden by default) #}
+                        <div data-document-upload-target="filePreview" class="hidden">
+                            <div class="flex items-center justify-center gap-4">
+                                <svg class="w-12 h-12 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+                                </svg>
+                                <div class="text-left flex-1">
+                                    <p data-document-upload-target="fileName" class="text-sm font-medium text-gray-900 dark:text-white"></p>
+                                    <p data-document-upload-target="fileSize" class="text-xs text-gray-500 dark:text-gray-400"></p>
+                                </div>
+                                <button type="button" data-action="click->document-upload#removeFile"
+                                        class="text-red-600 hover:text-red-700 dark:text-red-400">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Error message placeholder #}
+                    <div data-document-upload-target="errorMessage" class="hidden mt-2 text-sm text-red-600 dark:text-red-400"></div>
+                </div>
+
+                {# Optional comment #}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Commentaire (optionnel)
+                    </label>
+                    <textarea name="commentaire" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                              placeholder="Ajoutez une note ou un contexte pour ce document..."></textarea>
+                </div>
+
+                {# Auto-validate option (for admins) #}
+                {% if is_granted('ROLE_ADMIN') %}
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        <input type="checkbox" name="auto_validate" id="autoValidate"
+                               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    </div>
+                    <label for="autoValidate" class="ml-3 text-sm">
+                        <span class="font-medium text-gray-900 dark:text-white">Valider automatiquement</span>
+                        <p class="text-gray-500 dark:text-gray-400">
+                            Le document sera immédiatement marqué comme validé (réservé aux administrateurs)
+                        </p>
+                    </label>
+                </div>
+                {% endif %}
+            </div>
+
+            {# Form actions #}
+            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <a href="{{ path('admin_documents_list') }}"
+                   class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                    Annuler
+                </a>
+                <button type="submit" data-document-upload-target="submitButton"
+                        class="inline-flex items-center px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    Téléverser le document
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {# Help card #}
+    <div class="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+        <div class="flex gap-4">
+            <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <h3 class="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
+                    Conseils pour l'upload de documents
+                </h3>
+                <ul class="text-sm text-blue-800 dark:text-blue-400 space-y-1">
+                    <li>• Privilégiez le format PDF pour une meilleure compatibilité</li>
+                    <li>• Assurez-vous que le document est lisible et de bonne qualité</li>
+                    <li>• Les documents sensibles (RIB, CNI) sont automatiquement sécurisés</li>
+                    <li>• Chaque document sera soumis à validation par défaut</li>
+                    <li>• Vous pourrez remplacer le fichier ultérieurement si nécessaire</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

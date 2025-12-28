@@ -1,0 +1,89 @@
+{#
+    Reusable widget card component with glassmorphism design
+
+    Parameters:
+    - title: Widget title
+    - icon: SVG icon HTML (optional)
+    - icon_color: Glass badge type for icon (default: 'primary') - options: primary, success, danger, warning, info
+    - badge: Badge text (optional)
+    - badge_type: Glass badge type (default: 'primary') - options: primary, success, danger, warning, info
+    - actions: Array of action links [{label, url, type}] (optional)
+    - loading: Boolean to show loading state (optional)
+#}
+
+{% set widget_icon_type = icon_color|default('primary') %}
+{% set widget_badge_type = badge_type|default('primary') %}
+
+<div class="glass-card hover:scale-[1.02] transition-all duration-300">
+    {# Card header with glass border #}
+    <div class="p-4 border-b border-white/10">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                {% if icon is defined %}
+                    <div class="flex-shrink-0 w-10 h-10 rounded-lg backdrop-blur-sm bg-white/20 dark:bg-white/10 flex items-center justify-center transition-transform duration-300 hover:scale-110">
+                        {{ icon|raw }}
+                    </div>
+                {% endif %}
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    {{ title }}
+                </h3>
+            </div>
+            {% if badge is defined %}
+                <span class="glass-badge glass-badge-{{ widget_badge_type }}">
+                    {{ badge }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Card content #}
+    <div class="p-4">
+        {% if loading is defined and loading %}
+            {# Glass loading state #}
+            <div class="flex items-center justify-center py-8">
+                <div class="glass-loader"></div>
+                <span class="ml-3 text-gray-600 dark:text-gray-300 font-medium">Chargement...</span>
+            </div>
+        {% else %}
+            {# Widget content #}
+            {% block widget_content %}
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Contenu du widget</p>
+            {% endblock %}
+        {% endif %}
+    </div>
+
+    {# Card footer with glass actions #}
+    {% if actions is defined and actions|length > 0 %}
+        <div class="p-4 backdrop-blur-sm bg-white/5 dark:bg-black/5 border-t border-white/10">
+            <div class="flex flex-wrap gap-2">
+                {% for action in actions %}
+                    {% set action_type = action.type|default('secondary') %}
+                    {% if action_type == 'primary' %}
+                        <a href="{{ action.url }}" class="glass-btn glass-btn-primary inline-flex items-center">
+                            {{ action.label }}
+                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    {% elseif action_type == 'danger' %}
+                        <a href="{{ action.url }}" class="glass-btn glass-btn-danger inline-flex items-center">
+                            {{ action.label }}
+                        </a>
+                    {% elseif action_type == 'success' %}
+                        <a href="{{ action.url }}" class="glass-btn glass-btn-success inline-flex items-center">
+                            {{ action.label }}
+                        </a>
+                    {% elseif action_type == 'warning' %}
+                        <a href="{{ action.url }}" class="glass-btn glass-btn-warning inline-flex items-center">
+                            {{ action.label }}
+                        </a>
+                    {% else %}
+                        <a href="{{ action.url }}" class="glass-btn inline-flex items-center">
+                            {{ action.label }}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>

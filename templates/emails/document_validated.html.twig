@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document validé</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .content h2 {
+            color: #1f2937;
+            font-size: 22px;
+            margin-top: 0;
+        }
+        .success-box {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .info-box {
+            background: #f3f4f6;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .progress-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .progress-bar {
+            background: #e5e7eb;
+            height: 24px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #10b981, #059669);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+        .footer {
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Document validé !</h1>
+        </div>
+
+        <div class="content">
+            <h2>Bonjour {{ user.firstName }},</h2>
+
+            <p>
+                Bonne nouvelle ! Votre document a été validé avec succès par notre équipe RH.
+            </p>
+
+            <div class="success-box">
+                <strong>✓ Document validé :</strong><br>
+                <strong>Type :</strong> {{ document.typeLabel }}<br>
+                <strong>Nom du fichier :</strong> {{ document.originalName }}<br>
+                <strong>Validé le :</strong> {{ document.validatedAt|date('d/m/Y à H:i') }}<br>
+                {% if validator %}<strong>Validé par :</strong> {{ validator.fullName }}<br>{% endif %}
+            </div>
+
+            {% if comment %}
+            <div class="info-box">
+                <strong>💬 Commentaire de validation :</strong><br>
+                {{ comment }}
+            </div>
+            {% endif %}
+
+            {% if completionPercent is defined %}
+            <div class="progress-box">
+                <strong>📊 Progression de votre dossier :</strong>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ completionPercent }}%">
+                        {{ completionPercent }}% complété
+                    </div>
+                </div>
+                {% if completionPercent < 100 %}
+                <p style="margin: 10px 0 0 0; font-size: 14px;">
+                    Il vous reste encore quelques documents à fournir pour compléter votre dossier.
+                </p>
+                {% else %}
+                <p style="margin: 10px 0 0 0; font-size: 14px; color: #059669; font-weight: 600;">
+                    🎉 Félicitations ! Votre dossier est complet à 100% !
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <p>
+                Vous pouvez consulter tous vos documents et leur statut à tout moment depuis votre
+                espace personnel.
+            </p>
+
+            <center>
+                <a href="{{ profileUrl }}" class="button">
+                    👁️ Voir mes documents
+                </a>
+            </center>
+
+            <p style="font-size: 14px; color: #6b7280;">
+                Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br>
+                <a href="{{ profileUrl }}" style="color: #3b82f6; word-break: break-all;">{{ profileUrl }}</a>
+            </p>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="font-size: 14px; color: #6b7280;">
+                <strong>Prochaines étapes :</strong><br>
+                {% if completionPercent < 100 %}
+                1️⃣ Consultez la liste des documents manquants<br>
+                2️⃣ Téléversez les documents requis<br>
+                3️⃣ Attendez la validation de l'équipe RH
+                {% else %}
+                ✅ Votre dossier est complet !<br>
+                Notre équipe RH finalisera le traitement de votre dossier prochainement.
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>
+                <strong>Besoin d'aide ?</strong><br>
+                Contactez le service RH : <a href="mailto:rh@rhnewlife.com" style="color: #3b82f6;">rh@rhnewlife.com</a>
+            </p>
+            <p style="margin-top: 20px; font-size: 12px;">
+                © {{ currentYear|default("now"|date("Y")) }} RH NewLife. Tous droits réservés.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

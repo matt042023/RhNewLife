@@ -1,0 +1,343 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Documents archivés{% endblock %}
+
+{% block admin_title %}Documents archivés{% endblock %}
+{% block admin_subtitle %}Consultation des documents archivés{% endblock %}
+
+{% block admin_actions %}
+    <a href="{{ path('admin_documents_list') }}"
+       class="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Retour aux documents actifs
+    </a>
+{% endblock %}
+
+{% block admin_stats %}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+        {# Total archived #}
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
+            <div class="text-sm opacity-90">Total archivé</div>
+            <div class="text-2xl font-bold">{{ stats.total|default(0) }}</div>
+        </div>
+
+        {# This month #}
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
+            <div class="text-sm opacity-90">Ce mois-ci</div>
+            <div class="text-2xl font-bold">{{ stats.thisMonth|default(0) }}</div>
+        </div>
+
+        {# By user type #}
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
+            <div class="text-sm opacity-90">Contrats</div>
+            <div class="text-2xl font-bold">{{ stats.contracts|default(0) }}</div>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white">
+            <div class="text-sm opacity-90">Bulletins paie</div>
+            <div class="text-2xl font-bold">{{ stats.bulletins|default(0) }}</div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    {# Filters card #}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <form method="get" action="{{ path('admin_documents_archives') }}" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {# Search #}
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Rechercher
+                    </label>
+                    <input type="text" name="search" value="{{ filters.search|default('') }}"
+                           placeholder="Nom de fichier, salarié..."
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                </div>
+
+                {# User filter #}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Salarié
+                    </label>
+                    <select name="user_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        <option value="">Tous</option>
+                        {% for user in users %}
+                            <option value="{{ user.id }}" {{ filters.user_id|default('') == user.id ? 'selected' : '' }}>
+                                {{ user.fullName }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# Type filter #}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Type
+                    </label>
+                    <select name="type"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        <option value="">Tous les types</option>
+                        <option value="cni" {{ filters.type|default('') == 'cni' ? 'selected' : '' }}>CNI</option>
+                        <option value="rib" {{ filters.type|default('') == 'rib' ? 'selected' : '' }}>RIB</option>
+                        <option value="domicile" {{ filters.type|default('') == 'domicile' ? 'selected' : '' }}>Justificatif domicile</option>
+                        <option value="diplome" {{ filters.type|default('') == 'diplome' ? 'selected' : '' }}>Diplôme</option>
+                        <option value="contrat_cdi" {{ filters.type|default('') == 'contrat_cdi' ? 'selected' : '' }}>Contrat CDI</option>
+                        <option value="contrat_cdd" {{ filters.type|default('') == 'contrat_cdd' ? 'selected' : '' }}>Contrat CDD</option>
+                        <option value="bulletin" {{ filters.type|default('') == 'bulletin' ? 'selected' : '' }}>Bulletin de paie</option>
+                        <option value="autre" {{ filters.type|default('') == 'autre' ? 'selected' : '' }}>Autre</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Filtrer
+                </button>
+                <a href="{{ path('admin_documents_archives') }}"
+                   class="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors">
+                    Réinitialiser
+                </a>
+            </div>
+        </form>
+    </div>
+
+    {# Documents list #}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Liste des documents archivés
+            </h2>
+            {% if documents|length > 0 %}
+            <span class="text-sm text-gray-500 dark:text-gray-400">
+                {{ documents|length }} document(s)
+            </span>
+            {% endif %}
+        </div>
+
+        {% if documents|length > 0 %}
+        {# Desktop table view #}
+        <div class="hidden md:block overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Document
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Salarié
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Type
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Archivé le
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Archivé par
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for document in documents %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                {% include 'components/documents/_document_type_icon.html.twig' with {
+                                    'type': document.type,
+                                    'iconClass': 'w-5 h-5'
+                                } %}
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ document.originalName }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ document.fileSizeFormatted }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                            {% if document.user %}
+                                <a href="{{ path('admin_users_show', {id: document.user.id}) }}"
+                                   class="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                                    {{ document.user.fullName }}
+                                </a>
+                            {% else %}
+                                <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {{ document.typeLabel ?? document.type }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {{ document.archivedAt ? document.archivedAt|date('d/m/Y H:i') : '—' }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {{ document.archivedBy ? document.archivedBy.fullName : '—' }}
+                        </td>
+                        <td class="px-6 py-4 text-right text-sm space-x-2">
+                            <a href="{{ path('admin_documents_view', {id: document.id}) }}"
+                               class="inline-flex items-center text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                               title="Consulter">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </a>
+                            <button type="button"
+                                    onclick="restoreDocument({{ document.id }})"
+                                    class="inline-flex items-center text-green-600 hover:text-green-700 dark:text-green-400"
+                                    title="Restaurer">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                            </button>
+                            <button type="button"
+                                    onclick="deleteDocument({{ document.id }})"
+                                    class="inline-flex items-center text-red-600 hover:text-red-700 dark:text-red-400"
+                                    title="Supprimer définitivement">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# Mobile card view #}
+        <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-700">
+            {% for document in documents %}
+            <div class="p-4 space-y-3">
+                <div class="flex items-start gap-3">
+                    {% include 'components/documents/_document_type_icon.html.twig' with {
+                        'type': document.type,
+                        'iconClass': 'w-5 h-5 flex-shrink-0 mt-0.5'
+                    } %}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {{ document.originalName }}
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ document.typeLabel ?? document.type }} • {{ document.fileSizeFormatted }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                    <div>
+                        <span class="font-medium">Salarié:</span>
+                        {% if document.user %}
+                            <a href="{{ path('admin_users_show', {id: document.user.id}) }}"
+                               class="text-blue-600 dark:text-blue-400">
+                                {{ document.user.fullName }}
+                            </a>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </div>
+                    <div>
+                        <span class="font-medium">Archivé le:</span>
+                        {{ document.archivedAt ? document.archivedAt|date('d/m/Y H:i') : '—' }}
+                    </div>
+                    {% if document.archivedBy %}
+                    <div>
+                        <span class="font-medium">Par:</span>
+                        {{ document.archivedBy.fullName }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="flex gap-2">
+                    <a href="{{ path('admin_documents_view', {id: document.id}) }}"
+                       class="flex-1 inline-flex items-center justify-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        Voir
+                    </a>
+                    <button type="button"
+                            onclick="restoreDocument({{ document.id }})"
+                            class="flex-1 inline-flex items-center justify-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Restaurer
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {# Pagination placeholder #}
+        {% if pagination is defined %}
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div class="text-sm text-gray-700 dark:text-gray-300">
+                Affichage de {{ pagination.from }} à {{ pagination.to }} sur {{ pagination.total }} résultats
+            </div>
+            <div class="flex gap-2">
+                {# Pagination controls will be implemented in Phase 7 #}
+                <button class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded disabled:opacity-50" disabled>
+                    Précédent
+                </button>
+                <button class="px-3 py-1 bg-blue-600 text-white rounded">1</button>
+                <button class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                    Suivant
+                </button>
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        {# Empty state #}
+        <div class="px-6 py-12 text-center">
+            <svg class="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+            </svg>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                Aucun document archivé
+            </h3>
+            <p class="text-gray-500 dark:text-gray-400 mb-6">
+                Les documents archivés apparaîtront ici.
+            </p>
+            <a href="{{ path('admin_documents_list') }}"
+               class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                Retour aux documents actifs
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Temporary JavaScript - Will be migrated to Stimulus in Phase 9 #}
+<script>
+    function restoreDocument(documentId) {
+        if (confirm('Êtes-vous sûr de vouloir restaurer ce document ?')) {
+            // AJAX call will be implemented in Phase 9
+            window.location.href = `/admin/documents/${documentId}/restore`;
+        }
+    }
+
+    function deleteDocument(documentId) {
+        if (confirm('ATTENTION : Cette action supprimera définitivement le document. Cette action est irréversible.\n\nÊtes-vous absolument certain ?')) {
+            // AJAX call will be implemented in Phase 9
+            window.location.href = `/admin/documents/${documentId}/delete`;
+        }
+    }
+</script>
+{% endblock %}

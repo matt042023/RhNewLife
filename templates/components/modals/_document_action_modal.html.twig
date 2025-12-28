@@ -1,0 +1,184 @@
+{#
+    Document Action Modal Component
+
+    Modale unique pour toutes les actions sur les documents (validate, reject, archive, delete, replace)
+
+    Parameters:
+    - document: Entity Document (required)
+    - action: 'validate' | 'reject' | 'archive' | 'delete' | 'replace' (required)
+
+    Usage:
+    {% include 'components/modals/_document_action_modal.html.twig' with {
+        'document': document,
+        'action': 'validate'
+    } %}
+#}
+
+{% set action = action|default('validate') %}
+{% set document = document %}
+
+{% set actionConfig = {
+    'validate': {
+        'id': 'validateModal',
+        'title': 'Valider le document',
+        'titleClass': '',
+        'confirmText': 'Confirmer la validation',
+        'confirmClass': 'bg-green-600 hover:bg-green-700',
+        'route': 'app_admin_documents_validate',
+        'method': 'POST',
+        'icon': 'check',
+        'requireComment': false,
+        'commentLabel': 'Commentaire (optionnel)',
+        'commentPlaceholder': ''
+    },
+    'reject': {
+        'id': 'rejectModal',
+        'title': 'Rejeter le document',
+        'titleClass': 'text-red-600',
+        'confirmText': 'Confirmer le rejet',
+        'confirmClass': 'bg-red-600 hover:bg-red-700',
+        'route': 'app_admin_documents_reject',
+        'method': 'POST',
+        'icon': 'x',
+        'requireComment': true,
+        'commentLabel': 'Motif du rejet',
+        'commentPlaceholder': 'Veuillez indiquer le motif du rejet...'
+    },
+    'archive': {
+        'id': 'archiveModal',
+        'title': 'Archiver le document',
+        'titleClass': '',
+        'confirmText': 'Archiver',
+        'confirmClass': 'bg-yellow-600 hover:bg-yellow-700',
+        'route': 'app_admin_documents_archive',
+        'method': 'POST',
+        'icon': 'archive',
+        'requireComment': false,
+        'commentLabel': 'Commentaire (optionnel)',
+        'commentPlaceholder': '',
+        'warning': 'Êtes-vous sûr de vouloir archiver ce document ? Il ne sera plus visible dans la liste principale mais restera accessible dans les archives.'
+    },
+    'delete': {
+        'id': 'deleteModal',
+        'title': 'Supprimer définitivement',
+        'titleClass': 'text-red-600',
+        'confirmText': 'Supprimer définitivement',
+        'confirmClass': 'bg-red-600 hover:bg-red-700',
+        'route': 'app_admin_documents_delete',
+        'method': 'DELETE',
+        'icon': 'trash',
+        'requireComment': true,
+        'commentLabel': 'Motif de suppression',
+        'commentPlaceholder': 'Indiquez le motif de la suppression...',
+        'warning': 'Attention : Cette action est irréversible !',
+        'warningDetails': 'Le fichier sera définitivement supprimé du serveur. Cette action ne peut pas être annulée.'
+    },
+    'replace': {
+        'id': 'replaceModal',
+        'title': 'Remplacer le fichier',
+        'titleClass': '',
+        'confirmText': 'Remplacer',
+        'confirmClass': 'bg-blue-600 hover:bg-blue-700',
+        'route': 'app_admin_documents_replace',
+        'method': 'POST',
+        'icon': 'upload',
+        'requireComment': false,
+        'commentLabel': 'Commentaire (optionnel)',
+        'commentPlaceholder': '',
+        'info': 'Le fichier actuel sera remplacé. L\'ancienne version sera conservée dans l\'historique.',
+        'requireFile': true
+    }
+} %}
+
+{% set config = actionConfig[action] %}
+
+{% embed 'components/modals/_base_modal.html.twig' with {
+    'id': config.id,
+    'title': config.title,
+    'titleClass': config.titleClass,
+    'size': 'md'
+} %}
+
+    {% block content %}
+        <form method="post"
+              action="{{ path(config.route, {id: document.id}) }}"
+              {% if config.requireFile|default(false) %}enctype="multipart/form-data"{% endif %}
+              data-turbo="false"
+              id="form{{ config.id }}">
+
+            {# Symfony method spoofing for non-POST methods #}
+            {% if config.method|default('POST') != 'POST' %}
+                <input type="hidden" name="_method" value="{{ config.method }}">
+            {% endif %}
+
+            {# Warning Message #}
+            {% if config.warning|default(false) %}
+                <div class="flex items-start gap-3 mb-4 p-4 bg-{{ action == 'delete' ? 'red' : 'yellow' }}-50 dark:bg-{{ action == 'delete' ? 'red' : 'yellow' }}-900/20 rounded-lg border border-{{ action == 'delete' ? 'red' : 'yellow' }}-200 dark:border-{{ action == 'delete' ? 'red' : 'yellow' }}-800">
+                    <svg class="w-6 h-6 text-{{ action == 'delete' ? 'red' : 'yellow' }}-600 dark:text-{{ action == 'delete' ? 'red' : 'yellow' }}-400 flex-shrink-0"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                            {{ config.warning }}
+                        </p>
+                        {% if config.warningDetails|default(false) %}
+                            <p class="text-sm text-gray-600 dark:text-gray-300">
+                                {{ config.warningDetails }}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Info Message #}
+            {% if config.info|default(false) %}
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                    {{ config.info }}
+                </p>
+            {% endif %}
+
+            {# File Upload (for replace action) #}
+            {% if config.requireFile|default(false) %}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Nouveau fichier <span class="text-red-500">*</span>
+                    </label>
+                    <input type="file"
+                           name="file"
+                           required
+                           accept=".pdf,.jpg,.jpeg,.png"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+            {% endif %}
+
+            {# Comment Field #}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ config.commentLabel }}
+                    {% if config.requireComment %}<span class="text-red-500">*</span>{% endif %}
+                </label>
+                <textarea name="{{ action == 'reject' or action == 'delete' ? 'reason' : 'commentaire' }}"
+                          rows="3"
+                          {% if config.requireComment %}required{% endif %}
+                          {% if config.commentPlaceholder %}placeholder="{{ config.commentPlaceholder }}"{% endif %}
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
+            </div>
+        </form>
+    {% endblock %}
+
+    {% block footer %}
+        <button type="button"
+                onclick="var m = this.closest('[id$=Modal]'); m.style.display = 'none'; document.body.style.overflow = '';"
+                class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+            Annuler
+        </button>
+        <button type="submit"
+                form="form{{ config.id }}"
+                class="px-4 py-2 {{ config.confirmClass }} text-white rounded-lg transition-colors">
+            {{ config.confirmText }}
+        </button>
+    {% endblock %}
+
+{% endembed %}

@@ -1,0 +1,158 @@
+{% extends 'layouts/auth.html.twig' %}
+
+{% block title %}Dossier soumis - RH NewLife{% endblock %}
+
+{% block page_title %}Dossier soumis avec succès !{% endblock %}
+
+{% block content %}
+    <div class="text-center space-y-6">
+        {# Icône de succès #}
+        <div class="flex justify-center">
+            <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center">
+                <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <h2 class="text-2xl font-bold text-gray-900">Félicitations, {{ app.user.firstName }} !</h2>
+            <p class="text-gray-600">
+                Votre dossier d'onboarding a été soumis avec succès.
+            </p>
+        </div>
+
+        {# Informations récapitulatives #}
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 text-left rounded">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <div class="ml-3">
+                    <h3 class="text-sm font-semibold text-blue-900">Que se passe-t-il maintenant ?</h3>
+                    <ul class="mt-2 text-sm text-blue-800 space-y-1">
+                        <li>✅ Votre dossier va être examiné par l'équipe RH</li>
+                        <li>📧 Vous recevrez un email dès que votre dossier sera validé</li>
+                        <li>⏱️ Ce processus prend généralement 24 à 48 heures</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {# Récapitulatif du dossier #}
+        <div class="bg-white border border-gray-200 rounded-xl p-6 text-left">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Votre dossier</h3>
+
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Nom complet</span>
+                    <span class="font-semibold text-gray-900">{{ app.user.firstName }} {{ app.user.lastName }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Email</span>
+                    <span class="font-semibold text-gray-900">{{ app.user.email }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Poste</span>
+                    <span class="font-semibold text-gray-900">{{ app.user.position ?? '-' }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Villa</span>
+                    <span class="font-semibold text-gray-900">
+                        {% if app.user.villa %}
+                            <span class="inline-flex items-center gap-1.5">
+                                {% if app.user.villa.color %}
+                                    <span class="w-2 h-2 rounded-full" style="background-color: {{ app.user.villa.color }}"></span>
+                                {% endif %}
+                                {{ app.user.villa.nom }}
+                            </span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Téléphone</span>
+                    <span class="font-semibold text-gray-900">{{ app.user.phone }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Documents soumis</span>
+                    <span class="font-semibold text-green-600">{{ app.user.documents|length }} justificatifs</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Statut</span>
+                    <span class="badge badge-warning">En attente de validation</span>
+                </div>
+            </div>
+        </div>
+
+        {# Contact support #}
+        <div class="text-sm text-gray-600">
+            <p>Une question ? Contactez-nous à <a href="mailto:rh@rhnewlife.fr" class="text-blue-600 hover:text-blue-800 font-semibold">rh@rhnewlife.fr</a></p>
+        </div>
+
+        {# Actions #}
+        <div class="flex flex-col gap-3">
+            <a href="{{ path('app_dashboard') }}" class="btn btn-primary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Retour au tableau de bord
+            </a>
+            <a href="{{ path('app_logout') }}" class="btn btn-ghost">
+                Se déconnecter
+            </a>
+        </div>
+
+        {# Timeline visuelle #}
+        <div class="mt-8 pt-8 border-t border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-900 mb-4">Suivi de votre inscription</h3>
+            <div class="flex items-center justify-between text-xs">
+                <div class="flex flex-col items-center flex-1">
+                    <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white mb-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <span class="text-green-600 font-semibold">Invitation</span>
+                </div>
+                <div class="flex-1 h-1 bg-green-500"></div>
+                <div class="flex flex-col items-center flex-1">
+                    <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white mb-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <span class="text-green-600 font-semibold">Activation</span>
+                </div>
+                <div class="flex-1 h-1 bg-green-500"></div>
+                <div class="flex flex-col items-center flex-1">
+                    <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white mb-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <span class="text-green-600 font-semibold">Dossier soumis</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-300"></div>
+                <div class="flex flex-col items-center flex-1">
+                    <div class="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white mb-2 animate-pulse">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <span class="text-yellow-600 font-semibold">Validation RH</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-300"></div>
+                <div class="flex flex-col items-center flex-1">
+                    <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-white mb-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/>
+                        </svg>
+                    </div>
+                    <span class="text-gray-500 font-semibold">Bienvenue !</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

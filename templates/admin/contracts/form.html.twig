@@ -1,0 +1,345 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}{{ isEdit ? 'Modifier' : 'Créer' }} un contrat - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <a href="{{ path('app_dashboard') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">Administration</a>
+        </div>
+    </li>
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <a href="{{ path('app_admin_users_view', {id: user.id}) }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">{{ user.fullName }}</a>
+        </div>
+    </li>
+    <li aria-current="page">
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">{{ isEdit ? 'Modifier' : 'Créer' }} un contrat</span>
+        </div>
+    </li>
+{% endblock %}
+
+{% block page_header %}
+    <div class="px-4 py-6 lg:px-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">{{ isEdit ? 'Modifier le contrat' : 'Créer un contrat' }}</h1>
+                <p class="text-blue-100">Pour {{ user.fullName }} ({{ user.matricule }})</p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block dashboard_content %}
+    <div class="max-w-4xl mx-auto">
+
+        {# Errors #}
+        {% if errors is not empty %}
+            <div class="alert alert-error mb-6">
+                <ul class="list-disc list-inside">
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {# Message d'information pour les avenants #}
+        {% if parentContract is defined and parentContract %}
+            <div class="alert alert-info mb-6">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <p class="font-semibold">Création d'un avenant (version {{ parentContract.version + 1 }})</p>
+                    <p class="text-sm">Les champs sont pré-remplis avec les données du contrat actuel. Modifiez uniquement ce qui change.</p>
+                    {% if parentContract.template %}
+                        <p class="text-sm">Template du contrat parent : <strong>{{ parentContract.template.name }}</strong></p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        {# Form #}
+        <form method="post" class="bg-white rounded-2xl shadow-lg p-8">
+
+            {# Template de contrat (WF09) #}
+            {% if not isEdit %}
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Modèle de contrat
+                </h2>
+
+                <div>
+                    <label class="form-label">Sélectionner un modèle de contrat *</label>
+                    <select name="template_id" class="form-select" required>
+                        <option value="">Choisir un modèle...</option>
+                        {% for template in activeTemplates %}
+                            <option value="{{ template.id }}" {{ (formData.template_id ?? '') == template.id ? 'selected' : '' }}>
+                                {{ template.name }}
+                                {% if template.description %}- {{ template.description }}{% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Le modèle sera utilisé pour générer le contrat avec les informations ci-dessous.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+            {# Type et dates #}
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Type de contrat et période
+                </h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="form-label">Type de contrat *</label>
+                        <select name="type" class="form-select" required>
+                            <option value="">Sélectionner...</option>
+                            <option value="CDI" {{ (formData.type ?? contract.type ?? '') == 'CDI' ? 'selected' : '' }}>CDI</option>
+                            <option value="CDD" {{ (formData.type ?? contract.type ?? '') == 'CDD' ? 'selected' : '' }}>CDD</option>
+                            <option value="Stage" {{ (formData.type ?? contract.type ?? '') == 'Stage' ? 'selected' : '' }}>Stage</option>
+                            <option value="Alternance" {{ (formData.type ?? contract.type ?? '') == 'Alternance' ? 'selected' : '' }}>Alternance</option>
+                            <option value="Autre" {{ (formData.type ?? contract.type ?? '') == 'Autre' ? 'selected' : '' }}>Autre</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Date de début *</label>
+                        <input type="date" name="start_date"
+                               value="{{ formData.start_date ?? (contract and contract.startDate ? contract.startDate|date('Y-m-d') : '') }}"
+                               class="form-input" required>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Date de fin (CDD uniquement)</label>
+                        <input type="date" name="end_date"
+                               value="{{ formData.end_date ?? (contract and contract.endDate ? contract.endDate|date('Y-m-d') : '') }}"
+                               class="form-input">
+                        <p class="text-xs text-gray-500 mt-1">Laisser vide pour un CDI</p>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Fin période d'essai</label>
+                        <input type="date" name="essai_end_date"
+                               value="{{ formData.essai_end_date ?? (contract and contract.essaiEndDate ? contract.essaiEndDate|date('Y-m-d') : '') }}"
+                               class="form-input">
+                    </div>
+                </div>
+            </div>
+
+            {# Rémunération #}
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Rémunération et temps de travail
+                </h2>
+
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="form-label">Salaire de base (brut mensuel) *</label>
+                        <div class="relative">
+                            <input type="number" name="base_salary" step="0.01"
+                                   value="{{ formData.base_salary ?? contract.baseSalary ?? '' }}"
+                                   class="form-input pr-8" required>
+                            <span class="absolute right-3 top-3 text-gray-500">€</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Villa affectée</label>
+                        <select name="villa_id" id="villa_id" class="form-select">
+                            <option value="">Non affectée</option>
+                            {% for villa in villas %}
+                                <option value="{{ villa.id }}"
+                                        {% if isEdit and contract.villa and contract.villa.id == villa.id %}selected
+                                        {% elseif not isEdit and formData.villa_id is defined and formData.villa_id == villa.id %}selected
+                                        {% elseif not isEdit and formData.villa_id is not defined and user.villa and user.villa.id == villa.id %}selected
+                                        {% endif %}>
+                                    {{ villa.nom }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            {% if user.villa %}
+                                Villa actuelle de {{ user.firstName }} : <strong>{{ user.villa.nom }}</strong>
+                            {% else %}
+                                Aucune villa assignée à {{ user.firstName }}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                {# Choix du système de suivi #}
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                    <label class="font-semibold text-gray-900 block mb-3">Système de suivi du temps de travail</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 bg-white" id="tracking-annual-label">
+                            <input type="radio" name="tracking_system" value="annual" class="mt-1 w-4 h-4 text-blue-600" checked>
+                            <div>
+                                <div class="font-medium text-gray-900">Compteur de jours annuels</div>
+                                <div class="text-sm text-gray-600">Pour les éducateurs (258 jours/an)</div>
+                            </div>
+                        </label>
+
+                        <label class="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 bg-white" id="tracking-hourly-label">
+                            <input type="radio" name="tracking_system" value="hourly" class="mt-1 w-4 h-4 text-blue-600">
+                            <div>
+                                <div class="font-medium text-gray-900">Suivi horaire classique</div>
+                                <div class="text-sm text-gray-600">Heures hebdomadaires et jours travaillés</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                {# Champs cachés pour le système choisi #}
+                <input type="hidden" name="use_annual_day_system" id="use_annual_day_system_input" value="1">
+                <input type="hidden" name="annual_days_required" id="annual_days_input" value="258">
+
+                {# Panel Compteur Annuel #}
+                <div id="annual-panel" class="tracking-panel">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-5">
+                        <h3 class="font-semibold text-blue-900 mb-3">📅 Jours annuels à effectuer</h3>
+
+                        <div class="bg-white rounded-lg p-4 mb-4">
+                            <div class="text-center my-3">
+                                <span class="text-4xl font-bold text-blue-600">258</span>
+                                <span class="text-xl text-gray-600 ml-2">jours</span>
+                            </div>
+                            <small class="block text-center text-gray-500">
+                                Standard pour tous les éducateurs
+                            </small>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Notes (optionnel)</label>
+                            <textarea name="annual_day_notes" class="form-input" rows="2" placeholder="Ex: Temps partiel convenu, particularités..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                {# Panel Suivi Horaire #}
+                <div id="hourly-panel" class="tracking-panel" style="display:none;">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="form-label">Taux d'activité</label>
+                            <select name="activity_rate" class="form-select">
+                                <option value="1.00" {{ (formData.activity_rate ?? contract.activityRate ?? '1.00') == '1.00' ? 'selected' : '' }}>100% (temps plein)</option>
+                                <option value="0.80" {{ (formData.activity_rate ?? contract.activityRate ?? '') == '0.80' ? 'selected' : '' }}>80%</option>
+                                <option value="0.50" {{ (formData.activity_rate ?? contract.activityRate ?? '') == '0.50' ? 'selected' : '' }}>50% (mi-temps)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Heures hebdomadaires</label>
+                            <input type="number" name="weekly_hours" step="0.5"
+                                   value="{{ formData.weekly_hours ?? contract.weeklyHours ?? '35' }}"
+                                   class="form-input">
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-3">Jours travaillés</h3>
+                        <div class="grid grid-cols-7 gap-3">
+                            {% set days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'] %}
+                            {% set workingDays = formData.working_days ?? (contract and contract.workingDays ? contract.workingDays : ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']) %}
+
+                            {% for day in days %}
+                                <label class="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                    <input type="checkbox" name="working_days[]" value="{{ day }}"
+                                           {{ day in workingDays ? 'checked' : '' }}
+                                           class="w-4 h-4 text-blue-600 rounded">
+                                    <span class="text-sm font-medium">{{ day }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Actions #}
+            <div class="flex items-center justify-between pt-6 border-t">
+                <a href="{{ path('app_admin_users_view', {id: user.id}) }}" class="text-gray-600 hover:text-gray-800 font-semibold">
+                    Annuler
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {{ isEdit ? 'Mettre à jour' : 'Créer en brouillon' }}
+                </button>
+            </div>
+        </form>
+
+        {# Info box #}
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex gap-3">
+                <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-sm text-blue-800">
+                    <p class="font-semibold mb-1">À propos des contrats</p>
+                    <p>Le contrat sera créé en mode brouillon. Vous pourrez ensuite le valider, l'envoyer au bureau comptable et uploader la version signée depuis la page de détails du contrat.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const annualPanel = document.getElementById('annual-panel');
+        const hourlyPanel = document.getElementById('hourly-panel');
+        const radioButtons = document.querySelectorAll('input[name="tracking_system"]');
+        const annualLabel = document.getElementById('tracking-annual-label');
+        const hourlyLabel = document.getElementById('tracking-hourly-label');
+        const useAnnualDaySystemInput = document.getElementById('use_annual_day_system_input');
+
+        // Toggle panels based on radio selection
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'annual') {
+                    annualPanel.style.display = 'block';
+                    hourlyPanel.style.display = 'none';
+                    annualLabel.classList.add('border-blue-500', 'bg-blue-50');
+                    hourlyLabel.classList.remove('border-blue-500', 'bg-blue-50');
+                    useAnnualDaySystemInput.value = '1';
+                } else {
+                    annualPanel.style.display = 'none';
+                    hourlyPanel.style.display = 'block';
+                    annualLabel.classList.remove('border-blue-500', 'bg-blue-50');
+                    hourlyLabel.classList.add('border-blue-500', 'bg-blue-50');
+                    useAnnualDaySystemInput.value = '0';
+                }
+            });
+        });
+
+        // Initial highlight
+        annualLabel.classList.add('border-blue-500', 'bg-blue-50');
+    });
+    </script>
+{% endblock %}

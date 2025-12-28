@@ -1,0 +1,178 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Nouvelle demande d'absence{% endblock %}
+
+{% block page_header %}
+    <div class="px-4 py-6 lg:px-6">
+        <div class="flex items-center">
+            <a href="{{ path('app_absence_index') }}" class="mr-4 text-blue-100 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">
+                    Nouvelle demande d'absence
+                </h1>
+                <p class="text-blue-100 text-sm md:text-base mt-1">
+                    Remplissez le formulaire ci-dessous
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block dashboard_content %}
+    <div class="px-4 py-6 lg:px-6 max-w-3xl mx-auto">
+        {# Flash messages #}
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="mb-4 glass-card {{ type == 'success' ? 'glass-card-success' : (type == 'error' ? 'glass-card-danger' : 'glass-card-primary') }} p-4 animate-slide-in-glass">
+                    <span class="font-medium {{ type == 'success' ? 'text-green-800 dark:text-green-200' : (type == 'error' ? 'text-red-800 dark:text-red-200' : 'text-blue-800 dark:text-blue-200') }}">
+                        {{ message }}
+                    </span>
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        <div class="glass-card p-6 space-y-6">
+            {{ form_start(form, {
+                'attr': {
+                    'data-controller': 'absence-form',
+                    'novalidate': 'novalidate'
+                }
+            }) }}
+
+            {# Type d'absence #}
+            <div>
+                {{ form_label(form.absenceType, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                {{ form_widget(form.absenceType, {
+                    'attr': {
+                        'class': 'glass-input w-full',
+                        'data-absence-form-target': 'absenceType',
+                        'data-action': 'change->absence-form#onTypeChange'
+                    }
+                }) }}
+                {{ form_errors(form.absenceType) }}
+
+                {# Info sur les compteurs disponibles #}
+                <div class="mt-2 p-3 glass-card glass-card-primary" data-absence-form-target="counterInfo" style="display: none;">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                        <span class="font-medium">Solde disponible:</span>
+                        <span data-absence-form-target="counterValue">-</span> jours
+                    </p>
+                </div>
+            </div>
+
+            {# Dates #}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    {{ form_label(form.startAt, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                    {{ form_widget(form.startAt, {
+                        'attr': {
+                            'class': 'glass-input w-full',
+                            'data-absence-form-target': 'startDate',
+                            'data-action': 'change->absence-form#calculateWorkingDays'
+                        }
+                    }) }}
+                    {{ form_errors(form.startAt) }}
+                </div>
+
+                <div>
+                    {{ form_label(form.endAt, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                    {{ form_widget(form.endAt, {
+                        'attr': {
+                            'class': 'glass-input w-full',
+                            'data-absence-form-target': 'endDate',
+                            'data-action': 'change->absence-form#calculateWorkingDays'
+                        }
+                    }) }}
+                    {{ form_errors(form.endAt) }}
+                </div>
+            </div>
+
+            {# Durée calculée #}
+            <div class="p-4 glass-card" data-absence-form-target="workingDaysDisplay" style="display: none;">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Durée de l'absence:</span>
+                    <span class="text-lg font-bold text-blue-600 dark:text-blue-400" data-absence-form-target="workingDaysValue">-</span>
+                </div>
+            </div>
+
+            {# Motif #}
+            <div>
+                {{ form_label(form.reason, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                {{ form_widget(form.reason, {
+                    'attr': {
+                        'class': 'glass-input w-full',
+                        'rows': 4
+                    }
+                }) }}
+                {{ form_errors(form.reason) }}
+            </div>
+
+            {# Justificatif #}
+            <div data-absence-form-target="justificationField">
+                {{ form_label(form.justificationFile, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-white/20 dark:border-white/10 border-dashed rounded-lg glass-card hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer"
+                     data-controller="file-upload"
+                     data-file-upload-target="dropzone">
+                    <div class="space-y-1 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="flex text-sm text-gray-600 dark:text-gray-400">
+                            <label class="relative cursor-pointer rounded-md font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 focus-within:outline-none">
+                                <span>Télécharger un fichier</span>
+                                {{ form_widget(form.justificationFile, {
+                                    'attr': {
+                                        'class': 'sr-only',
+                                        'data-action': 'change->file-upload#onFileSelect'
+                                    }
+                                }) }}
+                            </label>
+                            <p class="pl-1">ou glisser-déposer</p>
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">PDF, JPG, PNG jusqu'à 10MB</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium" data-file-upload-target="fileName"></p>
+                    </div>
+                </div>
+                {{ form_errors(form.justificationFile) }}
+
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Le justificatif peut être fourni maintenant ou ultérieurement selon le type d'absence.
+                </p>
+            </div>
+
+            {# Alertes de validation #}
+            <div data-absence-form-target="validationAlerts">
+                {# Les alertes seront affichées ici via Stimulus #}
+            </div>
+
+            {# Actions #}
+            <div class="flex items-center justify-end space-x-3 pt-4 border-t border-white/10">
+                <a href="{{ path('app_absence_index') }}" class="glass-btn px-4 py-2">
+                    Annuler
+                </a>
+                <button type="submit" class="glass-btn glass-btn-primary inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        data-absence-form-target="submitButton">
+                    Créer la demande
+                </button>
+            </div>
+
+            {{ form_end(form) }}
+        </div>
+
+        {# Informations complémentaires #}
+        <div class="mt-6 glass-card glass-card-primary p-4 animate-slide-in-glass">
+            <h3 class="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">Informations importantes</h3>
+            <ul class="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                <li>Les demandes d'absence doivent être soumises en respectant les délais en vigueur</li>
+                <li>Les congés payés nécessitent une validation hiérarchique</li>
+                <li>Les absences maladie nécessitent un justificatif médical dans les 48h</li>
+                <li>Vous recevrez une notification par email lors de la validation de votre demande</li>
+            </ul>
+        </div>
+    </div>
+{% endblock %}
