@@ -105,6 +105,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Contract::class, mappedBy: 'user', orphanRemoval: true)]
     private Collection $contracts;
 
+    /**
+     * @var Collection<int, VisiteMedicale>
+     */
+    #[ORM\OneToMany(targetEntity: VisiteMedicale::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $visitesMedicales;
+
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
     private ?Health $health = null;
 
@@ -112,6 +118,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->documents = new ArrayCollection();
         $this->contracts = new ArrayCollection();
+        $this->visitesMedicales = new ArrayCollection();
         $this->createdAt = new \DateTime();
         $this->updatedAt = new \DateTime();
         $this->health = new Health();
@@ -523,6 +530,64 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->health = $health;
 
         return $this;
+    }
+
+    /**
+     * @return Collection<int, VisiteMedicale>
+     */
+    public function getVisitesMedicales(): Collection
+    {
+        return $this->visitesMedicales;
+    }
+
+    public function addVisiteMedicale(VisiteMedicale $visiteMedicale): static
+    {
+        if (!$this->visitesMedicales->contains($visiteMedicale)) {
+            $this->visitesMedicales->add($visiteMedicale);
+            $visiteMedicale->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeVisiteMedicale(VisiteMedicale $visiteMedicale): static
+    {
+        if ($this->visitesMedicales->removeElement($visiteMedicale)) {
+            if ($visiteMedicale->getUser() === $this) {
+                $visiteMedicale->setUser(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get latest medical visit
+     */
+    public function getLatestVisiteMedicale(): ?VisiteMedicale
+    {
+        if ($this->visitesMedicales->isEmpty()) {
+            return null;
+        }
+
+        $visites = $this->visitesMedicales->toArray();
+        usort($visites, fn($a, $b) => $b->getVisitDate() <=> $a->getVisitDate());
+
+        return $visites[0] ?? null;
+    }
+
+    /**
+     * Check if medical visit is up to date (not expired)
+     */
+    public function hasMedicalVisitUpToDate(): bool
+    {
+        $latest = $this->getLatestVisiteMedicale();
+
+        if (!$latest) {
+            return false;
+        }
+
+        return !$latest->isExpired();
     }
 
     #[\Deprecated]

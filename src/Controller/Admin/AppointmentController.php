@@ -9,8 +9,10 @@ use App\Form\AppointmentConvocationType;
 use App\Form\AppointmentValidationType;
 use App\Form\AppointmentRefusalType;
 use App\Form\AppointmentFilterType;
+use App\Form\AppointmentMedicalType;
 use App\Repository\RendezVousRepository;
 use App\Service\Appointment\AppointmentService;
+use App\Service\MedicalVisit\MedicalVisitService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,7 +25,8 @@ class AppointmentController extends AbstractController
 {
     public function __construct(
         private AppointmentService $appointmentService,
-        private RendezVousRepository $appointmentRepository
+        private RendezVousRepository $appointmentRepository,
+        private MedicalVisitService $medicalVisitService
     ) {}
 
     /**
@@ -113,6 +116,69 @@ class AppointmentController extends AbstractController
         }
 
         return $this->render('admin/appointment/create.html.twig', [
+            'form' => $form,
+        ]);
+    }
+
+    /**
+     * Créer un rendez-vous pour une visite médicale
+     */
+    #[Route('/visite-medicale/creer', name: 'admin_appointment_medical_create', methods: ['GET', 'POST'])]
+    public function createMedicalAppointment(Request $request): Response
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $appointment = new RendezVous();
+        $form = $this->createForm(AppointmentMedicalType::class, $appointment);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            try {
+                // Get form data
+                $visitType = $form->get('visitType')->getData();
+                $participant = $form->get('participants')->getData();
+
+                // Generate subject based on visit type
+                $typeLabels = [
+                    'embauche' => 'Visite médicale - Embauche',
+                    'periodique' => 'Visite médicale - Périodique',
+                    'reprise' => 'Visite médicale - Reprise',
+                    'demande' => 'Visite médicale - À la demande',
+                ];
+                $subject = $typeLabels[$visitType] ?? 'Visite médicale';
+
+                // Set appointment type before creation
+                $appointment->setType(RendezVous::TYPE_VISITE_MEDICALE);
+
+                // Create the appointment
+                $createdAppointment = $this->appointmentService->createConvocation(
+                    organizer: $user,
+                    subject: $subject,
+                    scheduledAt: $appointment->getStartAt(),
+                    durationMinutes: $appointment->getDurationMinutes(),
+                    participants: [$participant],
+                    description: $appointment->getDescription(),
+                    location: $appointment->getLocation(),
+                    createsAbsence: false
+                );
+
+                // Update type to VISITE_MEDICALE
+                $createdAppointment->setType(RendezVous::TYPE_VISITE_MEDICALE);
+                $this->appointmentService->updateAppointment($createdAppointment, []);
+
+                // Create linked VisiteMedicale
+                $visite = $this->medicalVisitService->createFromAppointment($createdAppointment, $visitType);
+
+                $this->addFlash('success', 'Le rendez-vous et la visite médicale ont été créés avec succès.');
+
+                return $this->redirectToRoute('admin_visite_medicale_show', ['id' => $visite->getId()]);
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'Erreur lors de la création : ' . $e->getMessage());
+            }
+        }
+
+        return $this->render('admin/appointment/create_medical.html.twig', [
             'form' => $form,
         ]);
     }

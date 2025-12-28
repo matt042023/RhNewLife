@@ -1,0 +1,111 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Programmer une visite médicale{% endblock %}
+
+{% block admin_title %}Programmer une visite médicale{% endblock %}
+{% block admin_subtitle %}Créer un rendez-vous pour une visite médicale{% endblock %}
+
+{% block admin_content %}
+    <div class="space-y-6">
+        {# Flash messages #}
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="p-4 rounded-lg {{ type == 'success' ? 'bg-green-100 text-green-800' : (type == 'error' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800') }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        {# Information workflow #}
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">
+                        Workflow de la visite médicale
+                    </h3>
+                    <div class="mt-2 text-sm text-blue-700">
+                        <ol class="list-decimal list-inside space-y-1">
+                            <li>Créez le rendez-vous pour programmer la visite</li>
+                            <li>Une visite médicale sera automatiquement créée avec le statut "Programmée"</li>
+                            <li>Le salarié sera notifié du rendez-vous</li>
+                            <li>Après la visite, complétez les résultats médicaux dans la fiche de la visite</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Formulaire #}
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-6">Informations du rendez-vous</h2>
+
+            {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+
+            <div class="space-y-6">
+                {# Type de visite #}
+                <div>
+                    {{ form_label(form.visitType, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                    {{ form_widget(form.visitType, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'}}) }}
+                    {{ form_errors(form.visitType) }}
+                    {{ form_help(form.visitType) }}
+                </div>
+
+                {# Éducateur concerné #}
+                <div>
+                    {{ form_label(form.participants, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                    {{ form_widget(form.participants, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'}}) }}
+                    {{ form_errors(form.participants) }}
+                </div>
+
+                {# Date et heure #}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        {{ form_label(form.startAt, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                        {{ form_widget(form.startAt, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'}}) }}
+                        {{ form_errors(form.startAt) }}
+                    </div>
+
+                    <div>
+                        {{ form_label(form.durationMinutes, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                        {{ form_widget(form.durationMinutes, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'}}) }}
+                        {{ form_errors(form.durationMinutes) }}
+                        {{ form_help(form.durationMinutes) }}
+                    </div>
+                </div>
+
+                {# Lieu / Organisme médical #}
+                <div>
+                    {{ form_label(form.location, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                    {{ form_widget(form.location, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'}}) }}
+                    {{ form_errors(form.location) }}
+                    {{ form_help(form.location) }}
+                </div>
+
+                {# Description / Notes #}
+                <div>
+                    {{ form_label(form.description, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-2'}}) }}
+                    {{ form_widget(form.description, {'attr': {'class': 'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500', 'rows': 4}}) }}
+                    {{ form_errors(form.description) }}
+                    {{ form_help(form.description) }}
+                </div>
+            </div>
+
+            {# Actions #}
+            <div class="flex justify-end space-x-3 mt-8">
+                <a href="{{ path('admin_visite_medicale_index') }}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Annuler
+                </a>
+                <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Créer le rendez-vous et la visite
+                </button>
+            </div>
+
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

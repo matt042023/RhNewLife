@@ -120,6 +120,10 @@ class Document
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?ElementVariable $elementVariable = null;
 
+    #[ORM\ManyToOne(targetEntity: VisiteMedicale::class, inversedBy: 'documents')]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?VisiteMedicale $visiteMedicale = null;
+
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $validatedBy = null;
@@ -460,6 +464,17 @@ class Document
     public function setElementVariable(?ElementVariable $elementVariable): static
     {
         $this->elementVariable = $elementVariable;
+        return $this;
+    }
+
+    public function getVisiteMedicale(): ?VisiteMedicale
+    {
+        return $this->visiteMedicale;
+    }
+
+    public function setVisiteMedicale(?VisiteMedicale $visiteMedicale): static
+    {
+        $this->visiteMedicale = $visiteMedicale;
         return $this;
     }
 

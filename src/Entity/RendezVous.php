@@ -19,6 +19,7 @@ class RendezVous
     // Nouveaux types
     public const TYPE_CONVOCATION = 'CONVOCATION';
     public const TYPE_DEMANDE = 'DEMANDE';
+    public const TYPE_VISITE_MEDICALE = 'VISITE_MEDICALE';
 
     // Anciens statuts (deprecated, pour compatibilité)
     public const STATUS_PLANNED = 'planned';
@@ -99,6 +100,9 @@ class RendezVous
      */
     #[ORM\OneToMany(mappedBy: 'appointment', targetEntity: AppointmentParticipant::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $appointmentParticipants;
+
+    #[ORM\OneToOne(mappedBy: 'appointment', targetEntity: VisiteMedicale::class, cascade: ['persist'])]
+    private ?VisiteMedicale $visiteMedicale = null;
 
     public function __construct()
     {
@@ -398,6 +402,11 @@ class RendezVous
         return $this->type === self::TYPE_DEMANDE;
     }
 
+    public function isVisiteMedicale(): bool
+    {
+        return $this->type === self::TYPE_VISITE_MEDICALE;
+    }
+
     public function isEnAttente(): bool
     {
         return $this->statut === self::STATUS_EN_ATTENTE;
@@ -572,5 +581,44 @@ class RendezVous
             'TERMINE' => 'Terminé',
             default => $status
         };
+    }
+
+    public function getTypeLabel(): string
+    {
+        return match($this->type) {
+            self::TYPE_CONVOCATION => 'Convocation',
+            self::TYPE_DEMANDE => 'Demande',
+            self::TYPE_VISITE_MEDICALE => 'Visite médicale',
+            self::TYPE_INDIVIDUEL => 'Individuel',
+            self::TYPE_GROUPE => 'Groupe',
+            default => $this->type
+        };
+    }
+
+    public function getVisiteMedicale(): ?VisiteMedicale
+    {
+        return $this->visiteMedicale;
+    }
+
+    public function setVisiteMedicale(?VisiteMedicale $visiteMedicale): static
+    {
+        // Unset the owning side of the relation if necessary
+        if ($visiteMedicale === null && $this->visiteMedicale !== null) {
+            $this->visiteMedicale->setAppointment(null);
+        }
+
+        // Set the owning side of the relation if necessary
+        if ($visiteMedicale !== null && $visiteMedicale->getAppointment() !== $this) {
+            $visiteMedicale->setAppointment($this);
+        }
+
+        $this->visiteMedicale = $visiteMedicale;
+
+        return $this;
+    }
+
+    public function hasCompletedMedicalVisit(): bool
+    {
+        return $this->visiteMedicale !== null && $this->visiteMedicale->isEffectuee();
     }
 }

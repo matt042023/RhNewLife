@@ -126,15 +126,14 @@
                                     {{ appointment.organizer.fullName }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    {% if appointment.type == 'CONVOCATION' %}
-                                        <span class="px-2 py-1 text-xs font-semibold rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                                            Convocation
-                                        </span>
-                                    {% else %}
-                                        <span class="px-2 py-1 text-xs font-semibold rounded bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                                            Demande
-                                        </span>
-                                    {% endif %}
+                                    {% set typeColors = {
+                                        'CONVOCATION': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+                                        'DEMANDE': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+                                        'VISITE_MEDICALE': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                                    } %}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded {{ typeColors[appointment.type] ?? 'bg-gray-100 text-gray-800' }}">
+                                        {{ appointment.typeLabel }}
+                                    </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     {% set displayStatus = appointment.displayStatus %}
