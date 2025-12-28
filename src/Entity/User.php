@@ -111,6 +111,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: VisiteMedicale::class, mappedBy: 'user', orphanRemoval: true)]
     private Collection $visitesMedicales;
 
+    /**
+     * @var Collection<int, Astreinte>
+     */
+    #[ORM\OneToMany(targetEntity: Astreinte::class, mappedBy: 'educateur')]
+    private Collection $astreintes;
+
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
     private ?Health $health = null;
 
@@ -119,6 +125,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->documents = new ArrayCollection();
         $this->contracts = new ArrayCollection();
         $this->visitesMedicales = new ArrayCollection();
+        $this->astreintes = new ArrayCollection();
         $this->createdAt = new \DateTime();
         $this->updatedAt = new \DateTime();
         $this->health = new Health();
@@ -588,6 +595,80 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         return !$latest->isExpired();
+    }
+
+    /**
+     * @return Collection<int, Astreinte>
+     */
+    public function getAstreintes(): Collection
+    {
+        return $this->astreintes;
+    }
+
+    public function addAstreinte(Astreinte $astreinte): static
+    {
+        if (!$this->astreintes->contains($astreinte)) {
+            $this->astreintes->add($astreinte);
+            $astreinte->setEducateur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAstreinte(Astreinte $astreinte): static
+    {
+        if ($this->astreintes->removeElement($astreinte)) {
+            if ($astreinte->getEducateur() === $this) {
+                $astreinte->setEducateur(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get current astreinte (if any)
+     */
+    public function getCurrentAstreinte(): ?Astreinte
+    {
+        $now = new \DateTime();
+
+        foreach ($this->astreintes as $astreinte) {
+            if ($astreinte->getStartAt() <= $now && $astreinte->getEndAt() >= $now) {
+                return $astreinte;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get upcoming astreintes
+     * @return Astreinte[]
+     */
+    public function getUpcomingAstreintes(): array
+    {
+        $now = new \DateTime();
+        $upcoming = [];
+
+        foreach ($this->astreintes as $astreinte) {
+            if ($astreinte->getStartAt() > $now) {
+                $upcoming[] = $astreinte;
+            }
+        }
+
+        // Sort by start date
+        usort($upcoming, fn($a, $b) => $a->getStartAt() <=> $b->getStartAt());
+
+        return $upcoming;
+    }
+
+    /**
+     * Check if user is currently on-call
+     */
+    public function isOnCall(): bool
+    {
+        return $this->getCurrentAstreinte() !== null;
     }
 
     #[\Deprecated]
