@@ -198,6 +198,14 @@
                         <span class="ml-3">Templates de contrat</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{{ path('admin_squelette_garde_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'admin_squelette_garde' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-7.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-1ZM0 4a2 2 0 0 1 2-2h2V1a1 1 0 0 1 2 0v1h3V1a1 1 0 1 1 2 0v1h3V1a1 1 0 0 1 2 0v1h2a2 2 0 0 1 2 2v2H0V4Z"/>
+                        </svg>
+                        <span class="ml-3">Templates de garde</span>
+                    </a>
+                </li>
             {% endif %}
 
             {# Director section #}
