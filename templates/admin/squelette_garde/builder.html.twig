@@ -1,0 +1,149 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}{{ isEdit ? 'Modifier' : 'Créer' }} un template{% endblock %}
+
+{% block admin_title %}{{ isEdit ? 'Modifier' : 'Créer' }} un template de garde{% endblock %}
+{% block admin_subtitle %}Planification hebdomadaire type (8 jours consécutifs){% endblock %}
+
+{% block admin_actions %}
+    <a href="{{ path('admin_squelette_garde_index') }}"
+       class="inline-flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-medium rounded-lg transition duration-150 border border-white/30">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        Retour
+    </a>
+{% endblock %}
+
+{% block admin_content %}
+<div data-controller="squelette-builder"
+     data-squelette-builder-squelette-id-value="{{ squelette ? squelette.id : 0 }}"
+     data-squelette-builder-is-edit-value="{{ isEdit ? 'true' : 'false' }}">
+
+    {# Validation messages #}
+    <div data-squelette-builder-target="validationErrors" class="space-y-2 mb-4"></div>
+    <div data-squelette-builder-target="validationWarnings" class="space-y-2 mb-4"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {# Left column: Properties and controls #}
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-4 space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold mb-4">Propriétés</h2>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Nom du template *</label>
+                            <input type="text"
+                                   data-squelette-builder-target="nomInput"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                   placeholder="Ex: Planning standard semaine"
+                                   value="{{ squelette ? squelette.nom : '' }}">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Description</label>
+                            <textarea
+                                data-squelette-builder-target="descriptionInput"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                rows="3"
+                                placeholder="Description optionnelle...">{{ squelette ? squelette.description : '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                {# Créneaux de garde #}
+                <div>
+                    <h3 class="font-semibold text-gray-900 mb-2">Créneaux de garde</h3>
+                    <div class="flex flex-col gap-2 mb-3">
+                        <button type="button"
+                                data-action="click->squelette-builder#addGarde24h"
+                                class="px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Garde 24h (1 jour)
+                        </button>
+                        <button type="button"
+                                data-action="click->squelette-builder#addGarde48h"
+                                class="px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Garde 48h (2 jours)
+                        </button>
+                    </div>
+                    <div data-squelette-builder-target="gardeList" class="space-y-2">
+                        <p class="text-xs text-gray-500">Aucun créneau de garde</p>
+                    </div>
+                </div>
+
+                <hr>
+
+                {# Créneaux de renfort #}
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-semibold text-gray-900">Créneaux de renfort</h3>
+                        <button type="button"
+                                data-action="click->squelette-builder#addRenfort"
+                                class="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded">
+                            + Ajouter
+                        </button>
+                    </div>
+                    <div data-squelette-builder-target="renfortList" class="space-y-2">
+                        <p class="text-xs text-gray-500">Aucun renfort</p>
+                    </div>
+                </div>
+
+                <hr>
+
+                {# Action buttons #}
+                <div class="space-y-2">
+                    <button type="button"
+                            data-action="click->squelette-builder#save"
+                            class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-150">
+                        Enregistrer
+                    </button>
+                    <button type="button"
+                            data-action="click->squelette-builder#preview"
+                            class="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition duration-150">
+                        Prévisualiser
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {# Right column: Calendar #}
+        <div class="lg:col-span-3">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-xl font-bold mb-4">Calendrier Hebdomadaire (8 jours: Lundi → Lundi)</h2>
+
+                <div data-squelette-builder-target="calendar"
+                     class="border border-gray-300 rounded-lg overflow-hidden"
+                     style="min-height: 700px;">
+                    {# FullCalendar sera initialisé ici #}
+                </div>
+
+                <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p class="text-sm text-blue-900 font-medium mb-2">Instructions :</p>
+                    <ul class="text-sm text-blue-800 space-y-1">
+                        <li>• Ajoutez des créneaux via les boutons à gauche</li>
+                        <li>• Glissez-déposez les créneaux pour les repositionner</li>
+                        <li>• Redimensionnez en tirant les bordures inférieure/supérieure</li>
+                        <li>• Cliquez sur un créneau pour le supprimer</li>
+                        <li>• Les créneaux bleus sont des gardes, les verts sont des renforts</li>
+                        <li>• <strong>Les gardes peuvent s'étendre sur plusieurs jours (ex: samedi → lundi)</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Import FullCalendar CSS #}
+<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.9/main.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.9/main.min.css" rel="stylesheet">
+
+{% endblock %}
