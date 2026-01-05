@@ -1,0 +1,550 @@
+<?php
+
+namespace App\Controller\Api;
+
+use App\Entity\Affectation;
+use App\Entity\SqueletteGarde;
+use App\Entity\Villa;
+use App\Repository\AffectationRepository;
+use App\Repository\PlanningMonthRepository;
+use App\Repository\SqueletteGardeRepository;
+use App\Repository\UserRepository;
+use App\Repository\VillaRepository;
+use App\Service\Planning\PlanningAssignmentService;
+use App\Service\Planning\PlanningAvailabilityService;
+use App\Service\Planning\PlanningValidationService;
+use App\Service\Planning\VillaPlanningService;
+use App\Service\SqueletteGarde\SqueletteGardeApplicator;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
+#[Route('/api/planning-assignment')]
+#[IsGranted('ROLE_ADMIN')]
+class PlanningAssignmentApiController extends AbstractController
+{
+    public function __construct(
+        private SqueletteGardeRepository $templateRepository,
+        private SqueletteGardeApplicator $templateApplicator,
+        private PlanningMonthRepository $planningRepository,
+        private AffectationRepository $affectationRepository,
+        private UserRepository $userRepository,
+        private VillaRepository $villaRepository,
+        private PlanningAssignmentService $assignmentService,
+        private PlanningAvailabilityService $availabilityService,
+        private PlanningValidationService $validationService,
+        private VillaPlanningService $villaPlanningService,
+        private EntityManagerInterface $em
+    ) {
+    }
+
+    /**
+     * Generate skeleton from template for a period
+     * POST /api/planning-assignment/generate
+     */
+    #[Route('/generate', methods: ['POST'])]
+    public function generate(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        // Validate input
+        $templateId = $data['templateId'] ?? null;
+        $startDate = $data['startDate'] ?? null;
+        $endDate = $data['endDate'] ?? null;
+        $scope = $data['scope'] ?? 'villa'; // 'villa', 'all', 'renfort'
+        $villaId = $data['villaId'] ?? null;
+
+        if (!$templateId || !$startDate || !$endDate) {
+            return $this->json(['error' => 'Missing required parameters'], 400);
+        }
+
+        // Load template
+        $template = $this->templateRepository->find($templateId);
+        if (!$template) {
+            return $this->json(['error' => 'Template not found'], 404);
+        }
+
+        // Parse dates
+        try {
+            $start = new \DateTime($startDate);
+            $end = new \DateTime($endDate);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Invalid date format'], 400);
+        }
+
+        // Apply template based on scope
+        $villa = null;
+        $allVillas = false;
+        $renfortOnly = false;
+
+        switch ($scope) {
+            case 'villa':
+                if (!$villaId) {
+                    return $this->json(['error' => 'Villa ID required for scope "villa"'], 400);
+                }
+                $villa = $this->villaRepository->find($villaId);
+                if (!$villa) {
+                    return $this->json(['error' => 'Villa not found'], 404);
+                }
+                break;
+            case 'all':
+                $allVillas = true;
+                break;
+            case 'renfort':
+                $renfortOnly = true;
+                break;
+            default:
+                return $this->json(['error' => 'Invalid scope'], 400);
+        }
+
+        // Apply template
+        $result = $this->templateApplicator->applyToPeriod(
+            $template,
+            $start,
+            $end,
+            $villa,
+            $allVillas,
+            $renfortOnly
+        );
+
+        return $this->json([
+            'success' => true,
+            'created' => $result['created'],
+            'plannings' => array_map(function ($planning) {
+                return [
+                    'id' => $planning->getId(),
+                    'villa' => $planning->getVilla()->getNom(),
+                    'year' => $planning->getAnnee(),
+                    'month' => $planning->getMois()
+                ];
+            }, $result['plannings'])
+        ]);
+    }
+
+    /**
+     * Get all plannings for a specific month (all villas)
+     * GET /api/planning-assignment/{year}/{month}
+     */
+    #[Route('/{year}/{month}', methods: ['GET'])]
+    public function getMonth(int $year, int $month): JsonResponse
+    {
+        // Load all plannings for this month with eager loading
+        $plannings = $this->planningRepository->createQueryBuilder('p')
+            ->leftJoin('p.affectations', 'a')
+            ->leftJoin('a.user', 'u')
+            ->leftJoin('p.villa', 'v')
+            ->addSelect('a', 'u', 'v')
+            ->where('p.annee = :year')
+            ->andWhere('p.mois = :month')
+            ->setParameter('year', $year)
+            ->setParameter('month', $month)
+            ->getQuery()
+            ->getResult();
+
+        $data = [];
+        foreach ($plannings as $planning) {
+            $affectations = [];
+            foreach ($planning->getAffectations() as $affectation) {
+                $user = $affectation->getUser();
+                $villa = $affectation->getVilla();
+
+                $affectations[] = [
+                    'id' => $affectation->getId(),
+                    'startAt' => $affectation->getStartAt()?->format('c'),
+                    'endAt' => $affectation->getEndAt()?->format('c'),
+                    'type' => $affectation->getType(),
+                    'user' => $user ? [
+                        'id' => $user->getId(),
+                        'fullName' => $user->getFullName(),
+                        'color' => $user->getColor()
+                    ] : null,
+                    'villa' => [
+                        'id' => $villa?->getId(),
+                        'nom' => $villa?->getNom(),
+                        'color' => $villa?->getColor()
+                    ],
+                    'statut' => $affectation->getStatut(),
+                    'commentaire' => $affectation->getCommentaire()
+                ];
+            }
+
+            $data[] = [
+                'id' => $planning->getId(),
+                'villa' => [
+                    'id' => $planning->getVilla()->getId(),
+                    'nom' => $planning->getVilla()->getNom(),
+                    'color' => $planning->getVilla()->getColor()
+                ],
+                'status' => $planning->getStatut(),
+                'affectations' => $affectations
+            ];
+        }
+
+        return $this->json(['plannings' => $data]);
+    }
+
+    /**
+     * Assign user to affectation (drag & drop)
+     * POST /api/planning-assignment/assign
+     */
+    #[Route('/assign', methods: ['POST'])]
+    public function assign(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $affectationId = $data['affectationId'] ?? null;
+        $userId = $data['userId'] ?? null;
+
+        if (!$affectationId || !$userId) {
+            return $this->json(['error' => 'Missing required parameters'], 400);
+        }
+
+        $affectation = $this->affectationRepository->find($affectationId);
+        if (!$affectation) {
+            return $this->json(['error' => 'Affectation not found'], 404);
+        }
+
+        $user = $this->userRepository->find($userId);
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], 404);
+        }
+
+        // Assign user and get warnings
+        $warnings = $this->assignmentService->assignUserToAffectation($affectation, $user);
+
+        return $this->json([
+            'success' => true,
+            'warnings' => $warnings
+        ]);
+    }
+
+    /**
+     * Update affectation hours (drag edges to resize)
+     * PUT /api/planning-assignment/hours/{id}
+     */
+    #[Route('/hours/{id}', methods: ['PUT'])]
+    public function updateHours(int $id, Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $affectation = $this->affectationRepository->find($id);
+        if (!$affectation) {
+            return $this->json(['error' => 'Affectation not found'], 404);
+        }
+
+        $startAt = $data['startAt'] ?? null;
+        $endAt = $data['endAt'] ?? null;
+
+        if (!$startAt || !$endAt) {
+            return $this->json(['error' => 'Missing required parameters'], 400);
+        }
+
+        try {
+            $start = new \DateTime($startAt);
+            $end = new \DateTime($endAt);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Invalid date format'], 400);
+        }
+
+        // Update hours
+        $this->assignmentService->updateAffectationHours($affectation, $start, $end);
+
+        // Calculate working days
+        $workingDays = $this->assignmentService->calculateWorkingDays($affectation);
+
+        // Get warnings
+        $warnings = $this->assignmentService->getValidationWarnings($affectation);
+
+        return $this->json([
+            'success' => true,
+            'workingDays' => $workingDays,
+            'warnings' => $warnings
+        ]);
+    }
+
+    /**
+     * Get user availability for a period
+     * GET /api/planning-assignment/availability
+     */
+    #[Route('/availability', methods: ['GET'])]
+    public function getAvailability(Request $request): JsonResponse
+    {
+        $userId = $request->query->get('userId');
+        $startDate = $request->query->get('startDate');
+        $endDate = $request->query->get('endDate');
+
+        if (!$userId || !$startDate || !$endDate) {
+            return $this->json(['error' => 'Missing required parameters'], 400);
+        }
+
+        $user = $this->userRepository->find($userId);
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], 404);
+        }
+
+        try {
+            $start = new \DateTime($startDate);
+            $end = new \DateTime($endDate);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Invalid date format'], 400);
+        }
+
+        $availability = $this->availabilityService->getUserAvailabilityForPeriod($user, $start, $end);
+
+        // Format periods for frontend
+        $periods = [];
+
+        foreach ($availability['absences'] as $absence) {
+            $periods[] = [
+                'start' => $absence['start']->format('c'),
+                'end' => $absence['end']->format('c'),
+                'type' => $absence['type'],
+                'color' => $absence['color'],
+                'label' => $absence['label']
+            ];
+        }
+
+        foreach ($availability['rdvs'] as $rdv) {
+            $periods[] = [
+                'start' => $rdv['start']->format('c'),
+                'end' => $rdv['end']->format('c'),
+                'type' => $rdv['type'],
+                'color' => $rdv['color'],
+                'label' => $rdv['label']
+            ];
+        }
+
+        return $this->json([
+            'userId' => $userId,
+            'periods' => $periods
+        ]);
+    }
+
+    /**
+     * Validate planning (check warnings but don't publish)
+     * POST /api/planning-assignment/validate
+     */
+    #[Route('/validate', methods: ['POST'])]
+    public function validate(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $planningId = $data['planningId'] ?? null;
+        if (!$planningId) {
+            return $this->json(['error' => 'Missing planningId'], 400);
+        }
+
+        $planning = $this->planningRepository->find($planningId);
+        if (!$planning) {
+            return $this->json(['error' => 'Planning not found'], 404);
+        }
+
+        $validationResult = $this->validationService->validatePlanning($planning);
+
+        return $this->json($validationResult->toArray());
+    }
+
+    /**
+     * Publish planning (final validation with counter updates)
+     * POST /api/planning-assignment/publish
+     */
+    #[Route('/publish', methods: ['POST'])]
+    public function publish(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $planningId = $data['planningId'] ?? null;
+        if (!$planningId) {
+            return $this->json(['error' => 'Missing planningId'], 400);
+        }
+
+        $planning = $this->planningRepository->find($planningId);
+        if (!$planning) {
+            return $this->json(['error' => 'Planning not found'], 404);
+        }
+
+        // Publish planning (updates counters)
+        $this->villaPlanningService->publishPlanning($planning, $this->getUser());
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Planning published successfully'
+        ]);
+    }
+
+    /**
+     * Get all users (educators) with availability info
+     * GET /api/planning-assignment/users
+     */
+    #[Route('/users', methods: ['GET'])]
+    public function getUsers(): JsonResponse
+    {
+        // Get all users with ROLE_EDUCATOR or similar
+        $users = $this->userRepository->findAll();
+
+        $data = [];
+        foreach ($users as $user) {
+            // TODO: Calculate remaining days from AnnualDayCounterService
+            $remainingDays = 258; // Placeholder
+
+            // TODO: Check if user is currently unavailable
+            $unavailable = false;
+            $unavailableReason = null;
+
+            $data[] = [
+                'id' => $user->getId(),
+                'fullName' => $user->getFullName(),
+                'email' => $user->getEmail(),
+                'color' => $user->getColor(),
+                'villa' => $user->getVilla() ? [
+                    'id' => $user->getVilla()->getId(),
+                    'nom' => $user->getVilla()->getNom(),
+                    'color' => $user->getVilla()->getColor()
+                ] : null,
+                'remainingDays' => $remainingDays,
+                'unavailable' => $unavailable,
+                'unavailableReason' => $unavailableReason
+            ];
+        }
+
+        return $this->json(['users' => $data]);
+    }
+
+    /**
+     * Batch update affectations (batch save from frontend)
+     * POST /api/planning-assignment/batch-update
+     */
+    #[Route('/batch-update', methods: ['POST'])]
+    public function batchUpdate(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $changes = $data['changes'] ?? [];
+
+        if (empty($changes)) {
+            return $this->json(['error' => 'No changes provided'], 400);
+        }
+
+        $warnings = [];
+        $processed = 0;
+
+        foreach ($changes as $change) {
+            $affectationId = $change['affectationId'];
+            $type = $change['type']; // 'assign', 'update', 'delete'
+            $changeData = $change['data'];
+
+            $affectation = $this->affectationRepository->find($affectationId);
+            if (!$affectation) {
+                $warnings[] = [
+                    'type' => 'not_found',
+                    'message' => "Affectation #{$affectationId} introuvable",
+                    'severity' => 'error'
+                ];
+                continue;
+            }
+
+            try {
+                switch ($type) {
+                    case 'assign':
+                        $userId = $changeData['userId'];
+                        $user = $this->userRepository->find($userId);
+                        if ($user) {
+                            $assignWarnings = $this->assignmentService->assignUserToAffectation($affectation, $user);
+                            $warnings = array_merge($warnings, $assignWarnings);
+                            $processed++;
+                        }
+                        break;
+
+                    case 'update':
+                        if (isset($changeData['userId'])) {
+                            $user = $changeData['userId']
+                                ? $this->userRepository->find($changeData['userId'])
+                                : null;
+                            $affectation->setUser($user);
+                        }
+                        if (isset($changeData['type'])) {
+                            $affectation->setType($changeData['type']);
+                        }
+                        if (isset($changeData['startAt'])) {
+                            $affectation->setStartAt(new \DateTime($changeData['startAt']));
+                        }
+                        if (isset($changeData['endAt'])) {
+                            $affectation->setEndAt(new \DateTime($changeData['endAt']));
+                        }
+                        if (isset($changeData['commentaire'])) {
+                            $affectation->setCommentaire($changeData['commentaire']);
+                        }
+                        $processed++;
+                        break;
+
+                    case 'delete':
+                        $this->em->remove($affectation);
+                        $processed++;
+                        break;
+                }
+            } catch (\Exception $e) {
+                $warnings[] = [
+                    'type' => 'error',
+                    'message' => "Erreur affectation #{$affectationId}: " . $e->getMessage(),
+                    'severity' => 'error'
+                ];
+            }
+        }
+
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'processed' => $processed,
+            'warnings' => $warnings
+        ]);
+    }
+
+    /**
+     * Bulk delete draft affectations
+     * POST /api/planning-assignment/bulk-delete
+     */
+    #[Route('/bulk-delete', methods: ['POST'])]
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $year = $data['year'];
+        $month = $data['month'] ?? null; // null = all months
+        $villaId = $data['villaId'] ?? null; // null = all villas
+
+        // Build query - filter on Affectation status, not PlanningMonth status
+        $qb = $this->affectationRepository->createQueryBuilder('a')
+            ->innerJoin('a.planningMois', 'p')
+            ->where('p.annee = :year')
+            ->andWhere('a.statut = :draft')
+            ->setParameter('year', $year)
+            ->setParameter('draft', Affectation::STATUS_DRAFT);
+
+        if ($month) {
+            $qb->andWhere('p.mois = :month')
+               ->setParameter('month', $month);
+        }
+
+        if ($villaId) {
+            $qb->andWhere('a.villa = :villa')
+               ->setParameter('villa', $villaId);
+        }
+
+        $affectations = $qb->getQuery()->getResult();
+        $count = count($affectations);
+
+        foreach ($affectations as $affectation) {
+            $this->em->remove($affectation);
+        }
+
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'deleted' => $count
+        ]);
+    }
+}

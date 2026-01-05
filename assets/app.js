@@ -19,14 +19,20 @@ import "./js/modal-close-helper";
 // any CSS you import will output into a single css file (app.css in this case)
 import "./styles/app.css";
 
-// Import FullCalendar for squelette builder
+// Import FullCalendar for squelette builder and planning assignment
 import { Calendar } from '@fullcalendar/core';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
+import resourceTimelinePlugin from '@fullcalendar/resource-timeline';
 
 // Make FullCalendar globally available
 window.FullCalendar = {
     Calendar,
     timeGridPlugin,
-    interactionPlugin
+    dayGridPlugin,
+    interactionPlugin,
+    Draggable,
+    ResourceTimeline: resourceTimelinePlugin,
+    Interaction: interactionPlugin
 };

@@ -1,0 +1,56 @@
+{% for user in users %}
+<div class="p-3 border rounded-lg cursor-move transition hover:shadow-md
+            {{ user.unavailable|default(false) ? 'bg-gray-100 opacity-50' : 'bg-white hover:bg-blue-50' }}"
+     draggable="true"
+     data-user-id="{{ user.id }}"
+     data-user-color="{{ user.color|default('#3B82F6') }}"
+     data-villa-id="{{ user.villa ? user.villa.id : '' }}"
+     data-action="dragstart->planning-assignment#handleDragStart dragend->planning-assignment#handleDragEnd">
+
+    <div class="flex items-center justify-between">
+        <div class="flex-1">
+            {# User name with color indicator #}
+            <div class="flex items-center">
+                {% if user.color %}
+                <span class="inline-block w-3 h-3 rounded-full mr-2"
+                      style="background-color: {{ user.color }}"></span>
+                {% endif %}
+                <span class="font-medium text-gray-800">{{ user.fullName|default(user.email) }}</span>
+            </div>
+
+            {# Villa assignment #}
+            {% if user.villa %}
+            <div class="text-xs text-gray-500 mt-1 flex items-center">
+                <span class="inline-block w-2 h-2 rounded-full mr-1"
+                      style="background-color: {{ user.villa.color|default('#6B7280') }}"></span>
+                {{ user.villa.nom }}
+            </div>
+            {% endif %}
+        </div>
+
+        {# Remaining days counter #}
+        <div class="ml-2">
+            <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
+                {{ user.remainingDays|default(258) }}j
+            </span>
+        </div>
+    </div>
+
+    {# Unavailability indicator #}
+    {% if user.unavailable|default(false) %}
+    <div class="mt-2 text-xs text-orange-600 flex items-center">
+        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+        {{ user.unavailableReason|default('Indisponible') }}
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="text-center py-8 text-gray-400">
+    <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+    </svg>
+    <p class="text-sm">Aucun éducateur</p>
+</div>
+{% endfor %}
