@@ -134,6 +134,7 @@ export default class extends Controller {
             eventDrop: (info) => this.handleEventDrop(info),
             eventResize: (info) => this.handleEventResize(info),
             eventDidMount: (info) => this.renderEvent(info),
+            eventContent: (arg) => this.renderEventContent(arg),
             eventClick: (info) => this.handleEventClick(info),
             drop: (info) => this.handleExternalDrop(info),
 
@@ -308,6 +309,86 @@ export default class extends Controller {
         if (isAssigned && user) {
             this.renderEventOverlay(info);
         }
+    }
+
+    /**
+     * Custom event content rendering
+     */
+    renderEventContent(arg) {
+        const { user, villa, type, realStart, realEnd } = arg.event.extendedProps;
+        const isAssigned = !!user;
+        const isMonthView = arg.view.type === 'dayGridMonth';
+
+        // Parse dates
+        const start = new Date(realStart);
+        const end = new Date(realEnd);
+
+        // Format time
+        const startTime = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const endTime = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        // Calculate duration
+        const durationHours = Math.round((end - start) / (1000 * 60 * 60));
+
+        // Type labels
+        const typeLabels = {
+            'garde_48h': '48h',
+            'garde_24h': '24h',
+            'renfort': 'Renfort',
+            'TYPE_RENFORT': 'Renfort',
+            'autre': 'Autre'
+        };
+        const typeLabel = typeLabels[type] || type;
+
+        // Create custom HTML content
+        const container = document.createElement('div');
+        container.className = 'fc-event-main-custom p-1';
+        container.style.cssText = 'height: 100%; display: flex; flex-direction: column; font-size: 0.75rem; line-height: 1.2;';
+
+        if (isAssigned) {
+            // GARDE AFFECTÉE: Nom éducateur + infos
+            // Get text color for contrast with educator background color
+            const textColor = this.getContrastColor(user.color || '#3B82F6');
+
+            container.innerHTML = `
+                <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${textColor};">
+                    ${user.fullName}
+                </div>
+                ${isMonthView ? `
+                    <div style="opacity: 0.9; font-size: 0.7rem; color: ${textColor};">
+                        ${villa?.nom || 'Villa'} · ${typeLabel}
+                    </div>
+                    <div style="opacity: 0.8; font-size: 0.65rem; color: ${textColor};">
+                        ${startTime} - ${endTime} (${durationHours}h)
+                    </div>
+                ` : `
+                    <div style="opacity: 0.9; color: ${textColor};">
+                        ${villa?.nom || 'Villa'} · ${typeLabel} · ${durationHours}h
+                    </div>
+                `}
+            `;
+        } else {
+            // GARDE NON AFFECTÉE: Infos de la garde
+            container.innerHTML = `
+                <div style="font-weight: 600; color: #6B7280;">
+                    À affecter
+                </div>
+                ${isMonthView ? `
+                    <div style="color: #6B7280; font-size: 0.7rem;">
+                        ${villa?.nom || 'Villa'} · ${typeLabel}
+                    </div>
+                    <div style="color: #6B7280; font-size: 0.65rem;">
+                        ${startTime} - ${endTime} (${durationHours}h)
+                    </div>
+                ` : `
+                    <div style="color: #6B7280;">
+                        ${villa?.nom || 'Villa'} · ${typeLabel} · ${durationHours}h
+                    </div>
+                `}
+            `;
+        }
+
+        return { domNodes: [container] };
     }
 
     /**
