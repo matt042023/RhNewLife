@@ -62,6 +62,7 @@ class InvitationController extends AbstractController
             $lastName = $request->request->get('last_name');
             $position = $request->request->get('position');
             $villaId = $request->request->get('villa_id');
+            $color = $request->request->get('color');
 
             $errors = [];
 
@@ -90,8 +91,13 @@ class InvitationController extends AbstractController
 
                     if ($villa) {
                         $invitation->setVilla($villa);
-                        $this->invitationRepository->getEntityManager()->flush();
                     }
+
+                    if ($color) {
+                        $invitation->setColor($color);
+                    }
+
+                    $this->invitationRepository->getEntityManager()->flush();
 
                     $this->addFlash('success', 'Invitation envoyée à ' . $email);
                     return $this->redirectToRoute('app_admin_onboarding_list');

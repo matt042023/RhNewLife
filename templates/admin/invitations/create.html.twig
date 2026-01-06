@@ -104,6 +104,22 @@
             </p>
         </div>
 
+        <div>
+            <label for="color" class="form-label">
+                Couleur de l'éducateur
+            </label>
+            <input
+                type="color"
+                name="color"
+                id="color"
+                value="{{ formData.color ?? '#3B82F6' }}"
+                class="h-10 w-24 rounded border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            >
+            <p class="form-help">
+                Utilisée pour différencier visuellement les éducateurs dans le planning
+            </p>
+        </div>
+
         <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
             <div class="flex items-start">
                 <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">

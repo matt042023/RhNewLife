@@ -109,7 +109,8 @@
 						<tr class="transition-colors hover:bg-white/10 dark:hover:bg-white/5">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm"
+                                             style="background: linear-gradient(135deg, {{ user.color ?? '#3B82F6' }}, {{ user.color ?? '#8B5CF6' }});">
                                             {{ user.firstName|first }}{{ user.lastName|first }}
                                         </div>
                                         <div>

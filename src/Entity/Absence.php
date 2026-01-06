@@ -55,7 +55,7 @@ class Absence
     #[ORM\Column(length: 30)]
     private string $status = self::STATUS_PENDING;
 
-    #[ORM\OneToMany(mappedBy: 'absence', targetEntity: Document::class)]
+    #[ORM\OneToMany(mappedBy: 'absence', targetEntity: Document::class, cascade: ['persist'])]
     private Collection $documents;
 
     #[ORM\Column(length: 30, nullable: true)]

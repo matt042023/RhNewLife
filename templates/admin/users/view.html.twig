@@ -36,7 +36,8 @@
 	<div class="px-4 py-6 lg:px-6">
 		<div class="flex flex-col md:flex-row md:items-start md:justify-between">
 			<div class="flex items-center gap-4">
-				<div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white text-2xl font-bold border-2 border-white/30">
+				<div class="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold border-2 border-white/30"
+				     style="background: linear-gradient(135deg, {{ user.color ?? '#3B82F6' }}, {{ user.color ?? '#8B5CF6' }});">
 					{{ user.firstName|first }}{{ user.lastName|first }}
 				</div>
 				<div>
@@ -226,6 +227,16 @@
 								<div>
 									<dt class="text-sm text-gray-500">Matricule</dt>
 									<dd class="font-mono text-gray-900">{{ user.matricule ?? '-' }}</dd>
+								</div>
+								<div>
+									<dt class="text-sm text-gray-500">Couleur de l'éducateur</dt>
+									<dd class="text-gray-900">
+										<div class="flex items-center gap-2">
+											<span class="inline-block w-8 h-8 rounded border border-gray-300"
+											      style="background-color: {{ user.color ?? '#3B82F6' }}"></span>
+											<span class="font-mono text-sm">{{ user.color ?? '#3B82F6' }}</span>
+										</div>
+									</dd>
 								</div>
 							</dl>
 						</div>

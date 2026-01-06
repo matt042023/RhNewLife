@@ -108,7 +108,7 @@ class Document
     #[ORM\Column(nullable: true)]
     private ?int $retentionYears = null;
 
-    #[ORM\ManyToOne(targetEntity: Absence::class)]
+    #[ORM\ManyToOne(targetEntity: Absence::class, inversedBy: 'documents')]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?Absence $absence = null;
 

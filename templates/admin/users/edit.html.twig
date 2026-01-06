@@ -64,6 +64,12 @@
                     <input type="date" name="hiring_date" value="{{ user.hiringDate ? user.hiringDate|date('Y-m-d') : '' }}" class="glass-input w-full">
                 </div>
 
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Couleur</label>
+                    <input type="color" name="color" value="{{ user.color ?? '#3B82F6' }}" class="h-10 w-24 rounded border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Pour le planning</p>
+                </div>
+
                 <div class="col-span-2">
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Adresse</label>
                     <textarea name="address" class="glass-input w-full" rows="2">{{ user.address }}</textarea>
