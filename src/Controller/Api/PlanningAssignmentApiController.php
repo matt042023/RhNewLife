@@ -547,4 +547,75 @@ class PlanningAssignmentApiController extends AbstractController
             'deleted' => $count
         ]);
     }
+
+    /**
+     * Validate all affectations for a month (change status from draft to validated)
+     * POST /api/planning-assignment/validate-month
+     */
+    #[Route('/validate-month', methods: ['POST'])]
+    public function validateMonth(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $year = $data['year'] ?? null;
+        $month = $data['month'] ?? null;
+
+        if (!$year || !$month) {
+            return $this->json(['error' => 'Missing year or month'], 400);
+        }
+
+        // Get all draft affectations for this month
+        $affectations = $this->affectationRepository->createQueryBuilder('a')
+            ->innerJoin('a.planningMois', 'p')
+            ->where('p.annee = :year')
+            ->andWhere('p.mois = :month')
+            ->andWhere('a.statut = :draft')
+            ->setParameter('year', $year)
+            ->setParameter('month', $month)
+            ->setParameter('draft', Affectation::STATUS_DRAFT)
+            ->getQuery()
+            ->getResult();
+
+        if (empty($affectations)) {
+            return $this->json([
+                'success' => true,
+                'validated' => 0,
+                'message' => 'Aucune affectation en brouillon à valider'
+            ]);
+        }
+
+        // Validate all affectations
+        $validated = 0;
+        $warnings = [];
+
+        foreach ($affectations as $affectation) {
+            // Check if affectation has a user assigned
+            if (!$affectation->getUser()) {
+                $warnings[] = [
+                    'type' => 'unassigned',
+                    'message' => sprintf(
+                        'Garde non affectée: %s du %s au %s',
+                        $affectation->getVilla()?->getNom() ?? 'Villa inconnue',
+                        $affectation->getStartAt()?->format('d/m/Y H:i'),
+                        $affectation->getEndAt()?->format('d/m/Y H:i')
+                    ),
+                    'severity' => 'warning',
+                    'affectationId' => $affectation->getId()
+                ];
+            }
+
+            // Change status to validated
+            $affectation->setStatut(Affectation::STATUS_VALIDATED);
+            $validated++;
+        }
+
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'validated' => $validated,
+            'warnings' => $warnings,
+            'message' => sprintf('%d affectation(s) validée(s)', $validated)
+        ]);
+    }
 }

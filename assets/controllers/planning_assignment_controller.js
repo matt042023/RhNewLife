@@ -315,7 +315,7 @@ export default class extends Controller {
      * Custom event content rendering
      */
     renderEventContent(arg) {
-        const { user, villa, type, realStart, realEnd } = arg.event.extendedProps;
+        const { user, villa, type, realStart, realEnd, statut } = arg.event.extendedProps;
         const isAssigned = !!user;
         const isMonthView = arg.view.type === 'dayGridMonth';
 
@@ -340,6 +340,15 @@ export default class extends Controller {
         };
         const typeLabel = typeLabels[type] || type;
 
+        // Status labels and styles
+        const statusConfig = {
+            'draft': { label: 'Brouillon', icon: '📝', color: '#9CA3AF' },
+            'validated': { label: 'Validé', icon: '✓', color: '#10B981' },
+            'to_replace_absence': { label: 'À remplacer', icon: '⚠', color: '#F59E0B' },
+            'to_replace_rdv': { label: 'RDV', icon: '📅', color: '#F59E0B' }
+        };
+        const statusInfo = statusConfig[statut] || statusConfig['draft'];
+
         // Create custom HTML content
         const container = document.createElement('div');
         container.className = 'fc-event-main-custom p-1';
@@ -351,8 +360,13 @@ export default class extends Controller {
             const textColor = this.getContrastColor(user.color || '#3B82F6');
 
             container.innerHTML = `
-                <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${textColor};">
-                    ${user.fullName}
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                    <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${textColor}; flex: 1;">
+                        ${user.fullName}
+                    </div>
+                    <span style="font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; background: ${statusInfo.color}; color: white; white-space: nowrap; flex-shrink: 0;" title="${statusInfo.label}">
+                        ${statusInfo.icon}
+                    </span>
                 </div>
                 ${isMonthView ? `
                     <div style="opacity: 0.9; font-size: 0.7rem; color: ${textColor};">
@@ -370,8 +384,13 @@ export default class extends Controller {
         } else {
             // GARDE NON AFFECTÉE: Infos de la garde
             container.innerHTML = `
-                <div style="font-weight: 600; color: #6B7280;">
-                    À affecter
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                    <div style="font-weight: 600; color: #6B7280; flex: 1;">
+                        À affecter
+                    </div>
+                    <span style="font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; background: ${statusInfo.color}; color: white; white-space: nowrap; flex-shrink: 0;" title="${statusInfo.label}">
+                        ${statusInfo.icon}
+                    </span>
                 </div>
                 ${isMonthView ? `
                     <div style="color: #6B7280; font-size: 0.7rem;">
@@ -855,14 +874,47 @@ export default class extends Controller {
     }
 
     /**
-     * Validate planning
+     * Validate planning for current month
      */
     async validatePlanning() {
-        // TODO: Get current planningId (for now, validate all plannings in view)
+        const year = this.currentYearValue;
+        const month = this.currentMonthValue;
+
+        // Confirm with user
+        if (!confirm(`Êtes-vous sûr de vouloir valider toutes les affectations du mois ${month}/${year} ?\n\nToutes les gardes en brouillon seront marquées comme validées et apparaîtront dans le planning des éducateurs.`)) {
+            return;
+        }
+
         this.showInfo('Validation du planning en cours...');
 
-        // For complete implementation, need to select which planning to validate
-        // This is a placeholder
+        try {
+            const response = await fetch('/api/planning-assignment/validate-month', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year, month })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Erreur lors de la validation');
+            }
+
+            // Show success message
+            this.showSuccess(data.message || `${data.validated} affectation(s) validée(s)`);
+
+            // Show warnings if any
+            if (data.warnings && data.warnings.length > 0) {
+                this.showWarningsToast(data.warnings);
+            }
+
+            // Reload calendar to show updated statuses
+            this.calendar.refetchEvents();
+
+        } catch (error) {
+            console.error('Failed to validate planning:', error);
+            this.showError('Échec de la validation du planning');
+        }
     }
 
     /**
