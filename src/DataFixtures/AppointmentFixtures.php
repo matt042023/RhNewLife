@@ -5,7 +5,6 @@ namespace App\DataFixtures;
 use App\Entity\RendezVous;
 use App\Entity\AppointmentParticipant;
 use App\Entity\User;
-use App\Entity\TypeAbsence;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -19,10 +18,6 @@ class AppointmentFixtures extends Fixture implements DependentFixtureInterface
         $director = $this->getReference('director', User::class);
         $educator1 = $this->getReference('educator-1', User::class);
         $educator2 = $this->getReference('educator-2', User::class);
-
-        // Récupérer le type d'absence REUNION
-        $reunionType = $manager->getRepository(TypeAbsence::class)
-            ->findOneBy(['code' => TypeAbsence::CODE_REUNION]);
 
         // 1. Convocation confirmée (future)
         $convocation1 = new RendezVous();
@@ -38,7 +33,6 @@ class AppointmentFixtures extends Fixture implements DependentFixtureInterface
 - Bilan du mois
 - Objectifs du mois prochain
 - Questions diverses');
-        $convocation1->setCreatesAbsence(true);
 
         $endAt1 = clone $convocation1->getStartAt();
         $endAt1->modify('+90 minutes');
@@ -98,7 +92,6 @@ class AppointmentFixtures extends Fixture implements DependentFixtureInterface
         $convocation2->setStartAt(new \DateTime('-3 days 14:00'));
         $convocation2->setDurationMinutes(120);
         $convocation2->setLocation('Salle de formation');
-        $convocation2->setCreatesAbsence(true);
 
         $endAt2 = clone $convocation2->getStartAt();
         $endAt2->modify('+120 minutes');

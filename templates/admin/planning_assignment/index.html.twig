@@ -125,6 +125,32 @@
     {# Generate Modal #}
     {% include 'admin/planning_assignment/_generate_modal.html.twig' %}
 
+    {# Details Modal for Absence/RDV #}
+    <div id="details-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-start mb-4">
+                <h3 id="details-modal-title" class="text-xl font-semibold text-gray-900"></h3>
+                <button data-action="click->planning-assignment#closeDetailsModal"
+                        type="button"
+                        class="text-gray-400 hover:text-gray-600 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="details-modal-content" class="text-gray-700 space-y-3">
+                {# Content will be dynamically populated #}
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button data-action="click->planning-assignment#closeDetailsModal"
+                        type="button"
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 
@@ -135,11 +161,13 @@
         .fc-event {
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s ease !important;
             cursor: pointer;
+            z-index: 3 !important; /* Gardes/affectations au premier plan par défaut */
         }
 
         .fc-event:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 10 !important; /* Elevé au survol */
         }
 
         .fc-event.drag-hover {
@@ -177,9 +205,83 @@
             padding: 2px 4px !important;
         }
 
-        .fc-daygrid-event-harness {
-            margin-top: 1px !important;
-            margin-bottom: 1px !important;
+        /* Absence events - rendered as regular events but with lower z-index (background layer) */
+        .fc-event-absence {
+            cursor: pointer !important;
+            opacity: 0.7 !important;
+            border-width: 2px !important;
+            border-style: solid !important;
+            z-index: 1 !important; /* Behind gardes (z-index: 3) and RDVs (z-index: 3) */
+        }
+
+        .fc-event-absence:hover {
+            opacity: 0.85 !important;
+            z-index: 2 !important; /* Slightly raised on hover but still below gardes/RDVs */
+        }
+
+        /* Congé event (CP, RTT, CPSS) - red striped pattern */
+        .fc-event-absence.conge-overlay {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(239, 68, 68, 0.8),
+                rgba(239, 68, 68, 0.8) 10px,
+                rgba(220, 38, 38, 0.6) 10px,
+                rgba(220, 38, 38, 0.6) 20px
+            ) !important;
+            border-color: #DC2626 !important;
+            color: white !important;
+        }
+
+        /* Absence event (MAL, AT) - orange striped pattern */
+        .fc-event-absence.absence-overlay {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(251, 146, 60, 0.8),
+                rgba(251, 146, 60, 0.8) 10px,
+                rgba(234, 88, 12, 0.6) 10px,
+                rgba(234, 88, 12, 0.6) 20px
+            ) !important;
+            border-color: #EA580C !important;
+            color: white !important;
+        }
+
+        /* RDV event styling - same layer as gardes (above absences) */
+        .fc-event-rdv {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(245, 158, 11, 0.8),
+                rgba(245, 158, 11, 0.8) 10px,
+                rgba(245, 158, 11, 0.5) 10px,
+                rgba(245, 158, 11, 0.5) 20px
+            ) !important;
+            border: 2px solid #D97706 !important;
+            cursor: pointer !important;
+            opacity: 0.9 !important;
+            overflow: hidden !important;
+            z-index: 3 !important; /* Same z-index as gardes/affectations */
+        }
+
+        .fc-event-rdv:hover {
+            opacity: 1 !important;
+            z-index: 10 !important; /* Elevated on hover, same as gardes */
+        }
+
+        .fc-event-rdv .fc-event-main {
+            color: #78350F !important;
+            font-weight: 600;
+            overflow: hidden !important;
+        }
+
+        /* Custom RDV content container */
+        .fc-event-rdv-custom {
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .fc-event-rdv-custom > div {
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
         }
     </style>
 {% endblock %}

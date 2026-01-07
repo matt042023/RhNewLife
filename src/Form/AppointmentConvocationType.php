@@ -6,7 +6,6 @@ use App\Entity\RendezVous;
 use App\Entity\User;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -106,14 +105,6 @@ class AppointmentConvocationType extends AbstractType
                     'rows' => 4,
                     'placeholder' => 'Ordre du jour, informations complémentaires...',
                 ]
-            ])
-            ->add('createsAbsence', CheckboxType::class, [
-                'label' => 'Créer une absence automatique pour les participants',
-                'required' => false,
-                'attr' => [
-                    'class' => 'form-checkbox',
-                ],
-                'help' => 'Une absence de type "Réunion" sera automatiquement créée pour chaque participant'
             ]);
     }
 

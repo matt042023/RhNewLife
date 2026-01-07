@@ -124,6 +124,10 @@ export default class extends Controller {
             firstDay: 1,
             displayEventTime: false, // Hide time in monthly view
 
+            // Allow events to overlap (gardes and RDVs can overlay on absences)
+            slotEventOverlap: true,
+            eventOverlap: true,
+
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -170,22 +174,38 @@ export default class extends Controller {
         try {
             // Add timestamp to avoid caching
             const timestamp = new Date().getTime();
-            const response = await fetch(`/api/planning-assignment/${year}/${month}?t=${timestamp}`, {
-                cache: 'no-store'
-            });
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+            // Fetch plannings, absences, and RDVs in parallel
+            const [planningsResponse, absencesResponse, rdvsResponse] = await Promise.all([
+                fetch(`/api/planning-assignment/${year}/${month}?t=${timestamp}`, {
+                    cache: 'no-store',
+                    credentials: 'same-origin'
+                }),
+                fetch(`/api/planning-assignment/absences/${year}/${month}?t=${timestamp}`, {
+                    cache: 'no-store',
+                    credentials: 'same-origin'
+                }),
+                fetch(`/api/planning-assignment/rendezvous/${year}/${month}?t=${timestamp}`, {
+                    cache: 'no-store',
+                    credentials: 'same-origin'
+                })
+            ]);
+
+            if (!planningsResponse.ok || !absencesResponse.ok || !rdvsResponse.ok) {
+                throw new Error(`HTTP error`);
             }
 
-            const data = await response.json();
-            console.log('API Response:', data);
+            const planningsData = await planningsResponse.json();
+            const absencesData = await absencesResponse.json();
+            const rdvsData = await rdvsResponse.json();
+
+            console.log('API Response:', { planningsData, absencesData, rdvsData });
 
             // Convert plannings to FullCalendar events
             const events = [];
 
-            for (const planning of data.plannings) {
-                // Add affectations as events
+            // 1. Add affectations (shifts) as regular events
+            for (const planning of planningsData.plannings) {
                 for (const affectation of planning.affectations) {
                     const villaName = affectation.villa?.nom || 'Villa inconnue';
                     const userName = affectation.user?.fullName || 'À affecter';
@@ -219,7 +239,54 @@ export default class extends Controller {
                 }
             }
 
-            console.log(`Loaded ${events.length} events`);
+            // 2. Add absences as regular events with special rendering (visible with striped pattern)
+            for (const absence of absencesData) {
+                events.push({
+                    id: `absence-${absence.id}`,
+                    title: `🚫 ${absence.user.fullName} - ${absence.absenceType.label}`,
+                    start: absence.startAt,
+                    end: absence.endAt,
+                    editable: false,
+                    classNames: ['fc-event-absence', this.getAbsenceClass(absence.absenceType.code)],
+                    extendedProps: {
+                        type: 'absence',
+                        absenceTypeCode: absence.absenceType.code,
+                        absenceTypeLabel: absence.absenceType.label,
+                        user: absence.user,
+                        absenceData: absence
+                    }
+                });
+            }
+
+            // 3. Add RDVs as regular events (same z-index as gardes/affectations)
+            for (const rdv of rdvsData) {
+                events.push({
+                    id: `rdv-${rdv.id}`,
+                    title: rdv.title,
+                    start: rdv.startAt,
+                    end: rdv.endAt,
+                    editable: false,  // RDVs are not editable in planning view
+                    classNames: ['fc-event-rdv'],
+                    extendedProps: {
+                        type: 'rdv',
+                        participants: rdv.participants,
+                        rdvTitle: rdv.title,
+                        rdvData: rdv
+                    }
+                });
+            }
+
+            const affectationsCount = planningsData.plannings.reduce((acc, p) => acc + p.affectations.length, 0);
+            console.log(`Loaded ${events.length} events (${affectationsCount} affectations, ${absencesData.length} absences, ${rdvsData.length} RDVs)`);
+
+            // Debug: Log absences specifically
+            if (absencesData.length > 0) {
+                console.log('Absences loaded:', absencesData);
+                console.log('Sample absence event:', events.find(e => e.extendedProps?.type === 'absence'));
+            } else {
+                console.warn('⚠️ No absences found for this month');
+            }
+
             successCallback(events);
 
         } catch (error) {
@@ -247,6 +314,21 @@ export default class extends Controller {
         // Otherwise, round up by 24h blocks
         return Math.ceil(hoursDiff / 24);
     }
+
+    /**
+     * Get absence CSS class based on absence type code
+     */
+    getAbsenceClass(absenceTypeCode) {
+        const mapping = {
+            'CP': 'conge-overlay',     // Congés payés
+            'RTT': 'conge-overlay',    // RTT
+            'MAL': 'absence-overlay',  // Maladie
+            'AT': 'absence-overlay',   // Accident travail
+            'CPSS': 'conge-overlay'    // Congé sans solde
+        };
+        return mapping[absenceTypeCode] || 'absence-overlay';
+    }
+
 
     /**
      * Render event with color system (educator background + villa/type border)
@@ -305,19 +387,73 @@ export default class extends Controller {
             }
         }
 
-        // Render overlays for absences/RDV
-        if (isAssigned && user) {
-            this.renderEventOverlay(info);
+        // Note: Absences/RDV overlays are now rendered as independent background events
+        // No need to call renderEventOverlay() here
+    }
+
+    /**
+     * Render RDV event content with participant list
+     */
+    renderRdvContent(arg, participants, title) {
+        const isMonthView = arg.view.type === 'dayGridMonth';
+        const start = new Date(arg.event.start);
+        const end = arg.event.end ? new Date(arg.event.end) : start;
+
+        const startTime = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const endTime = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        const container = document.createElement('div');
+        container.className = 'fc-event-rdv-custom p-1';
+        container.style.cssText = 'height: 100%; display: flex; flex-direction: column; font-size: 0.75rem; line-height: 1.2; overflow: hidden;';
+
+        // Build participants list - limit to 3 names max for readability
+        const participantCount = participants.length;
+        let participantText;
+
+        if (participantCount <= 2) {
+            participantText = participants.map(p => p.fullName).join(', ');
+        } else {
+            // Show first 2 names + count
+            const firstTwo = participants.slice(0, 2).map(p => p.fullName).join(', ');
+            participantText = `${firstTwo} +${participantCount - 2}`;
         }
+
+        container.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; overflow: hidden;">
+                <div style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0;">
+                    📅 ${title}
+                </div>
+                <span style="font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; background: #D97706; color: white; white-space: nowrap; flex-shrink: 0;">
+                    ${participantCount} pers.
+                </span>
+            </div>
+            <div style="opacity: 0.9; font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${participantText}
+            </div>
+            <div style="opacity: 0.8; font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${startTime} - ${endTime}
+            </div>
+        `;
+
+        return { domNodes: [container] };
     }
 
     /**
      * Custom event content rendering
      */
     renderEventContent(arg) {
-        const { user, villa, type, realStart, realEnd, statut } = arg.event.extendedProps;
+        const { user, villa, type, realStart, realEnd, statut, participants, rdvTitle } = arg.event.extendedProps;
         const isAssigned = !!user;
         const isMonthView = arg.view.type === 'dayGridMonth';
+        const isRdv = type === 'rdv';
+
+        // Note: Absence events are now background events (display: 'background')
+        // FullCalendar doesn't call eventContent for background events - they only show the title
+
+        // Special rendering for RDV events
+        if (isRdv && participants) {
+            return this.renderRdvContent(arg, participants, rdvTitle);
+        }
 
         // Parse dates
         const start = new Date(realStart);
@@ -411,57 +547,12 @@ export default class extends Controller {
     }
 
     /**
-     * Render overlay for absences/RDV (transparent stripes)
+     * DEPRECATED: This method is no longer used.
+     * Absences and RDVs are now rendered as independent background events,
+     * not as overlays on shift events.
      */
-    async renderEventOverlay(info) {
-        const { user, affectation } = info.event.extendedProps;
-
-        try {
-            const startStr = encodeURIComponent(affectation.startAt);
-            const endStr = encodeURIComponent(affectation.endAt);
-            const response = await fetch(
-                `/api/planning-assignment/availability?userId=${user.id}&startDate=${startStr}&endDate=${endStr}`
-            );
-            const data = await response.json();
-
-            if (data.periods && data.periods.length > 0) {
-                // Create overlay element
-                const overlay = document.createElement('div');
-                overlay.style.position = 'absolute';
-                overlay.style.top = '0';
-                overlay.style.left = '0';
-                overlay.style.right = '0';
-                overlay.style.bottom = '0';
-                overlay.style.pointerEvents = 'none';
-
-                // Combine all conflict types into gradient
-                const patterns = data.periods.map(period => {
-                    return this.getOverlayPattern(period.type);
-                });
-
-                overlay.style.background = patterns[0]; // Use first pattern (can be enhanced for multiple)
-                overlay.style.opacity = '0.4';
-
-                info.el.style.position = 'relative';
-                info.el.appendChild(overlay);
-            }
-        } catch (error) {
-            console.error('Failed to load availability:', error);
-        }
-    }
-
-    /**
-     * Get overlay pattern based on conflict type
-     */
-    getOverlayPattern(type) {
-        const patterns = {
-            'conges': 'repeating-linear-gradient(45deg, rgba(239,68,68,0.5), rgba(239,68,68,0.5) 10px, transparent 10px, transparent 20px)',
-            'absence': 'repeating-linear-gradient(45deg, rgba(239,68,68,0.5), rgba(239,68,68,0.5) 10px, transparent 10px, transparent 20px)',
-            'maladie': 'repeating-linear-gradient(45deg, rgba(251,146,60,0.5), rgba(251,146,60,0.5) 10px, transparent 10px, transparent 20px)',
-            'rdv': 'repeating-linear-gradient(45deg, rgba(250,204,21,0.5), rgba(250,204,21,0.5) 10px, transparent 10px, transparent 20px)'
-        };
-        return patterns[type] || patterns['conges'];
-    }
+    // async renderEventOverlay(info) { ... }
+    // getOverlayPattern(type) { ... }
 
     /**
      * Calculate contrasting text color (black/white) based on background
@@ -921,9 +1012,24 @@ export default class extends Controller {
      * Handle event click (monthly view) - opens edit modal
      */
     handleEventClick(info) {
+        const { type } = info.event.extendedProps;
+
+        // Handle absence click
+        if (type === 'absence') {
+            this.showAbsenceDetails(info.event.extendedProps);
+            return;
+        }
+
+        // Handle RDV click
+        if (type === 'rdv') {
+            this.showRdvDetails(info.event.extendedProps);
+            return;
+        }
+
+        // Handle regular affectation click
         const currentView = this.calendar.view.type;
 
-        // Only open modal in monthly view
+        // Only open modal in monthly view for affectations
         if (currentView === 'dayGridMonth') {
             const { affectation, user, villa, realStart, realEnd, workingDays } = info.event.extendedProps;
             const eventId = info.event.id;
@@ -1331,5 +1437,200 @@ export default class extends Controller {
 
     showInfo(message) {
         this.showToast(message, 'blue');
+    }
+
+    /**
+     * Show absence details modal
+     */
+    showAbsenceDetails(extendedProps) {
+        const { user, absenceTypeLabel, absenceData } = extendedProps;
+
+        const startDate = new Date(absenceData.startAt);
+        const endDate = new Date(absenceData.endAt);
+
+        const formatDate = (date) => {
+            return date.toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        };
+
+        const formatTime = (date) => {
+            return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        };
+
+        // Calculate duration in days
+        const durationMs = endDate - startDate;
+        const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
+
+        const modal = document.getElementById('details-modal');
+        const title = document.getElementById('details-modal-title');
+        const content = document.getElementById('details-modal-content');
+
+        title.textContent = '🚫 Détails de l\'absence';
+
+        content.innerHTML = `
+            <div class="space-y-4">
+                <div class="flex items-start p-4 bg-gray-50 rounded-lg">
+                    <div class="flex-shrink-0 mr-4">
+                        <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-xl font-bold text-gray-700">
+                            ${user.fullName.charAt(0)}
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-lg text-gray-900">${user.fullName}</h4>
+                        <p class="text-sm text-gray-600">Éducateur</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-blue-50 rounded-lg">
+                        <p class="text-xs text-blue-600 font-semibold mb-1">TYPE D'ABSENCE</p>
+                        <p class="text-sm font-medium text-gray-900">${absenceTypeLabel}</p>
+                    </div>
+                    <div class="p-3 bg-purple-50 rounded-lg">
+                        <p class="text-xs text-purple-600 font-semibold mb-1">DURÉE</p>
+                        <p class="text-sm font-medium text-gray-900">${durationDays} jour${durationDays > 1 ? 's' : ''}</p>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4">
+                    <h5 class="font-semibold text-gray-900 mb-3">📅 Période</h5>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-600 w-20">Début :</span>
+                            <span class="text-sm font-medium text-gray-900">${formatDate(startDate)} à ${formatTime(startDate)}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-600 w-20">Fin :</span>
+                            <span class="text-sm font-medium text-gray-900">${formatDate(endDate)} à ${formatTime(endDate)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p class="text-xs text-green-700 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="font-semibold">Absence approuvée</span>
+                    </p>
+                </div>
+            </div>
+        `;
+
+        modal.classList.remove('hidden');
+    }
+
+    /**
+     * Show RDV details modal
+     */
+    showRdvDetails(extendedProps) {
+        const { rdvData, participants } = extendedProps;
+
+        const startDate = new Date(rdvData.startAt);
+        const endDate = new Date(rdvData.endAt);
+
+        const formatDate = (date) => {
+            return date.toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        };
+
+        const formatTime = (date) => {
+            return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        };
+
+        // Calculate duration
+        const durationMs = endDate - startDate;
+        const durationMinutes = Math.round(durationMs / (1000 * 60));
+        const hours = Math.floor(durationMinutes / 60);
+        const minutes = durationMinutes % 60;
+
+        const durationText = hours > 0
+            ? `${hours}h${minutes > 0 ? minutes.toString().padStart(2, '0') : ''}`
+            : `${minutes} min`;
+
+        const modal = document.getElementById('details-modal');
+        const title = document.getElementById('details-modal-title');
+        const content = document.getElementById('details-modal-content');
+
+        title.textContent = '📅 Détails du rendez-vous';
+
+        content.innerHTML = `
+            <div class="space-y-4">
+                <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <h4 class="font-semibold text-lg text-gray-900 mb-1">${rdvData.title}</h4>
+                    <p class="text-sm text-gray-600">Rendez-vous avec impact sur le planning</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-blue-50 rounded-lg">
+                        <p class="text-xs text-blue-600 font-semibold mb-1">PARTICIPANTS</p>
+                        <p class="text-sm font-medium text-gray-900">${participants.length} personne${participants.length > 1 ? 's' : ''}</p>
+                    </div>
+                    <div class="p-3 bg-purple-50 rounded-lg">
+                        <p class="text-xs text-purple-600 font-semibold mb-1">DURÉE</p>
+                        <p class="text-sm font-medium text-gray-900">${durationText}</p>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4">
+                    <h5 class="font-semibold text-gray-900 mb-3">📅 Horaires</h5>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-600 w-20">Date :</span>
+                            <span class="text-sm font-medium text-gray-900">${formatDate(startDate)}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-600 w-20">Début :</span>
+                            <span class="text-sm font-medium text-gray-900">${formatTime(startDate)}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-600 w-20">Fin :</span>
+                            <span class="text-sm font-medium text-gray-900">${formatTime(endDate)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4">
+                    <h5 class="font-semibold text-gray-900 mb-3">👥 Participants</h5>
+                    <div class="space-y-2">
+                        ${participants.map(p => `
+                            <div class="flex items-center p-2 bg-gray-50 rounded-lg">
+                                <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-bold text-gray-700 mr-3">
+                                    ${p.fullName.charAt(0)}
+                                </div>
+                                <span class="text-sm font-medium text-gray-900">${p.fullName}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p class="text-xs text-yellow-700 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="font-semibold">Ce rendez-vous impacte le planning des participants</span>
+                    </p>
+                </div>
+            </div>
+        `;
+
+        modal.classList.remove('hidden');
+    }
+
+    /**
+     * Close details modal
+     */
+    closeDetailsModal() {
+        const modal = document.getElementById('details-modal');
+        modal.classList.add('hidden');
     }
 }

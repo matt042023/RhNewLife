@@ -83,9 +83,6 @@ class RendezVous
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $location = null;
 
-    #[ORM\Column(options: ['default' => false])]
-    private bool $createsAbsence = false;
-
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $refusalReason = null;
 
@@ -293,18 +290,6 @@ class RendezVous
     public function setLocation(?string $location): static
     {
         $this->location = $location;
-
-        return $this;
-    }
-
-    public function isCreatesAbsence(): bool
-    {
-        return $this->createsAbsence;
-    }
-
-    public function setCreatesAbsence(bool $createsAbsence): static
-    {
-        $this->createsAbsence = $createsAbsence;
 
         return $this;
     }

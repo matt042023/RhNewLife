@@ -35,10 +35,6 @@ class AppointmentParticipant
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $confirmedAt = null;
 
-    #[ORM\ManyToOne(targetEntity: Absence::class)]
-    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
-    private ?Absence $linkedAbsence = null;
-
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
 
@@ -91,18 +87,6 @@ class AppointmentParticipant
     public function setConfirmedAt(?\DateTimeInterface $confirmedAt): static
     {
         $this->confirmedAt = $confirmedAt;
-
-        return $this;
-    }
-
-    public function getLinkedAbsence(): ?Absence
-    {
-        return $this->linkedAbsence;
-    }
-
-    public function setLinkedAbsence(?Absence $linkedAbsence): static
-    {
-        $this->linkedAbsence = $linkedAbsence;
 
         return $this;
     }

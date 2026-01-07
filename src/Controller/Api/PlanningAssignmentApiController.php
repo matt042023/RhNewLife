@@ -2,11 +2,15 @@
 
 namespace App\Controller\Api;
 
+use App\Entity\Absence;
 use App\Entity\Affectation;
+use App\Entity\RendezVous;
 use App\Entity\SqueletteGarde;
 use App\Entity\Villa;
+use App\Repository\AbsenceRepository;
 use App\Repository\AffectationRepository;
 use App\Repository\PlanningMonthRepository;
+use App\Repository\RendezVousRepository;
 use App\Repository\SqueletteGardeRepository;
 use App\Repository\UserRepository;
 use App\Repository\VillaRepository;
@@ -33,6 +37,8 @@ class PlanningAssignmentApiController extends AbstractController
         private AffectationRepository $affectationRepository,
         private UserRepository $userRepository,
         private VillaRepository $villaRepository,
+        private AbsenceRepository $absenceRepository,
+        private RendezVousRepository $rendezVousRepository,
         private PlanningAssignmentService $assignmentService,
         private PlanningAvailabilityService $availabilityService,
         private PlanningValidationService $validationService,
@@ -184,6 +190,110 @@ class PlanningAssignmentApiController extends AbstractController
         }
 
         return $this->json(['plannings' => $data]);
+    }
+
+    /**
+     * Get all absences for a specific month (for calendar background events)
+     * GET /api/planning-assignment/absences/{year}/{month}
+     */
+    #[Route('/absences/{year}/{month}', methods: ['GET'])]
+    public function getAbsencesForMonth(int $year, int $month): JsonResponse
+    {
+        // Calculate month start and end dates
+        $monthStart = new \DateTime("$year-$month-01 00:00:00");
+        $monthEnd = (clone $monthStart)->modify('last day of this month')->setTime(23, 59, 59);
+
+        // Fetch all approved absences that overlap with this month
+        $absences = $this->absenceRepository->createQueryBuilder('a')
+            ->join('a.user', 'u')
+            ->leftJoin('a.absenceType', 't')
+            ->addSelect('u', 't')
+            ->where('a.status = :approved')
+            ->andWhere('a.startAt <= :monthEnd')
+            ->andWhere('a.endAt >= :monthStart')
+            ->setParameter('approved', Absence::STATUS_APPROVED)
+            ->setParameter('monthStart', $monthStart)
+            ->setParameter('monthEnd', $monthEnd)
+            ->orderBy('a.startAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $data = [];
+        foreach ($absences as $absence) {
+            $user = $absence->getUser();
+            $absenceType = $absence->getAbsenceType();
+
+            $data[] = [
+                'id' => $absence->getId(),
+                'user' => [
+                    'id' => $user->getId(),
+                    'fullName' => $user->getFullName()
+                ],
+                'absenceType' => [
+                    'code' => $absenceType?->getCode() ?? 'AUTRE',
+                    'label' => $absenceType?->getLabel() ?? 'Absence'
+                ],
+                'startAt' => $absence->getStartAt()?->format('c'),
+                'endAt' => $absence->getEndAt()?->format('c')
+            ];
+        }
+
+        return $this->json($data);
+    }
+
+    /**
+     * Get all rendez-vous for a specific month (for calendar background events)
+     * GET /api/planning-assignment/rendezvous/{year}/{month}
+     */
+    #[Route('/rendezvous/{year}/{month}', methods: ['GET'])]
+    public function getRendezVousForMonth(int $year, int $month): JsonResponse
+    {
+        // Calculate month start and end dates
+        $monthStart = new \DateTime("$year-$month-01 00:00:00");
+        $monthEnd = (clone $monthStart)->modify('last day of this month')->setTime(23, 59, 59);
+
+        // Fetch all confirmed RDVs affecting shifts that overlap with this month
+        $rdvs = $this->rendezVousRepository->createQueryBuilder('r')
+            ->leftJoin('r.appointmentParticipants', 'ap')
+            ->leftJoin('ap.user', 'u')
+            ->addSelect('ap', 'u')
+            ->where('r.impactGarde = true')
+            ->andWhere('r.statut IN (:statuses)')
+            ->andWhere('r.startAt <= :monthEnd')
+            ->andWhere('r.endAt >= :monthStart')
+            ->setParameter('statuses', [
+                RendezVous::STATUS_CONFIRME,
+                RendezVous::STATUS_EN_ATTENTE
+            ])
+            ->setParameter('monthStart', $monthStart)
+            ->setParameter('monthEnd', $monthEnd)
+            ->orderBy('r.startAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $data = [];
+        foreach ($rdvs as $rdv) {
+            $participants = [];
+            foreach ($rdv->getAppointmentParticipants() as $participant) {
+                $user = $participant->getUser();
+                if ($user) {
+                    $participants[] = [
+                        'id' => $user->getId(),
+                        'fullName' => $user->getFullName()
+                    ];
+                }
+            }
+
+            $data[] = [
+                'id' => $rdv->getId(),
+                'title' => $rdv->getSubject() ?? $rdv->getTitre(),
+                'startAt' => $rdv->getStartAt()?->format('c'),
+                'endAt' => $rdv->getEndAt()?->format('c'),
+                'participants' => $participants
+            ];
+        }
+
+        return $this->json($data);
     }
 
     /**

@@ -3,7 +3,6 @@
 namespace App\Form;
 
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -58,14 +57,6 @@ class AppointmentValidationType extends AbstractType
                 'constraints' => [
                     new Assert\Length(max: 255)
                 ]
-            ])
-            ->add('createsAbsence', CheckboxType::class, [
-                'label' => 'Créer une absence automatique',
-                'required' => false,
-                'attr' => [
-                    'class' => 'form-checkbox',
-                ],
-                'help' => 'Une absence de type "Réunion" sera créée pour le demandeur'
             ])
             ->add('adminComment', TextareaType::class, [
                 'label' => 'Commentaire (optionnel)',
