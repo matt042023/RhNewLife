@@ -162,6 +162,7 @@ class PlanningAssignmentApiController extends AbstractController
                     'startAt' => $affectation->getStartAt()?->format('c'),
                     'endAt' => $affectation->getEndAt()?->format('c'),
                     'type' => $affectation->getType(),
+                    'joursTravailes' => $affectation->getJoursTravailes(),
                     'user' => $user ? [
                         'id' => $user->getId(),
                         'fullName' => $user->getFullName(),

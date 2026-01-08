@@ -25,6 +25,10 @@ class PlanningAssignmentService
         // Affecter l'éducateur
         $affectation->setUser($user);
 
+        // Auto-calculer les jours travaillés
+        $workingDays = $this->calculateWorkingDays($affectation);
+        $affectation->setJoursTravailes((int)$workingDays);
+
         // Vérifier conflits avec le service existant
         $this->conflictService->checkAndResolveConflicts($affectation);
 
@@ -45,8 +49,9 @@ class PlanningAssignmentService
         $affectation->setStartAt($start);
         $affectation->setEndAt($end);
 
-        // Recalculer si besoin (ex: jours travaillés)
-        // TODO: Ajouter calcul jours travaillés
+        // Recalculer les jours travaillés après modification des heures
+        $workingDays = $this->calculateWorkingDays($affectation);
+        $affectation->setJoursTravailes((int)$workingDays);
 
         // Vérifier nouveaux conflits
         if ($affectation->getUser()) {

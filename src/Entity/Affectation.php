@@ -54,6 +54,9 @@ class Affectation
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $commentaire = null;
 
+    #[ORM\Column(type: Types::INTEGER, nullable: true)]
+    private ?int $joursTravailes = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -163,6 +166,18 @@ class Affectation
     public function setCommentaire(?string $commentaire): static
     {
         $this->commentaire = $commentaire;
+
+        return $this;
+    }
+
+    public function getJoursTravailes(): ?int
+    {
+        return $this->joursTravailes;
+    }
+
+    public function setJoursTravailes(?int $joursTravailes): static
+    {
+        $this->joursTravailes = $joursTravailes;
 
         return $this;
     }

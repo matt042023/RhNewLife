@@ -210,20 +210,37 @@ export default class extends Controller {
                     const villaName = affectation.villa?.nom || 'Villa inconnue';
                     const userName = affectation.user?.fullName || 'À affecter';
 
-                    // Calculate working days for display
-                    const workingDays = this.calculateWorkingDays(affectation.startAt, affectation.endAt);
+                    // Récupérer jours travaillés depuis l'API (avec fallback si null)
+                    const workingDays = affectation.joursTravailes ??
+                        this.calculateWorkingDays(affectation.startAt, affectation.endAt);
 
-                    // For monthly view: use working days calculation
-                    // Event end date should be start + working days (not actual end time)
-                    const startDate = new Date(affectation.startAt);
-                    const displayEnd = new Date(startDate);
-                    displayEnd.setDate(displayEnd.getDate() + workingDays);
+                    // Détecter le type de vue actuel
+                    const currentView = this.calendar.view.type;
+                    const isMonthView = currentView === 'dayGridMonth';
+
+                    // Calculer la date de début/fin d'affichage selon la vue
+                    let eventStart, eventEnd;
+
+                    if (isMonthView) {
+                        // Vue mensuelle : utiliser format date uniquement (pas d'heure)
+                        // pour éviter les problèmes de timezone
+                        const startDate = new Date(affectation.startAt);
+                        const displayEnd = new Date(startDate);
+                        displayEnd.setDate(displayEnd.getDate() + workingDays);
+
+                        // Format YYYY-MM-DD pour vue mensuelle (all-day events)
+                        eventStart = startDate.toISOString().split('T')[0];
+                        eventEnd = displayEnd.toISOString().split('T')[0];
+                    } else {
+                        // Vue hebdomadaire/jour : utiliser l'heure de fin réelle avec heures
+                        eventStart = affectation.startAt;
+                        eventEnd = affectation.endAt;
+                    }
 
                     events.push({
                         id: affectation.id,
-                        start: affectation.startAt,
-                        end: affectation.endAt, // Keep real end for weekly view
-                        displayEnd: displayEnd.toISOString().split('T')[0], // Display end for monthly
+                        start: eventStart, // Conditionnel selon la vue
+                        end: eventEnd, // Conditionnel selon la vue
                         title: `${villaName} - ${userName}`,
                         extendedProps: {
                             affectation,
