@@ -9,6 +9,7 @@ use App\Entity\SqueletteGarde;
 use App\Entity\Villa;
 use App\Repository\AbsenceRepository;
 use App\Repository\AffectationRepository;
+use App\Repository\AstreinteRepository;
 use App\Repository\PlanningMonthRepository;
 use App\Repository\RendezVousRepository;
 use App\Repository\SqueletteGardeRepository;
@@ -39,6 +40,7 @@ class PlanningAssignmentApiController extends AbstractController
         private VillaRepository $villaRepository,
         private AbsenceRepository $absenceRepository,
         private RendezVousRepository $rendezVousRepository,
+        private AstreinteRepository $astreinteRepository,
         private PlanningAssignmentService $assignmentService,
         private PlanningAvailabilityService $availabilityService,
         private PlanningValidationService $validationService,
@@ -291,6 +293,54 @@ class PlanningAssignmentApiController extends AbstractController
                 'startAt' => $rdv->getStartAt()?->format('c'),
                 'endAt' => $rdv->getEndAt()?->format('c'),
                 'participants' => $participants
+            ];
+        }
+
+        return $this->json($data);
+    }
+
+    /**
+     * Get astreintes (on-call duties) for a specific month
+     * GET /api/planning-assignment/astreintes/{year}/{month}
+     */
+    #[Route('/astreintes/{year}/{month}', methods: ['GET'])]
+    public function getAstreintes(int $year, int $month): JsonResponse
+    {
+        // Calculate month date range
+        $startDate = new \DateTime("$year-$month-01 00:00:00");
+        $endDate = (clone $startDate)->modify('last day of this month')->setTime(23, 59, 59);
+
+        // Fetch astreintes that overlap with the month
+        $astreintes = $this->astreinteRepository->createQueryBuilder('a')
+            ->where('a.startAt <= :endDate')
+            ->andWhere('a.endAt >= :startDate')
+            ->setParameter('startDate', $startDate)
+            ->setParameter('endDate', $endDate)
+            ->orderBy('a.startAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        // Transform to JSON
+        $data = [];
+        foreach ($astreintes as $astreinte) {
+            $educateur = $astreinte->getEducateur();
+
+            // For FullCalendar background events, end date must be exclusive (next day)
+            // If astreinte ends on Sunday 2026-01-11, we send 2026-01-12 so FC displays until 11th included
+            $endDate = clone $astreinte->getEndAt();
+            $endDate->modify('+1 day');
+
+            $data[] = [
+                'id' => $astreinte->getId(),
+                'startAt' => $astreinte->getStartAt()->format('Y-m-d'),
+                'endAt' => $endDate->format('Y-m-d'),
+                'periodLabel' => $astreinte->getPeriodLabel(),
+                'status' => $astreinte->getStatus(),
+                'educateur' => $educateur ? [
+                    'id' => $educateur->getId(),
+                    'fullName' => $educateur->getFullName(),
+                    'color' => $educateur->getColor() ?? '#3B82F6'
+                ] : null
             ];
         }
 

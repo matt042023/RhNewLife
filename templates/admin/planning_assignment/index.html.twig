@@ -283,5 +283,34 @@
             text-overflow: ellipsis !important;
             white-space: nowrap !important;
         }
+
+        /* Astreinte background - hatched pattern with educator color */
+        .fc-bg-astreinte {
+            z-index: 0 !important; /* Below all events */
+            opacity: 0.3 !important;
+            pointer-events: none; /* Don't interfere with event interactions */
+        }
+
+        /* Loading indicator for calendar */
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .loading::after {
+            content: "Chargement...";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-weight: 600;
+            color: #3B82F6;
+            z-index: 1000;
+        }
     </style>
 {% endblock %}

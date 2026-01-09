@@ -11,7 +11,7 @@
     <div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-gray-900/50 backdrop-blur-sm hidden md:hidden"></div>
 
     {# Main content area #}
-    <div class="md:ml-64">
+    <div class="md:ml-64 flex flex-col min-h-screen">
         {# Header with glass effect #}
         <header class="sticky top-0 z-20 glass-card rounded-none border-0 border-b border-white/10">
             <div class="px-4 py-3 lg:px-6">
@@ -65,7 +65,7 @@
         </div>
 
         {# Main content #}
-        <main class="p-4 lg:p-6">
+        <main class="p-4 lg:p-6 flex-grow">
             {# Flash messages with glass effect #}
             {% for label, messages in app.flashes %}
                 {% for message in messages %}

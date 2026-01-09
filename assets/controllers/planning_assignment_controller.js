@@ -16,6 +16,11 @@ export default class extends Controller {
         this.pendingChanges = new Map();
         this.hasUnsavedChanges = false;
 
+        // Explicit month tracking properties to avoid Stimulus value sync issues
+        this.currentYear = this.currentYearValue;
+        this.currentMonth = this.currentMonthValue;
+        this.calendarInitialized = false; // Flag to prevent loading before datesSet is called
+
         this.initCalendar();
         this.initDraggableUsers();
         this.setupEventDragListeners();
@@ -152,6 +157,41 @@ export default class extends Controller {
                 }
             },
 
+            // Sync our variables when FullCalendar navigation changes (arrows, today button)
+            datesSet: (dateInfo) => {
+                const currentDate = dateInfo.view.currentStart;
+                const newYear = currentDate.getFullYear();
+                const newMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
+
+                // Check if month/year actually changed (to avoid infinite loops)
+                const hasChanged = (newYear !== this.currentYear || newMonth !== this.currentMonth);
+
+                // Update our tracking variables
+                this.currentYear = newYear;
+                this.currentMonth = newMonth;
+                this.currentYearValue = this.currentYear;
+                this.currentMonthValue = this.currentMonth;
+
+                // Update the custom month selector to match
+                if (this.hasMonthSelectorTarget) {
+                    const value = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}`;
+                    this.monthSelectorTarget.value = value;
+                }
+
+                // Mark calendar as initialized after first datesSet call
+                const wasInitialized = this.calendarInitialized;
+                this.calendarInitialized = true;
+
+                console.log(`📅 Calendar navigated to: ${this.currentYear}/${this.currentMonth}`);
+
+                // If calendar was already initialized and the date changed, refetch events
+                // This ensures we load the correct data after navigation
+                if (wasInitialized && hasChanged) {
+                    console.log(`🔄 Refetching events after navigation`);
+                    this.calendar.refetchEvents();
+                }
+            },
+
             // Event source
             events: (fetchInfo, successCallback, failureCallback) => {
                 this.loadEvents(fetchInfo, successCallback, failureCallback);
@@ -166,40 +206,110 @@ export default class extends Controller {
      * Load events from API for the current view
      */
     async loadEvents(fetchInfo, successCallback, failureCallback) {
-        const year = this.currentYearValue;
-        const month = this.currentMonthValue;
+        // Wait for calendar to be initialized (datesSet to be called at least once)
+        if (!this.calendarInitialized) {
+            console.log('⏸️ Waiting for calendar initialization...');
+            successCallback([]);
+            return;
+        }
 
-        console.log(`Loading events for ${year}/${month}`);
+        // Use our synchronized variables (updated by datesSet)
+        const year = this.currentYear;
+        const month = this.currentMonth;
+
+        console.log(`🔄 Loading events for ${year}/${month}`);
 
         try {
             // Add timestamp to avoid caching
             const timestamp = new Date().getTime();
 
-            // Fetch plannings, absences, and RDVs in parallel
-            const [planningsResponse, absencesResponse, rdvsResponse] = await Promise.all([
-                fetch(`/api/planning-assignment/${year}/${month}?t=${timestamp}`, {
-                    cache: 'no-store',
-                    credentials: 'same-origin'
-                }),
-                fetch(`/api/planning-assignment/absences/${year}/${month}?t=${timestamp}`, {
-                    cache: 'no-store',
-                    credentials: 'same-origin'
-                }),
-                fetch(`/api/planning-assignment/rendezvous/${year}/${month}?t=${timestamp}`, {
-                    cache: 'no-store',
-                    credentials: 'same-origin'
-                })
-            ]);
+            // Always load: previous month + current month + next month
+            // This ensures smooth transitions when navigating between months
+            const monthsToFetch = [];
 
-            if (!planningsResponse.ok || !absencesResponse.ok || !rdvsResponse.ok) {
-                throw new Error(`HTTP error`);
+            // Previous month
+            const prevMonth = month === 1 ? 12 : month - 1;
+            const prevYear = month === 1 ? year - 1 : year;
+            monthsToFetch.push({ year: prevYear, month: prevMonth, label: `${prevYear}/${prevMonth}` });
+
+            // Current month
+            monthsToFetch.push({ year: year, month: month, label: `${year}/${month}` });
+
+            // Next month
+            const nextMonth = month === 12 ? 1 : month + 1;
+            const nextYear = month === 12 ? year + 1 : year;
+            monthsToFetch.push({ year: nextYear, month: nextMonth, label: `${nextYear}/${nextMonth}` });
+
+            console.log(`📅 Fetching data for months: ${monthsToFetch.map(m => m.label).join(', ')}`);
+
+            // Fetch data for all required months
+            const allPromises = [];
+            for (const monthData of monthsToFetch) {
+                const y = monthData.year;
+                const m = monthData.month;
+
+                allPromises.push(
+                    fetch(`/api/planning-assignment/${y}/${m}?t=${timestamp}`, {
+                        cache: 'no-store',
+                        credentials: 'same-origin'
+                    }).then(r => r.json()).then(data => ({ type: 'planning', data })),
+
+                    fetch(`/api/planning-assignment/absences/${y}/${m}?t=${timestamp}`, {
+                        cache: 'no-store',
+                        credentials: 'same-origin'
+                    }).then(r => r.json()).then(data => ({ type: 'absence', data })),
+
+                    fetch(`/api/planning-assignment/rendezvous/${y}/${m}?t=${timestamp}`, {
+                        cache: 'no-store',
+                        credentials: 'same-origin'
+                    }).then(r => r.json()).then(data => ({ type: 'rdv', data })),
+
+                    fetch(`/api/planning-assignment/astreintes/${y}/${m}?t=${timestamp}`, {
+                        cache: 'no-store',
+                        credentials: 'same-origin'
+                    }).then(r => r.json()).then(data => ({ type: 'astreinte', data }))
+                );
             }
 
-            const planningsData = await planningsResponse.json();
-            const absencesData = await absencesResponse.json();
-            const rdvsData = await rdvsResponse.json();
+            const allResults = await Promise.all(allPromises);
 
-            console.log('API Response:', { planningsData, absencesData, rdvsData });
+            // Merge results by type and deduplicate
+            const planningsMap = new Map();
+            const absencesMap = new Map();
+            const rdvsMap = new Map();
+            const astreintesMap = new Map();
+
+            for (const result of allResults) {
+                if (result.type === 'planning') {
+                    for (const planning of result.data.plannings || []) {
+                        planningsMap.set(planning.id, planning);
+                    }
+                } else if (result.type === 'absence') {
+                    for (const absence of result.data || []) {
+                        absencesMap.set(absence.id, absence);
+                    }
+                } else if (result.type === 'rdv') {
+                    for (const rdv of result.data || []) {
+                        rdvsMap.set(rdv.id, rdv);
+                    }
+                } else if (result.type === 'astreinte') {
+                    for (const astreinte of result.data || []) {
+                        astreintesMap.set(astreinte.id, astreinte);
+                    }
+                }
+            }
+
+            const planningsData = { plannings: Array.from(planningsMap.values()) };
+            const absencesData = Array.from(absencesMap.values());
+            const rdvsData = Array.from(rdvsMap.values());
+            const astreintesData = Array.from(astreintesMap.values());
+
+            console.log('API Response (merged):', {
+                plannings: planningsData.plannings.length,
+                absences: absencesData.length,
+                rdvs: rdvsData.length,
+                astreintes: astreintesData.length
+            });
 
             // Convert plannings to FullCalendar events
             const events = [];
@@ -302,8 +412,32 @@ export default class extends Controller {
                 });
             }
 
+            // 4. Add astreintes as background events (week coloring with hatched pattern)
+            for (const astreinte of astreintesData) {
+                // Only show if educateur is assigned
+                if (!astreinte.educateur) {
+                    continue; // Skip unassigned weeks
+                }
+
+                events.push({
+                    id: `astreinte-${astreinte.id}`,
+                    start: astreinte.startAt,
+                    end: astreinte.endAt,
+                    display: 'background',  // Key: renders as background
+                    className: 'fc-bg-astreinte',
+                    editable: false,
+                    extendedProps: {
+                        type: 'astreinte',
+                        astreinteId: astreinte.id,
+                        educateur: astreinte.educateur,
+                        periodLabel: astreinte.periodLabel,
+                        status: astreinte.status
+                    }
+                });
+            }
+
             const affectationsCount = planningsData.plannings.reduce((acc, p) => acc + p.affectations.length, 0);
-            console.log(`Loaded ${events.length} events (${affectationsCount} affectations, ${absencesData.length} absences, ${rdvsData.length} RDVs)`);
+            console.log(`Loaded ${events.length} events (${affectationsCount} affectations, ${absencesData.length} absences, ${rdvsData.length} RDVs, ${astreintesData.length} astreintes)`);
 
             // Debug: Log absences specifically
             if (absencesData.length > 0) {
@@ -315,9 +449,14 @@ export default class extends Controller {
 
             successCallback(events);
 
+            // Remove loading indicator
+            this.calendarTarget.classList.remove('loading');
+
         } catch (error) {
             console.error('Failed to load events:', error);
             this.showError('Échec du chargement des événements');
+            // Remove loading indicator even on error
+            this.calendarTarget.classList.remove('loading');
             failureCallback(error);
         }
     }
@@ -367,6 +506,41 @@ export default class extends Controller {
 
         // Add event ID as data-attribute for drag & drop detection
         info.el.setAttribute('data-event-id', info.event.id);
+
+        // Handle astreinte background events (hatched pattern)
+        if (type === 'astreinte' && info.event.display === 'background') {
+            const educateur = info.event.extendedProps.educateur;
+            console.log('🎨 Rendering astreinte:', info.event.id, 'educateur:', educateur?.fullName, 'color:', educateur?.color);
+
+            if (educateur && educateur.color) {
+                const color = educateur.color;
+
+                // Convert hex to rgba
+                const hexToRgba = (hex, alpha) => {
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                };
+
+                // Apply hatched pattern
+                const gradient = `repeating-linear-gradient(
+                    45deg,
+                    ${hexToRgba(color, 0.30)},
+                    ${hexToRgba(color, 0.30)} 10px,
+                    ${hexToRgba(color, 0.15)} 10px,
+                    ${hexToRgba(color, 0.15)} 20px
+                )`;
+
+                info.el.style.setProperty('background', gradient, 'important');
+                info.el.style.setProperty('background-color', 'transparent', 'important');
+                info.el.style.border = 'none';
+                info.el.style.pointerEvents = 'none';
+
+                console.log('✅ Applied gradient:', gradient);
+            }
+            return; // Don't process further for background events
+        }
 
         const isRenfort = (type === 'renfort' || type === 'TYPE_RENFORT');
         const isAssigned = !!user;
@@ -808,12 +982,23 @@ export default class extends Controller {
     loadMonth(event = null) {
         if (event) {
             const [year, month] = event.target.value.split('-');
-            this.currentYearValue = parseInt(year);
-            this.currentMonthValue = parseInt(month);
+            this.currentYear = parseInt(year);
+            this.currentMonth = parseInt(month);
+            this.currentYearValue = this.currentYear;
+            this.currentMonthValue = this.currentMonth;
+
+            console.log(`📅 Loading month changed to: ${this.currentYear}/${this.currentMonth}`);
         }
 
-        // Reload calendar
+        // Show loading indicator and navigate calendar to the selected month
         if (this.calendar) {
+            this.calendarTarget.classList.add('loading');
+
+            // Navigate FullCalendar to the correct month
+            const targetDate = new Date(this.currentYear, this.currentMonth - 1, 1);
+            this.calendar.gotoDate(targetDate);
+
+            // Refetch events for the new month
             this.calendar.refetchEvents();
         }
     }
