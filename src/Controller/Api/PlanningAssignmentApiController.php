@@ -569,6 +569,8 @@ class PlanningAssignmentApiController extends AbstractController
                         break;
 
                     case 'update':
+                        $datesChanged = false;
+
                         if (isset($changeData['userId'])) {
                             $user = $changeData['userId']
                                 ? $this->userRepository->find($changeData['userId'])
@@ -580,13 +582,22 @@ class PlanningAssignmentApiController extends AbstractController
                         }
                         if (isset($changeData['startAt'])) {
                             $affectation->setStartAt(new \DateTime($changeData['startAt']));
+                            $datesChanged = true;
                         }
                         if (isset($changeData['endAt'])) {
                             $affectation->setEndAt(new \DateTime($changeData['endAt']));
+                            $datesChanged = true;
                         }
                         if (isset($changeData['commentaire'])) {
                             $affectation->setCommentaire($changeData['commentaire']);
                         }
+
+                        // Recalculer les jours travaillés si les dates ont changé
+                        if ($datesChanged) {
+                            $workingDays = $this->assignmentService->calculateWorkingDays($affectation);
+                            $affectation->setJoursTravailes((int)$workingDays);
+                        }
+
                         $processed++;
                         break;
 

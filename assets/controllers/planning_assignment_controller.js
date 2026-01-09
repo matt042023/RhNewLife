@@ -242,6 +242,7 @@ export default class extends Controller {
                         start: eventStart, // Conditionnel selon la vue
                         end: eventEnd, // Conditionnel selon la vue
                         title: `${villaName} - ${userName}`,
+                        order: 1, // Affectations en 2ème position (après absences)
                         extendedProps: {
                             affectation,
                             user: affectation.user,
@@ -258,11 +259,18 @@ export default class extends Controller {
 
             // 2. Add absences as regular events with special rendering (visible with striped pattern)
             for (const absence of absencesData) {
+                // Les absences sont maintenant des dates (jours complets) - pas d'heures
+                // Il faut ajouter 1 jour à la date de fin pour FullCalendar (end est exclusif)
+                const endDate = new Date(absence.endAt);
+                endDate.setDate(endDate.getDate() + 1);
+
                 events.push({
                     id: `absence-${absence.id}`,
                     title: `🚫 ${absence.user.fullName} - ${absence.absenceType.label}`,
                     start: absence.startAt,
-                    end: absence.endAt,
+                    end: endDate.toISOString().split('T')[0],
+                    allDay: true,
+                    order: 2, // Absences en 1ère position (en haut)
                     editable: false,
                     classNames: ['fc-event-absence', this.getAbsenceClass(absence.absenceType.code)],
                     extendedProps: {
@@ -282,6 +290,7 @@ export default class extends Controller {
                     title: rdv.title,
                     start: rdv.startAt,
                     end: rdv.endAt,
+                    order: 3, // RDVs en 3ème position (en bas)
                     editable: false,  // RDVs are not editable in planning view
                     classNames: ['fc-event-rdv'],
                     extendedProps: {
@@ -314,8 +323,9 @@ export default class extends Controller {
     }
 
     /**
-     * Calculate working days (48h = 2 days, not 3)
-     * Rule: < 7h = 0 day, else ceil(hours / 24)
+     * Calculate working days (24h + 3h tolerance rule)
+     * Rule: < 7h = 0 days, else ceil((hours - 3) / 24)
+     * Examples: 7h=1d, 27h=1d, 27h01=2d, 50h=2d, 51h=2d, 51h01=3d, 52h=3d
      */
     calculateWorkingDays(startAt, endAt) {
         const start = new Date(startAt);
@@ -328,8 +338,10 @@ export default class extends Controller {
             return 0;
         }
 
-        // Otherwise, round up by 24h blocks
-        return Math.ceil(hoursDiff / 24);
+        // New rule: 24h + 3h tolerance
+        // Each 24h block with >3h additional = 1 more day
+        // Formula: ceil((hours - 3) / 24)
+        return Math.ceil((hoursDiff - 3) / 24);
     }
 
     /**
@@ -1043,25 +1055,19 @@ export default class extends Controller {
             return;
         }
 
-        // Handle regular affectation click
-        const currentView = this.calendar.view.type;
+        // Handle regular affectation click - open modal in ALL views
+        const { affectation, user, villa, realStart, realEnd, workingDays } = info.event.extendedProps;
+        const eventId = info.event.id;
 
-        // Only open modal in monthly view for affectations
-        if (currentView === 'dayGridMonth') {
-            const { affectation, user, villa, realStart, realEnd, workingDays } = info.event.extendedProps;
-            const eventId = info.event.id;
-
-            // Render rich edit modal
-            this.renderEditModal(eventId, {
-                affectation,
-                user,
-                villa,
-                startAt: new Date(realStart),
-                endAt: new Date(realEnd),
-                workingDays
-            });
-        }
-        // In weekly view, the time is already visible and editable via resize/drag
+        // Render rich edit modal (works in monthly, weekly, and daily views)
+        this.renderEditModal(eventId, {
+            affectation,
+            user,
+            villa,
+            startAt: new Date(realStart),
+            endAt: new Date(realEnd),
+            workingDays
+        });
     }
 
     /**
@@ -1195,14 +1201,22 @@ export default class extends Controller {
             this.saveAffectationFromModal(eventId);
         });
 
-        // Real-time duration calculation
+        // Real-time duration calculation with new formula
         const startInput = document.getElementById('editStartAt');
         const endInput = document.getElementById('editEndAt');
         const updateDuration = () => {
             const start = new Date(startInput.value);
             const end = new Date(endInput.value);
             const hours = Math.round((end - start) / (1000 * 60 * 60));
-            const days = Math.ceil(hours / 24);
+
+            // Apply new working days formula: ceil((hours - 3) / 24)
+            let days;
+            if (hours < 7) {
+                days = 0;
+            } else {
+                days = Math.ceil((hours - 3) / 24);
+            }
+
             document.getElementById('calculatedDuration').textContent =
                 `${hours}h (${days} jour${days > 1 ? 's' : ''} travaillé${days > 1 ? 's' : ''})`;
         };
@@ -1322,13 +1336,38 @@ export default class extends Controller {
             }
         }
 
-        // If dates changed, they're already updated by FullCalendar drag/resize
-        // Just ensure extendedProps are synced
-        if (updates.startAt) {
-            event.setExtendedProp('realStart', updates.startAt);
-        }
-        if (updates.endAt) {
-            event.setExtendedProp('realEnd', updates.endAt);
+        // If dates changed, recalculate working days and update calendar display
+        if (updates.startAt || updates.endAt) {
+            // Update real times
+            const newStartAt = updates.startAt || event.extendedProps.realStart;
+            const newEndAt = updates.endAt || event.extendedProps.realEnd;
+
+            event.setExtendedProp('realStart', newStartAt);
+            event.setExtendedProp('realEnd', newEndAt);
+
+            // Recalculate working days with new formula
+            const workingDays = this.calculateWorkingDays(newStartAt, newEndAt);
+            event.setExtendedProp('workingDays', workingDays);
+
+            // Update calendar display based on current view
+            const currentView = this.calendar.view.type;
+            const isMonthView = currentView === 'dayGridMonth';
+
+            if (isMonthView) {
+                // Monthly view: display as all-day spanning working days
+                const startDate = new Date(newStartAt);
+                const displayEnd = new Date(startDate);
+                displayEnd.setDate(displayEnd.getDate() + workingDays);
+
+                event.setStart(startDate.toISOString().split('T')[0]);
+                event.setEnd(displayEnd.toISOString().split('T')[0]);
+                event.setAllDay(true);
+            } else {
+                // Weekly/daily view: display with actual times
+                event.setStart(newStartAt);
+                event.setEnd(newEndAt);
+                event.setAllDay(false);
+            }
         }
     }
 

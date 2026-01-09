@@ -8,7 +8,7 @@ use App\Entity\User;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -62,9 +62,10 @@ class AdminAbsenceType extends AbstractType
                     'data-action' => 'change->absence-form#onTypeChange',
                 ],
             ])
-            ->add('startAt', DateTimeType::class, [
+            ->add('startAt', DateType::class, [
                 'widget' => 'single_text',
                 'label' => 'Date de début',
+                'help' => 'L\'absence démarre à 00h00 ce jour',
                 'constraints' => [
                     new NotBlank(['message' => 'La date de début est obligatoire']),
                 ],
@@ -74,9 +75,10 @@ class AdminAbsenceType extends AbstractType
                     'data-action' => 'change->absence-form#onDateChange',
                 ],
             ])
-            ->add('endAt', DateTimeType::class, [
+            ->add('endAt', DateType::class, [
                 'widget' => 'single_text',
                 'label' => 'Date de fin',
+                'help' => 'L\'absence se termine à 23h59 ce jour (inclus)',
                 'constraints' => [
                     new NotBlank(['message' => 'La date de fin est obligatoire']),
                 ],

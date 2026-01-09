@@ -62,8 +62,19 @@ class PlanningAssignmentService
     }
 
     /**
-     * Calculate working days for an affectation
-     * Règle: 1 journée commencée = 1 jour décompté
+     * Calculate working days for an affectation based on 24h+3h tolerance rule.
+     *
+     * Rule: First 24h + 3h tolerance, then each additional 24h block with >3h = +1 day
+     * Formula: if (hours < 7) return 0; else return ceil((hours - 3) / 24)
+     *
+     * Examples:
+     * - 7h → 1 day
+     * - 27h → 1 day
+     * - 27h01 → 2 days
+     * - 50h → 2 days
+     * - 51h → 2 days
+     * - 51h01 → 3 days
+     * - 52h → 3 days
      */
     public function calculateWorkingDays(Affectation $affectation): float
     {
@@ -81,8 +92,10 @@ class PlanningAssignmentService
             return 0;
         }
 
-        // Arrondi supérieur par tranche de 24h entamée
-        return ceil($hoursDiff / 24);
+        // Nouvelle règle : 24h + 3h de tolérance
+        // Chaque tranche de 24h avec plus de 3h supplémentaires = 1 jour de plus
+        // Formule : ceil((heures - 3) / 24)
+        return (int) ceil(($hoursDiff - 3) / 24);
     }
 
     /**
