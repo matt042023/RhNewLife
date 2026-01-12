@@ -226,6 +226,31 @@ export default class extends Controller {
         console.log(`🔄 Loading events for ${year}/${month}`);
 
         try {
+            // Check if force refresh is requested (bypass cache)
+            if (this.forceRefresh) {
+                console.log(`🔥 Force refresh requested - bypassing cache`);
+                this.forceRefresh = false;
+
+                // Show loading indicator
+                this.calendarTarget.classList.add('loading');
+
+                // Fetch fresh data from API
+                const data = await this.fetchMonthDataFromAPI(year, month);
+
+                // Store in cache
+                await cacheManager.set(monthKey, data);
+
+                // Transform and display
+                const events = await this.transformDataToEvents(data);
+                successCallback(events);
+
+                // Remove loading indicator
+                this.calendarTarget.classList.remove('loading');
+
+                console.log(`✅ Fresh data loaded (force refresh): ${monthKey}`);
+                return;
+            }
+
             // Try to load from cache first
             const cached = await cacheManager.get(monthKey);
 
@@ -271,6 +296,15 @@ export default class extends Controller {
             this.calendarTarget.classList.remove('loading');
             failureCallback(error);
         }
+    }
+
+    /**
+     * Force an immediate refresh from API (bypass cache)
+     */
+    forceRefreshFromAPI() {
+        this.forceRefresh = true;
+        this.calendar.removeAllEvents();
+        this.calendar.refetchEvents();
     }
 
     /**
@@ -481,6 +515,19 @@ export default class extends Controller {
 
         const affectationsCount = planningsData.plannings.reduce((acc, p) => acc + p.affectations.length, 0);
         console.log(`Transformed ${events.length} events (${affectationsCount} affectations, ${absencesData.length} absences, ${rdvsData.length} RDVs, ${astreintesData.length} astreintes)`);
+
+        // Debug: Log astreintes specifically
+        if (astreintesData.length > 0) {
+            console.log('🔍 Astreintes loaded:', astreintesData.map(a => ({
+                id: a.id,
+                start: a.startAt,
+                end: a.endAt,
+                educateur: a.educateur?.fullName,
+                label: a.periodLabel
+            })));
+        } else {
+            console.warn('⚠️ No astreintes found for this month');
+        }
 
         // Debug: Log absences specifically
         if (absencesData.length > 0) {
@@ -1288,8 +1335,8 @@ export default class extends Controller {
                 await cacheManager.invalidateRange(year, month);
             }
 
-            // Reload calendar
-            this.calendar.refetchEvents();
+            // Force immediate reload from API (bypass cache)
+            this.forceRefreshFromAPI();
 
             this.showSuccess(`${response.deleted} garde${response.deleted > 1 ? 's' : ''} supprimée${response.deleted > 1 ? 's' : ''}`);
 
@@ -1348,7 +1395,9 @@ export default class extends Controller {
                 await cacheManager.invalidateRange(endYear, endMonth);
             }
 
-            this.calendar.refetchEvents();
+            // Force immediate reload from API (bypass cache)
+            this.forceRefreshFromAPI();
+
             this.showSuccess(`${response.created} affectations créées avec succès`);
 
         } catch (error) {
@@ -1395,8 +1444,8 @@ export default class extends Controller {
             // Invalidate cache for validated month
             await cacheManager.invalidateRange(year, month);
 
-            // Reload calendar to show updated statuses
-            this.calendar.refetchEvents();
+            // Force immediate reload from API (bypass cache)
+            this.forceRefreshFromAPI();
 
         } catch (error) {
             console.error('Failed to validate planning:', error);
@@ -1783,8 +1832,8 @@ export default class extends Controller {
             // Invalidate cache for current month and adjacent months
             await cacheManager.invalidateRange(this.currentYear, this.currentMonth);
 
-            // Refresh calendar from server
-            this.calendar.refetchEvents();
+            // Force immediate reload from API (bypass cache)
+            this.forceRefreshFromAPI();
 
             this.showSuccess(`${changes.length} modification${changes.length > 1 ? 's' : ''} sauvegardée${changes.length > 1 ? 's' : ''}`);
 

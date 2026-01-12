@@ -166,6 +166,10 @@ class AstreinteManager
 
     /**
      * Generate weekly astreintes for a month
+     *
+     * Important: Weeks are Monday-to-Sunday and can span across month boundaries.
+     * - A week that STARTS before the month will be created (e.g., S01 2026 starts Dec 29)
+     * - A week that ENDS after the month will extend into next month (e.g., S05 ends Feb 1)
      */
     public function generateMonthlyAstreintes(int $year, int $month, ?User $createdBy = null): array
     {
@@ -173,27 +177,23 @@ class AstreinteManager
         $endOfMonth = (clone $startOfMonth)->modify('last day of this month');
 
         $astreintes = [];
+
+        // IMPORTANT: Start from Monday of the week CONTAINING the 1st day of the month
+        // This may be in the PREVIOUS month (e.g., S01 2026 starts Dec 29, 2025)
         $currentStart = clone $startOfMonth;
 
-        // Generate weekly periods starting from Monday
+        // Find the Monday of the week containing day 1
+        while ($currentStart->format('N') != 1) {  // N=1 is Monday
+            $currentStart->modify('-1 day');  // Go BACK to find the Monday
+        }
+
+        // Generate weekly periods (Monday to Sunday)
+        // Stop when we've processed all weeks that touch this month
         while ($currentStart <= $endOfMonth) {
-            // Find next Monday
-            if ($currentStart->format('N') != 1) {
-                $currentStart->modify('next Monday');
-            }
+            // Calculate Sunday of this week (6 days after Monday)
+            $currentEnd = (clone $currentStart)->modify('+6 days')->setTime(23, 59, 59);
 
-            if ($currentStart > $endOfMonth) {
-                break;
-            }
-
-            $currentEnd = (clone $currentStart)->modify('next Sunday')->setTime(23, 59, 59);
-
-            // Ensure we don't go beyond the month
-            if ($currentEnd > $endOfMonth) {
-                $currentEnd = (clone $endOfMonth)->setTime(23, 59, 59);
-            }
-
-            $weekNumber = $currentStart->format('W');
+            $weekNumber = (int) $currentStart->format('W');
             $periodLabel = "S$weekNumber";
 
             try {
@@ -207,11 +207,14 @@ class AstreinteManager
             } catch (\Exception $e) {
                 $this->logger->warning('Failed to create astreinte', [
                     'period' => $periodLabel,
+                    'start' => $currentStart->format('Y-m-d'),
+                    'end' => $currentEnd->format('Y-m-d'),
                     'error' => $e->getMessage(),
                 ]);
             }
 
-            $currentStart = (clone $currentEnd)->modify('+1 second');
+            // Move to next Monday (+7 days from current Monday)
+            $currentStart = (clone $currentStart)->modify('+7 days');
         }
 
         return $astreintes;

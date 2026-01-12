@@ -176,7 +176,10 @@ class PlanningAssignmentApiController extends AbstractController
                         'color' => $villa?->getColor()
                     ],
                     'statut' => $affectation->getStatut(),
-                    'commentaire' => $affectation->getCommentaire()
+                    'commentaire' => $affectation->getCommentaire(),
+                    'isSegmented' => $affectation->getIsSegmented(),
+                    'segmentNumber' => $affectation->getSegmentNumber(),
+                    'totalSegments' => $affectation->getTotalSegments()
                 ];
             }
 
@@ -407,7 +410,10 @@ class PlanningAssignmentApiController extends AbstractController
                         'color' => $villa?->getColor()
                     ],
                     'statut' => $affectation->getStatut(),
-                    'commentaire' => $affectation->getCommentaire()
+                    'commentaire' => $affectation->getCommentaire(),
+                    'isSegmented' => $affectation->getIsSegmented(),
+                    'segmentNumber' => $affectation->getSegmentNumber(),
+                    'totalSegments' => $affectation->getTotalSegments()
                 ];
             }
 

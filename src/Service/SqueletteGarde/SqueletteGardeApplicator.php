@@ -47,10 +47,11 @@ class SqueletteGardeApplicator
             $lastDay = clone $periodEnd;
         }
 
-        // Find the first Monday of the month (or closest)
+        // Find the Monday of the week containing the first day of the month
+        // This may be in the previous month to ensure we don't skip weeks
         $weekStart = clone $firstDay;
         while ($weekStart->format('N') != 1) {
-            $weekStart->modify('+1 day');
+            $weekStart->modify('-1 day');
         }
 
         // Loop through all weeks in the period
@@ -64,11 +65,20 @@ class SqueletteGardeApplicator
                     $squelette->getNom()
                 );
                 if ($affectation) {
-                    // Include affectation if it STARTS within the period (even if it ends after)
-                    $affectationStart = $affectation->getStartAt();
+                    // Split if spans multiple months
+                    $segments = $this->splitAffectationByMonth($affectation);
 
-                    if ($affectationStart >= $firstDay && $affectationStart <= (clone $lastDay)->modify('+1 day')) {
-                        $affectations[] = $affectation;
+                    foreach ($segments as $segment) {
+                        $segmentStart = $segment->getStartAt();
+
+                        // Include segment if it STARTS within this planning's month
+                        $segmentYear = (int)$segmentStart->format('Y');
+                        $segmentMonth = (int)$segmentStart->format('m');
+
+                        if ($segmentYear === $planningMois->getAnnee()
+                            && $segmentMonth === $planningMois->getMois()) {
+                            $affectations[] = $segment;
+                        }
                     }
                 }
             }
@@ -82,11 +92,20 @@ class SqueletteGardeApplicator
                     $squelette->getNom()
                 );
                 if ($affectation) {
-                    // Include affectation if it STARTS within the period
-                    $affectationStart = $affectation->getStartAt();
+                    // Split if spans multiple months
+                    $segments = $this->splitAffectationByMonth($affectation);
 
-                    if ($affectationStart >= $firstDay && $affectationStart <= (clone $lastDay)->modify('+1 day')) {
-                        $affectations[] = $affectation;
+                    foreach ($segments as $segment) {
+                        $segmentStart = $segment->getStartAt();
+
+                        // Include segment if it STARTS within this planning's month
+                        $segmentYear = (int)$segmentStart->format('Y');
+                        $segmentMonth = (int)$segmentStart->format('m');
+
+                        if ($segmentYear === $planningMois->getAnnee()
+                            && $segmentMonth === $planningMois->getMois()) {
+                            $affectations[] = $segment;
+                        }
                     }
                 }
             }
@@ -259,5 +278,140 @@ class SqueletteGardeApplicator
             ->setCommentaire('Créé depuis template: ' . $templateName . ' - ' . ($creneau['label'] ?? 'Renfort'));
 
         return $affectation;
+    }
+
+    /**
+     * Splits an affectation that spans multiple months into separate affectations
+     *
+     * Important: A guard shift is counted for the month where it STARTS, unless it truly
+     * spans multiple calendar days across month boundaries (e.g., 48h shift from Jan 31 to Feb 2).
+     *
+     * Rules:
+     * - 24h shift (e.g., Jan 31 7h → Feb 1 7h): Counted entirely for January (no split)
+     * - 48h shift (e.g., Jan 31 7h → Feb 2 7h): Split into 2 segments (Jan 31-Feb 1, Feb 1-Feb 2)
+     *
+     * @param Affectation $affectation The original affectation to split
+     * @return Affectation[] Array of affectations (1 if same month, 2+ if spanning)
+     */
+    private function splitAffectationByMonth(Affectation $affectation): array
+    {
+        $startAt = $affectation->getStartAt();
+        $endAt = $affectation->getEndAt();
+
+        // Check if same month
+        if ($startAt->format('Y-m') === $endAt->format('Y-m')) {
+            return [$affectation]; // No split needed
+        }
+
+        // Calculate the number of calendar days spanned
+        $startDay = (int)$startAt->format('d');
+        $endDay = (int)$endAt->format('d');
+        $startMonth = (int)$startAt->format('m');
+        $endMonth = (int)$endAt->format('m');
+        $startYear = (int)$startAt->format('Y');
+        $endYear = (int)$endAt->format('Y');
+
+        // Special case: 24h shift that ends on the 1st of next month at the same time
+        // Example: Jan 31 7h → Feb 1 7h (24h shift)
+        // This should count entirely for January (the month where it started)
+        if ($endDay === 1 && $startAt->format('H:i') === $endAt->format('H:i')) {
+            // This is a 24h shift ending on day 1 of next month
+            // Keep it as a single affectation for the start month
+            return [$affectation];
+        }
+
+        // For shifts that truly span multiple days across months (e.g., 48h+)
+        // Split by day boundaries, counting each full day for its respective month
+        $affectations = [];
+        $currentSegmentStart = clone $startAt;
+
+        while ($currentSegmentStart < $endAt) {
+            // Calculate the end of the current day (same time next day)
+            $nextDayAtSameTime = (clone $currentSegmentStart)->modify('+1 day');
+
+            // If the shift ends before the next day at same time, this is the last segment
+            $currentSegmentEnd = ($nextDayAtSameTime < $endAt) ? $nextDayAtSameTime : clone $endAt;
+
+            // Get or create PlanningMonth for this segment
+            $segmentYear = (int)$currentSegmentStart->format('Y');
+            $segmentMonth = (int)$currentSegmentStart->format('m');
+            $planningMonth = $this->getOrCreatePlanningMonth(
+                $affectation->getVilla(),
+                $segmentYear,
+                $segmentMonth
+            );
+
+            // Create affectation segment
+            $segment = new Affectation();
+            $segment
+                ->setPlanningMois($planningMonth)
+                ->setVilla($affectation->getVilla())
+                ->setStartAt(clone $currentSegmentStart)
+                ->setEndAt($currentSegmentEnd)
+                ->setType($affectation->getType())
+                ->setIsFromSquelette($affectation->isIsFromSquelette())
+                ->setCommentaire($affectation->getCommentaire() . ' [Partie ' . (count($affectations) + 1) . ']');
+
+            // Calculate working days for THIS segment only (should be 1 per 24h block)
+            $segment->setJoursTravailes($this->calculateWorkingDaysForSegment($segment));
+
+            $affectations[] = $segment;
+
+            // Move to next segment
+            $currentSegmentStart = $currentSegmentEnd;
+        }
+
+        // Mark all segments with metadata if we created multiple
+        if (count($affectations) > 1) {
+            for ($i = 0; $i < count($affectations); $i++) {
+                $affectations[$i]
+                    ->setIsSegmented(true)
+                    ->setSegmentNumber($i + 1)
+                    ->setTotalSegments(count($affectations));
+            }
+        }
+
+        return $affectations;
+    }
+
+    /**
+     * Get or create a PlanningMonth for a given villa, year, and month
+     */
+    private function getOrCreatePlanningMonth(Villa $villa, int $year, int $month): PlanningMonth
+    {
+        $planning = $this->em->getRepository(PlanningMonth::class)
+            ->findOneBy(['villa' => $villa, 'annee' => $year, 'mois' => $month]);
+
+        if (!$planning) {
+            $planning = new PlanningMonth();
+            $planning
+                ->setVilla($villa)
+                ->setAnnee($year)
+                ->setMois($month)
+                ->setStatut(PlanningMonth::STATUS_DRAFT);
+
+            $this->em->persist($planning);
+            $this->em->flush();
+        }
+
+        return $planning;
+    }
+
+    /**
+     * Calculate working days for a specific affectation segment
+     * Uses the same formula as PlanningAssignmentService but for the exact segment duration
+     */
+    private function calculateWorkingDaysForSegment(Affectation $affectation): int
+    {
+        $start = $affectation->getStartAt();
+        $end = $affectation->getEndAt();
+
+        $hoursDiff = ($end->getTimestamp() - $start->getTimestamp()) / 3600;
+
+        if ($hoursDiff < 7) {
+            return 0;
+        }
+
+        return (int) ceil(($hoursDiff - 3) / 24);
     }
 }
