@@ -131,6 +131,8 @@ export default class extends Controller {
             plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
             initialView: 'dayGridMonth',
             height: 'auto',
+            contentHeight: 'auto',
+            aspectRatio: 1.35,
             editable: true,
             droppable: true,
             locale: 'fr',
@@ -140,6 +142,10 @@ export default class extends Controller {
             // Allow events to overlap (gardes and RDVs can overlay on absences)
             slotEventOverlap: true,
             eventOverlap: true,
+
+            // Improve day cell height adaptation
+            dayMaxEvents: false,
+            dayMaxEventRows: false,
 
             headerToolbar: {
                 left: 'prev,next today',

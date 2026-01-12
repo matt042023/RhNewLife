@@ -1127,3 +1127,73 @@ body {
         transform: rotate(360deg);
     }
 }
+
+/* ========================================
+   FULLCALENDAR - ADAPTIVE HEIGHT FIX
+   ======================================== */
+
+/* Force calendar day cells to adapt to content height */
+.fc-daygrid-day-frame {
+    min-height: 120px !important;
+    height: auto !important;
+}
+
+.fc-daygrid-day-events {
+    margin-bottom: 0 !important;
+    min-height: auto !important;
+}
+
+/* Allow week rows to expand based on content */
+.fc-scrollgrid-section-body tr {
+    height: auto !important;
+}
+
+.fc-daygrid-body tr {
+    height: auto !important;
+}
+
+/* Ensure cells don't have fixed heights */
+.fc-daygrid-day {
+    height: auto !important;
+}
+
+.fc-day {
+    height: auto !important;
+}
+
+/* Fix for week rows with astreinte overlays */
+.fc-daygrid-body tbody tr[role="row"] {
+    min-height: 120px;
+    height: auto !important;
+}
+
+/* Force exactly 7 columns (Mon-Sun) and equal width */
+.fc-daygrid-body table {
+    table-layout: fixed !important;
+}
+
+.fc-daygrid-body td.fc-daygrid-day {
+    width: 14.28571% !important; /* 100% / 7 days */
+}
+
+/* Ensure grid alignment */
+.fc-scrollgrid-sync-table {
+    width: 100% !important;
+}
+
+.fc-col-header-cell {
+    width: 14.28571% !important;
+}
+
+/* ========================================
+   FULLCALENDAR - EVENT MARGINS
+   ======================================== */
+
+/* Margins for affectation events */
+.fc-daygrid-event {
+    margin-top: 10px !important;
+}
+
+.fc-event {
+    margin-top: 10px !important;
+}
