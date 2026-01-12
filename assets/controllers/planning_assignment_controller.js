@@ -26,6 +26,9 @@ export default class extends Controller {
         this.isSyncing = false; // Background sync in progress
         this.prefetchQueue = new Set(); // Months to prefetch
 
+        // 🆕 Store astreintes separately for full-width rendering
+        this.astreintesData = [];
+
         this.initCalendar();
         this.initDraggableUsers();
         this.setupEventDragListeners();
@@ -195,6 +198,9 @@ export default class extends Controller {
                     console.log(`🔄 Refetching events after navigation`);
                     this.calendar.refetchEvents();
                 }
+
+                // Render astreinte bars after calendar is ready
+                setTimeout(() => this.renderAstreinteBars(), 100);
             },
 
             // Event source
@@ -489,29 +495,9 @@ export default class extends Controller {
                 });
             }
 
-            // 4. Add astreintes as background events (week coloring with hatched pattern)
-            for (const astreinte of astreintesData) {
-                // Only show if educateur is assigned
-                if (!astreinte.educateur) {
-                    continue; // Skip unassigned weeks
-                }
-
-                events.push({
-                    id: `astreinte-${astreinte.id}`,
-                    start: astreinte.startAt,
-                    end: astreinte.endAt,
-                    display: 'background',  // Key: renders as background
-                    className: 'fc-bg-astreinte',
-                    editable: false,
-                    extendedProps: {
-                        type: 'astreinte',
-                        astreinteId: astreinte.id,
-                        educateur: astreinte.educateur,
-                        periodLabel: astreinte.periodLabel,
-                        status: astreinte.status
-                    }
-                });
-            }
+            // 4. Store astreintes separately for full-width bar rendering
+            // Don't add them as calendar events - we'll render them as custom overlays
+            this.astreintesData = astreintesData.filter(a => a.educateur); // Only keep assigned astreintes
 
         const affectationsCount = planningsData.plannings.reduce((acc, p) => acc + p.affectations.length, 0);
         console.log(`Transformed ${events.length} events (${affectationsCount} affectations, ${absencesData.length} absences, ${rdvsData.length} RDVs, ${astreintesData.length} astreintes)`);
@@ -711,9 +697,11 @@ export default class extends Controller {
         // Add event ID as data-attribute for drag & drop detection
         info.el.setAttribute('data-event-id', info.event.id);
 
-        // Handle astreinte background events (hatched pattern)
+        // Handle astreinte background events
         if (type === 'astreinte' && info.event.display === 'background') {
             const educateur = info.event.extendedProps.educateur;
+            const periodLabel = info.event.extendedProps.periodLabel || '';
+
             console.log('🎨 Rendering astreinte:', info.event.id, 'educateur:', educateur?.fullName, 'color:', educateur?.color);
 
             if (educateur && educateur.color) {
@@ -727,7 +715,7 @@ export default class extends Controller {
                     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
                 };
 
-                // Apply hatched pattern
+                // Apply hatched pattern background
                 const gradient = `repeating-linear-gradient(
                     45deg,
                     ${hexToRgba(color, 0.30)},
@@ -738,10 +726,31 @@ export default class extends Controller {
 
                 info.el.style.setProperty('background', gradient, 'important');
                 info.el.style.setProperty('background-color', 'transparent', 'important');
-                info.el.style.border = 'none';
-                info.el.style.pointerEvents = 'none';
+                info.el.style.border = `2px solid ${hexToRgba(color, 0.6)}`;
+                info.el.style.borderRadius = '4px';
 
-                console.log('✅ Applied gradient:', gradient);
+                // Create custom overlay text for background events
+                const textOverlay = document.createElement('div');
+                textOverlay.style.position = 'absolute';
+                textOverlay.style.top = '50%';
+                textOverlay.style.left = '50%';
+                textOverlay.style.transform = 'translate(-50%, -50%)';
+                textOverlay.style.color = color;
+                textOverlay.style.fontWeight = '700';
+                textOverlay.style.fontSize = '12px';
+                textOverlay.style.textAlign = 'center';
+                textOverlay.style.lineHeight = '1.4';
+                textOverlay.style.whiteSpace = 'pre-line';
+                textOverlay.style.pointerEvents = 'none';
+                textOverlay.style.zIndex = '10';
+                textOverlay.style.textShadow = '0 0 3px white, 0 0 5px white';
+                textOverlay.innerHTML = info.event.title || '';
+
+                // Position the parent relatively
+                info.el.style.position = 'relative';
+                info.el.appendChild(textOverlay);
+
+                console.log('✅ Applied astreinte hatched pattern with text overlay:', color);
             }
             return; // Don't process further for background events
         }
@@ -2107,5 +2116,119 @@ export default class extends Controller {
     closeDetailsModal() {
         const modal = document.getElementById('details-modal');
         modal.classList.add('hidden');
+    }
+
+    /**
+     * Render astreinte bars as overlays covering each week row
+     */
+    renderAstreinteBars() {
+        // Remove existing astreinte bars
+        const existingBars = this.calendarTarget.querySelectorAll('.astreinte-bar-overlay');
+        existingBars.forEach(bar => bar.remove());
+
+        if (!this.astreintesData || this.astreintesData.length === 0) {
+            console.log('No astreintes to render');
+            return;
+        }
+
+        // Get all week rows in the calendar
+        const weekRows = this.calendarTarget.querySelectorAll('.fc-scrollgrid-section-body tr[role="row"]');
+        if (!weekRows || weekRows.length === 0) {
+            console.warn('Calendar week rows not ready yet');
+            return;
+        }
+
+        console.log(`🎨 Rendering ${this.astreintesData.length} astreinte bars on ${weekRows.length} weeks`);
+
+        // For each astreinte, find the corresponding week row and overlay it
+        this.astreintesData.forEach((astreinte) => {
+            const astreinteStart = new Date(astreinte.startAt);
+
+            // Find the week row that contains this astreinte's start date
+            weekRows.forEach((weekRow) => {
+                const dayCells = weekRow.querySelectorAll('td.fc-daygrid-day');
+                if (dayCells.length === 0) return;
+
+                // Get the first and last day of this week row
+                const firstCell = dayCells[0];
+                const lastCell = dayCells[dayCells.length - 1];
+
+                const firstDate = new Date(firstCell.getAttribute('data-date'));
+                const lastDate = new Date(lastCell.getAttribute('data-date'));
+
+                // Check if astreinte starts in this week
+                if (astreinteStart >= firstDate && astreinteStart <= lastDate) {
+                    const bar = this.createAstreinteBarForWeekRow(astreinte, weekRow);
+                    if (bar) {
+                        weekRow.style.position = 'relative';
+                        weekRow.appendChild(bar);
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * Create a single astreinte bar overlay for a specific week row
+     */
+    createAstreinteBarForWeekRow(astreinte, weekRow) {
+        const educateur = astreinte.educateur;
+        if (!educateur) return null;
+
+        const color = educateur.color || '#cccccc';
+
+        // Format dates for display
+        const startDate = new Date(astreinte.startAt);
+        const endDate = new Date(astreinte.endAt);
+        const startFormatted = startDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        const endFormatted = endDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+
+        // Convert hex to rgba
+        const hexToRgba = (hex, alpha) => {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+
+        // Create bar element that covers the entire week row
+        const bar = document.createElement('div');
+        bar.className = 'astreinte-bar-overlay';
+        bar.style.position = 'absolute';
+        bar.style.top = '0';
+        bar.style.left = '0';
+        bar.style.right = '0';
+        bar.style.bottom = '0';
+        bar.style.border = `3px solid ${hexToRgba(color, 0.8)}`;
+        bar.style.borderRadius = '6px';
+        bar.style.pointerEvents = 'none';
+        bar.style.zIndex = '0';
+
+        // Apply hatched pattern background
+        const gradient = `repeating-linear-gradient(
+            45deg,
+            ${hexToRgba(color, 0.25)},
+            ${hexToRgba(color, 0.25)} 10px,
+            ${hexToRgba(color, 0.10)} 10px,
+            ${hexToRgba(color, 0.10)} 20px
+        )`;
+        bar.style.background = gradient;
+
+        // Create text content positioned at top-left
+        const text = document.createElement('div');
+        text.style.position = 'absolute';
+        text.style.top = '8px';
+        text.style.left = '12px';
+        text.style.color = color;
+        text.style.fontWeight = '700';
+        text.style.fontSize = '13px';
+        text.style.lineHeight = '1.3';
+        text.style.textShadow = '0 0 3px white, 0 0 5px white, 1px 1px 2px white';
+        text.style.whiteSpace = 'nowrap';
+        text.innerHTML = `${astreinte.periodLabel || ''} - ${educateur.fullName}<br><span style="font-size: 11px; font-weight: 600;">${startFormatted} → ${endFormatted}</span>`;
+
+        bar.appendChild(text);
+
+        return bar;
     }
 }
