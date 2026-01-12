@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { cacheManager } from '../utils/cache-manager';
 
 export default class extends Controller {
     static targets = ['calendar', 'usersSidebar', 'generateModal', 'monthSelector', 'scopeSelect', 'villaSelect'];
@@ -20,6 +21,10 @@ export default class extends Controller {
         this.currentYear = this.currentYearValue;
         this.currentMonth = this.currentMonthValue;
         this.calendarInitialized = false; // Flag to prevent loading before datesSet is called
+
+        // 🆕 Cache and sync state
+        this.isSyncing = false; // Background sync in progress
+        this.prefetchQueue = new Set(); // Months to prefetch
 
         this.initCalendar();
         this.initDraggableUsers();
@@ -203,7 +208,7 @@ export default class extends Controller {
     }
 
     /**
-     * Load events from API for the current view
+     * Load events from API for the current view (with cache optimization)
      */
     async loadEvents(fetchInfo, successCallback, failureCallback) {
         // Wait for calendar to be initialized (datesSet to be called at least once)
@@ -216,103 +221,141 @@ export default class extends Controller {
         // Use our synchronized variables (updated by datesSet)
         const year = this.currentYear;
         const month = this.currentMonth;
+        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
 
         console.log(`🔄 Loading events for ${year}/${month}`);
 
         try {
-            // Add timestamp to avoid caching
-            const timestamp = new Date().getTime();
+            // Try to load from cache first
+            const cached = await cacheManager.get(monthKey);
 
-            // Always load: previous month + current month + next month
-            // This ensures smooth transitions when navigating between months
-            const monthsToFetch = [];
+            if (cached && !cached.stale) {
+                // Cache HIT (fresh) - display immediately
+                console.log(`⚡ Displaying from cache: ${monthKey}`);
+                const events = await this.transformDataToEvents(cached.data);
+                successCallback(events);
+                this.calendarTarget.classList.remove('loading');
 
-            // Previous month
-            const prevMonth = month === 1 ? 12 : month - 1;
-            const prevYear = month === 1 ? year - 1 : year;
-            monthsToFetch.push({ year: prevYear, month: prevMonth, label: `${prevYear}/${prevMonth}` });
+                // Refresh in background to check for updates
+                this.refreshInBackground(year, month, monthKey, cached.data);
 
-            // Current month
-            monthsToFetch.push({ year: year, month: month, label: `${year}/${month}` });
+                // Prefetch adjacent months
+                this.schedulePrefetch(year, month);
 
-            // Next month
-            const nextMonth = month === 12 ? 1 : month + 1;
-            const nextYear = month === 12 ? year + 1 : year;
-            monthsToFetch.push({ year: nextYear, month: nextMonth, label: `${nextYear}/${nextMonth}` });
-
-            console.log(`📅 Fetching data for months: ${monthsToFetch.map(m => m.label).join(', ')}`);
-
-            // Fetch data for all required months
-            const allPromises = [];
-            for (const monthData of monthsToFetch) {
-                const y = monthData.year;
-                const m = monthData.month;
-
-                allPromises.push(
-                    fetch(`/api/planning-assignment/${y}/${m}?t=${timestamp}`, {
-                        cache: 'no-store',
-                        credentials: 'same-origin'
-                    }).then(r => r.json()).then(data => ({ type: 'planning', data })),
-
-                    fetch(`/api/planning-assignment/absences/${y}/${m}?t=${timestamp}`, {
-                        cache: 'no-store',
-                        credentials: 'same-origin'
-                    }).then(r => r.json()).then(data => ({ type: 'absence', data })),
-
-                    fetch(`/api/planning-assignment/rendezvous/${y}/${m}?t=${timestamp}`, {
-                        cache: 'no-store',
-                        credentials: 'same-origin'
-                    }).then(r => r.json()).then(data => ({ type: 'rdv', data })),
-
-                    fetch(`/api/planning-assignment/astreintes/${y}/${m}?t=${timestamp}`, {
-                        cache: 'no-store',
-                        credentials: 'same-origin'
-                    }).then(r => r.json()).then(data => ({ type: 'astreinte', data }))
-                );
+                return;
             }
 
-            const allResults = await Promise.all(allPromises);
+            // Cache MISS or STALE - show loading and fetch fresh data
+            this.calendarTarget.classList.add('loading');
 
-            // Merge results by type and deduplicate
-            const planningsMap = new Map();
-            const absencesMap = new Map();
-            const rdvsMap = new Map();
-            const astreintesMap = new Map();
+            const data = await this.fetchMonthDataFromAPI(year, month);
 
-            for (const result of allResults) {
-                if (result.type === 'planning') {
-                    for (const planning of result.data.plannings || []) {
-                        planningsMap.set(planning.id, planning);
-                    }
-                } else if (result.type === 'absence') {
-                    for (const absence of result.data || []) {
-                        absencesMap.set(absence.id, absence);
-                    }
-                } else if (result.type === 'rdv') {
-                    for (const rdv of result.data || []) {
-                        rdvsMap.set(rdv.id, rdv);
-                    }
-                } else if (result.type === 'astreinte') {
-                    for (const astreinte of result.data || []) {
-                        astreintesMap.set(astreinte.id, astreinte);
-                    }
-                }
+            // Store in cache
+            await cacheManager.set(monthKey, data);
+
+            // Transform and display
+            const events = await this.transformDataToEvents(data);
+            successCallback(events);
+
+            // Remove loading indicator
+            this.calendarTarget.classList.remove('loading');
+
+            console.log(`✅ Fresh data loaded and cached: ${monthKey}`);
+
+            // Prefetch adjacent months
+            this.schedulePrefetch(year, month);
+
+        } catch (error) {
+            console.error('Failed to load events:', error);
+            this.showError('Échec du chargement des événements');
+            this.calendarTarget.classList.remove('loading');
+            failureCallback(error);
+        }
+    }
+
+    /**
+     * Fetch month data from API using consolidated endpoint
+     * (1 request per month instead of 4 = 75% reduction in network requests)
+     */
+    async fetchMonthDataFromAPI(year, month) {
+        // Always load: previous month + current month + next month
+        const monthsToFetch = cacheManager.getAdjacentMonths(year, month);
+
+        console.log(`📅 Fetching data for months: ${monthsToFetch.map(m => m.monthKey).join(', ')}`);
+
+        // Fetch data using consolidated endpoint (1 request per month instead of 4)
+        const allPromises = monthsToFetch.map(monthData =>
+            fetch(`/api/planning-assignment/month-data/${monthData.year}/${monthData.month}`, {
+                credentials: 'same-origin'
+            })
+            .then(r => r.json())
+            .then(data => ({
+                month: monthData.monthKey,
+                plannings: data.plannings || [],
+                absences: data.absences || [],
+                rdvs: data.rendezvous || [],
+                astreintes: data.astreintes || []
+            }))
+        );
+
+        const allResults = await Promise.all(allPromises);
+
+        // Merge results from all months and deduplicate
+        const planningsMap = new Map();
+        const absencesMap = new Map();
+        const rdvsMap = new Map();
+        const astreintesMap = new Map();
+
+        for (const result of allResults) {
+            // Merge plannings
+            for (const planning of result.plannings) {
+                planningsMap.set(planning.id, planning);
             }
 
-            const planningsData = { plannings: Array.from(planningsMap.values()) };
-            const absencesData = Array.from(absencesMap.values());
-            const rdvsData = Array.from(rdvsMap.values());
-            const astreintesData = Array.from(astreintesMap.values());
+            // Merge absences
+            for (const absence of result.absences) {
+                absencesMap.set(absence.id, absence);
+            }
 
-            console.log('API Response (merged):', {
-                plannings: planningsData.plannings.length,
-                absences: absencesData.length,
-                rdvs: rdvsData.length,
-                astreintes: astreintesData.length
-            });
+            // Merge RDVs
+            for (const rdv of result.rdvs) {
+                rdvsMap.set(rdv.id, rdv);
+            }
 
-            // Convert plannings to FullCalendar events
-            const events = [];
+            // Merge astreintes
+            for (const astreinte of result.astreintes) {
+                astreintesMap.set(astreinte.id, astreinte);
+            }
+        }
+
+        const data = {
+            plannings: { plannings: Array.from(planningsMap.values()) },
+            absences: Array.from(absencesMap.values()),
+            rdvs: Array.from(rdvsMap.values()),
+            astreintes: Array.from(astreintesMap.values())
+        };
+
+        console.log('✅ API Response (consolidated endpoint - 3 requests instead of 12):', {
+            plannings: data.plannings.plannings.length,
+            absences: data.absences.length,
+            rdvs: data.rdvs.length,
+            astreintes: data.astreintes.length
+        });
+
+        return data;
+    }
+
+    /**
+     * Transform raw API data to FullCalendar events
+     */
+    async transformDataToEvents(data) {
+        const planningsData = data.plannings;
+        const absencesData = data.absences;
+        const rdvsData = data.rdvs;
+        const astreintesData = data.astreintes;
+
+        // Convert plannings to FullCalendar events
+        const events = [];
 
             // 1. Add affectations (shifts) as regular events
             for (const planning of planningsData.plannings) {
@@ -436,28 +479,142 @@ export default class extends Controller {
                 });
             }
 
-            const affectationsCount = planningsData.plannings.reduce((acc, p) => acc + p.affectations.length, 0);
-            console.log(`Loaded ${events.length} events (${affectationsCount} affectations, ${absencesData.length} absences, ${rdvsData.length} RDVs, ${astreintesData.length} astreintes)`);
+        const affectationsCount = planningsData.plannings.reduce((acc, p) => acc + p.affectations.length, 0);
+        console.log(`Transformed ${events.length} events (${affectationsCount} affectations, ${absencesData.length} absences, ${rdvsData.length} RDVs, ${astreintesData.length} astreintes)`);
 
-            // Debug: Log absences specifically
-            if (absencesData.length > 0) {
-                console.log('Absences loaded:', absencesData);
-                console.log('Sample absence event:', events.find(e => e.extendedProps?.type === 'absence'));
+        // Debug: Log absences specifically
+        if (absencesData.length > 0) {
+            console.log('Absences loaded:', absencesData);
+            console.log('Sample absence event:', events.find(e => e.extendedProps?.type === 'absence'));
+        } else {
+            console.warn('⚠️ No absences found for this month');
+        }
+
+        return events;
+    }
+
+    /**
+     * Refresh data in background (stale-while-revalidate strategy)
+     */
+    async refreshInBackground(year, month, monthKey, cachedData) {
+        if (this.isSyncing) {
+            console.log('⏭️ Skip background refresh (already syncing)');
+            return;
+        }
+
+        this.isSyncing = true;
+        this.showSyncIndicator();
+
+        try {
+            console.log(`🔄 Background refresh: ${monthKey}`);
+            const freshData = await this.fetchMonthDataFromAPI(year, month);
+
+            // Compare data to detect changes
+            const hasChanges = JSON.stringify(cachedData) !== JSON.stringify(freshData);
+
+            if (hasChanges) {
+                console.log(`🔃 Changes detected, updating cache and calendar: ${monthKey}`);
+
+                // Update cache
+                await cacheManager.set(monthKey, freshData);
+
+                // Refresh calendar display
+                this.calendar.refetchEvents();
             } else {
-                console.warn('⚠️ No absences found for this month');
+                console.log(`✓ No changes detected: ${monthKey}`);
+
+                // Update cache timestamp anyway to reset TTL
+                await cacheManager.set(monthKey, freshData);
             }
 
-            successCallback(events);
-
-            // Remove loading indicator
-            this.calendarTarget.classList.remove('loading');
-
         } catch (error) {
-            console.error('Failed to load events:', error);
-            this.showError('Échec du chargement des événements');
-            // Remove loading indicator even on error
-            this.calendarTarget.classList.remove('loading');
-            failureCallback(error);
+            console.error('Background refresh failed:', error);
+        } finally {
+            this.isSyncing = false;
+            this.hideSyncIndicator();
+        }
+    }
+
+    /**
+     * Schedule prefetch of adjacent months (in idle time)
+     */
+    schedulePrefetch(year, month) {
+        // Use requestIdleCallback if available, otherwise setTimeout
+        const scheduleTask = window.requestIdleCallback || ((cb) => setTimeout(cb, 1000));
+
+        scheduleTask(() => {
+            this.prefetchAdjacentMonths(year, month);
+        });
+    }
+
+    /**
+     * Prefetch adjacent months data
+     */
+    async prefetchAdjacentMonths(year, month) {
+        const adjacentMonths = [
+            { year: month === 1 ? year - 1 : year, month: month === 1 ? 12 : month - 1 },
+            { year: month === 12 ? year + 1 : year, month: month === 12 ? 1 : month + 1 }
+        ];
+
+        for (const m of adjacentMonths) {
+            const monthKey = `${m.year}-${String(m.month).padStart(2, '0')}`;
+
+            // Skip if already in prefetch queue
+            if (this.prefetchQueue.has(monthKey)) {
+                continue;
+            }
+
+            this.prefetchQueue.add(monthKey);
+
+            try {
+                // Check if already cached and fresh
+                const cached = await cacheManager.get(monthKey);
+                if (cached && !cached.stale) {
+                    console.log(`⏭️ Skip prefetch (already cached): ${monthKey}`);
+                    continue;
+                }
+
+                // Fetch and cache
+                console.log(`🔮 Prefetching: ${monthKey}`);
+                const data = await this.fetchMonthDataFromAPI(m.year, m.month);
+                await cacheManager.set(monthKey, data);
+                console.log(`✅ Prefetched: ${monthKey}`);
+
+            } catch (error) {
+                console.error(`Prefetch failed for ${monthKey}:`, error);
+            } finally {
+                this.prefetchQueue.delete(monthKey);
+            }
+        }
+    }
+
+    /**
+     * Show sync indicator (discreet badge)
+     */
+    showSyncIndicator() {
+        let indicator = document.getElementById('sync-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'sync-indicator';
+            indicator.className = 'sync-indicator';
+            indicator.innerHTML = '<span class="sync-spinner"></span> Synchronisation...';
+            document.body.appendChild(indicator);
+        }
+        indicator.classList.add('visible');
+    }
+
+    /**
+     * Hide sync indicator
+     */
+    hideSyncIndicator() {
+        const indicator = document.getElementById('sync-indicator');
+        if (indicator) {
+            indicator.classList.remove('visible');
+            // Show "up to date" briefly
+            indicator.innerHTML = '<span class="sync-check">✓</span> Synchronisé';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 2000);
         }
     }
 
@@ -1124,6 +1281,13 @@ export default class extends Controller {
             const modal = document.getElementById('bulkDeleteModal');
             if (modal) modal.remove();
 
+            // Invalidate cache (may affect multiple months if period = 'all')
+            if (period === 'all') {
+                await cacheManager.invalidateAll();
+            } else {
+                await cacheManager.invalidateRange(year, month);
+            }
+
             // Reload calendar
             this.calendar.refetchEvents();
 
@@ -1169,6 +1333,21 @@ export default class extends Controller {
             });
 
             this.closeModal();
+
+            // Invalidate cache for affected months
+            const startDate = new Date(data.startDate);
+            const endDate = new Date(data.endDate);
+            const startMonth = startDate.getMonth() + 1;
+            const startYear = startDate.getFullYear();
+            const endMonth = endDate.getMonth() + 1;
+            const endYear = endDate.getFullYear();
+
+            // Simple invalidation of start and end months (covers most cases)
+            await cacheManager.invalidateRange(startYear, startMonth);
+            if (startYear !== endYear || startMonth !== endMonth) {
+                await cacheManager.invalidateRange(endYear, endMonth);
+            }
+
             this.calendar.refetchEvents();
             this.showSuccess(`${response.created} affectations créées avec succès`);
 
@@ -1212,6 +1391,9 @@ export default class extends Controller {
             if (data.warnings && data.warnings.length > 0) {
                 this.showWarningsToast(data.warnings);
             }
+
+            // Invalidate cache for validated month
+            await cacheManager.invalidateRange(year, month);
 
             // Reload calendar to show updated statuses
             this.calendar.refetchEvents();
@@ -1597,6 +1779,9 @@ export default class extends Controller {
             this.pendingChanges.clear();
             this.hasUnsavedChanges = false;
             this.updateSaveIndicator();
+
+            // Invalidate cache for current month and adjacent months
+            await cacheManager.invalidateRange(this.currentYear, this.currentMonth);
 
             // Refresh calendar from server
             this.calendar.refetchEvents();

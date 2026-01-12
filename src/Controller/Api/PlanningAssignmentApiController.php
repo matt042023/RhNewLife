@@ -348,6 +348,212 @@ class PlanningAssignmentApiController extends AbstractController
     }
 
     /**
+     * Get all month data in one request (consolidated endpoint)
+     * GET /api/planning-assignment/month-data/{year}/{month}
+     *
+     * Returns: {
+     *   plannings: [...],
+     *   absences: [...],
+     *   rendezvous: [...],
+     *   astreintes: [...]
+     * }
+     */
+    #[Route('/month-data/{year}/{month}', methods: ['GET'])]
+    public function getMonthData(int $year, int $month, Request $request): JsonResponse
+    {
+        // Validate month
+        if ($month < 1 || $month > 12) {
+            return $this->json(['error' => 'Invalid month'], 400);
+        }
+
+        // Get month boundaries (extend to include adjacent months for overlap)
+        $startDate = new \DateTime("$year-$month-01");
+        $endDate = (clone $startDate)->modify('last day of this month')->setTime(23, 59, 59);
+
+        // 1. Get plannings with affectations
+        $plannings = $this->planningRepository->createQueryBuilder('p')
+            ->leftJoin('p.affectations', 'a')
+            ->leftJoin('a.user', 'u')
+            ->leftJoin('p.villa', 'v')
+            ->addSelect('a', 'u', 'v')
+            ->where('p.annee = :year')
+            ->andWhere('p.mois = :month')
+            ->setParameter('year', $year)
+            ->setParameter('month', $month)
+            ->getQuery()
+            ->getResult();
+
+        $planningsData = [];
+        foreach ($plannings as $planning) {
+            $affectations = [];
+            foreach ($planning->getAffectations() as $affectation) {
+                $user = $affectation->getUser();
+                $villa = $affectation->getVilla();
+
+                $affectations[] = [
+                    'id' => $affectation->getId(),
+                    'startAt' => $affectation->getStartAt()?->format('c'),
+                    'endAt' => $affectation->getEndAt()?->format('c'),
+                    'type' => $affectation->getType(),
+                    'joursTravailes' => $affectation->getJoursTravailes(),
+                    'user' => $user ? [
+                        'id' => $user->getId(),
+                        'fullName' => $user->getFullName(),
+                        'color' => $user->getColor()
+                    ] : null,
+                    'villa' => [
+                        'id' => $villa?->getId(),
+                        'nom' => $villa?->getNom(),
+                        'color' => $villa?->getColor()
+                    ],
+                    'statut' => $affectation->getStatut(),
+                    'commentaire' => $affectation->getCommentaire()
+                ];
+            }
+
+            $planningsData[] = [
+                'id' => $planning->getId(),
+                'villa' => [
+                    'id' => $planning->getVilla()->getId(),
+                    'nom' => $planning->getVilla()->getNom(),
+                    'color' => $planning->getVilla()->getColor()
+                ],
+                'status' => $planning->getStatut(),
+                'affectations' => $affectations
+            ];
+        }
+
+        // 2. Get absences (approved only, overlapping the month)
+        $absences = $this->absenceRepository->createQueryBuilder('a')
+            ->join('a.user', 'u')
+            ->leftJoin('a.absenceType', 't')
+            ->addSelect('u', 't')
+            ->where('a.status = :approved')
+            ->andWhere('a.startAt <= :monthEnd')
+            ->andWhere('a.endAt >= :monthStart')
+            ->setParameter('approved', 'APPROVED')
+            ->setParameter('monthStart', $startDate->format('Y-m-d'))
+            ->setParameter('monthEnd', $endDate->format('Y-m-d'))
+            ->getQuery()
+            ->getResult();
+
+        $absencesData = [];
+        foreach ($absences as $absence) {
+            $absencesData[] = [
+                'id' => $absence->getId(),
+                'user' => [
+                    'id' => $absence->getUser()->getId(),
+                    'fullName' => $absence->getUser()->getFullName()
+                ],
+                'absenceType' => [
+                    'code' => $absence->getAbsenceType()->getCode(),
+                    'label' => $absence->getAbsenceType()->getLabel()
+                ],
+                'startAt' => $absence->getStartAt()->format('Y-m-d'),
+                'endAt' => $absence->getEndAt()->format('Y-m-d')
+            ];
+        }
+
+        // 3. Get rendez-vous (with impactGarde=true, overlapping the month)
+        $rdvs = $this->rendezVousRepository->createQueryBuilder('r')
+            ->leftJoin('r.appointmentParticipants', 'ap')
+            ->leftJoin('ap.user', 'u')
+            ->addSelect('ap', 'u')
+            ->where('r.impactGarde = true')
+            ->andWhere('r.statut IN (:statuses)')
+            ->andWhere('r.startAt <= :monthEnd')
+            ->andWhere('r.endAt >= :monthStart')
+            ->setParameter('statuses', ['CONFIRME', 'EN_ATTENTE'])
+            ->setParameter('monthStart', $startDate->format('Y-m-d H:i:s'))
+            ->setParameter('monthEnd', $endDate->format('Y-m-d H:i:s'))
+            ->getQuery()
+            ->getResult();
+
+        $rdvsData = [];
+        foreach ($rdvs as $rdv) {
+            $participants = [];
+            foreach ($rdv->getAppointmentParticipants() as $participant) {
+                $participants[] = [
+                    'id' => $participant->getUser()->getId(),
+                    'fullName' => $participant->getUser()->getFullName()
+                ];
+            }
+
+            $rdvsData[] = [
+                'id' => $rdv->getId(),
+                'title' => $rdv->getTitre(),
+                'startAt' => $rdv->getStartAt()->format('c'),
+                'endAt' => $rdv->getEndAt()->format('c'),
+                'participants' => $participants
+            ];
+        }
+
+        // 4. Get astreintes (overlapping the month)
+        $astreintes = $this->astreinteRepository->createQueryBuilder('a')
+            ->where('a.startAt <= :endDate')
+            ->andWhere('a.endAt >= :startDate')
+            ->setParameter('startDate', $startDate->format('Y-m-d'))
+            ->setParameter('endDate', $endDate->format('Y-m-d'))
+            ->getQuery()
+            ->getResult();
+
+        $astreintesData = [];
+        foreach ($astreintes as $astreinte) {
+            $educateur = $astreinte->getEducateur();
+            if (!$educateur) {
+                continue; // Skip unassigned astreintes
+            }
+
+            $endDate = (clone $astreinte->getEndAt())->modify('+1 day');
+
+            $astreintesData[] = [
+                'id' => $astreinte->getId(),
+                'startAt' => $astreinte->getStartAt()->format('Y-m-d'),
+                'endAt' => $endDate->format('Y-m-d'),
+                'periodLabel' => $astreinte->getPeriodLabel(),
+                'status' => $astreinte->getStatus(),
+                'educateur' => [
+                    'id' => $educateur->getId(),
+                    'fullName' => $educateur->getFullName(),
+                    'color' => $educateur->getColor()
+                ]
+            ];
+        }
+
+        // Prepare response data
+        $responseData = [
+            'plannings' => $planningsData,
+            'absences' => $absencesData,
+            'rendezvous' => $rdvsData,
+            'astreintes' => $astreintesData
+        ];
+
+        // Generate ETag based on content
+        $etag = md5(json_encode($responseData));
+
+        // Create response with cache headers
+        $response = $this->json($responseData);
+
+        // Set cache headers (max-age: 60s, must-revalidate)
+        $response->setCache([
+            'max_age' => 60,
+            'must_revalidate' => true,
+            'public' => false,  // Private cache (user-specific data)
+        ]);
+
+        // Set ETag for conditional requests
+        $response->setEtag($etag);
+
+        // Check if client has fresh cache (If-None-Match header)
+        if ($response->isNotModified($request)) {
+            // Return 304 Not Modified (no body)
+            return $response;
+        }
+
+        return $response;
+    }
+
+    /**
      * Assign user to affectation (drag & drop)
      * POST /api/planning-assignment/assign
      */
