@@ -29,6 +29,17 @@ export default class extends Controller {
         // 🆕 Store astreintes separately for full-width rendering
         this.astreintesData = [];
 
+        // 🆕 Check if we need to force refresh (coming from astreintes page or manual refresh)
+        const urlParams = new URLSearchParams(window.location.search);
+        const shouldClearCache = urlParams.has('refresh') || document.referrer.includes('/admin/astreintes');
+        if (shouldClearCache) {
+            console.log('🔄 Force refresh triggered - clearing cache');
+            // Clear cache asynchronously (don't wait for it)
+            cacheManager.invalidateAll().then(() => {
+                console.log('✅ Cache cleared - fresh data will be loaded');
+            });
+        }
+
         this.initCalendar();
         this.initDraggableUsers();
         this.setupEventDragListeners();
@@ -259,6 +270,9 @@ export default class extends Controller {
                 // Remove loading indicator
                 this.calendarTarget.classList.remove('loading');
 
+                // 🆕 Render astreinte bars after data is loaded
+                setTimeout(() => this.renderAstreinteBars(), 100);
+
                 console.log(`✅ Fresh data loaded (force refresh): ${monthKey}`);
                 return;
             }
@@ -272,6 +286,9 @@ export default class extends Controller {
                 const events = await this.transformDataToEvents(cached.data);
                 successCallback(events);
                 this.calendarTarget.classList.remove('loading');
+
+                // 🆕 Render astreinte bars after data is loaded
+                setTimeout(() => this.renderAstreinteBars(), 100);
 
                 // Refresh in background to check for updates
                 this.refreshInBackground(year, month, monthKey, cached.data);
@@ -297,6 +314,9 @@ export default class extends Controller {
             // Remove loading indicator
             this.calendarTarget.classList.remove('loading');
 
+            // 🆕 Render astreinte bars after data is loaded
+            setTimeout(() => this.renderAstreinteBars(), 100);
+
             console.log(`✅ Fresh data loaded and cached: ${monthKey}`);
 
             // Prefetch adjacent months
@@ -307,6 +327,27 @@ export default class extends Controller {
             this.showError('Échec du chargement des événements');
             this.calendarTarget.classList.remove('loading');
             failureCallback(error);
+        }
+    }
+
+    /**
+     * Clear entire cache and force refresh
+     */
+    async clearCacheAndRefresh() {
+        try {
+            console.log('🗑️ Clearing all cached data...');
+            await cacheManager.invalidateAll();
+
+            // If calendar is initialized, force a refresh
+            if (this.calendar) {
+                this.forceRefresh = true;
+                this.calendar.removeAllEvents();
+                this.calendar.refetchEvents();
+            }
+
+            console.log('✅ Cache cleared successfully');
+        } catch (error) {
+            console.error('Failed to clear cache:', error);
         }
     }
 

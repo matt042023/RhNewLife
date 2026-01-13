@@ -1197,3 +1197,28 @@ body {
 .fc-event {
     margin-top: 10px !important;
 }
+
+/* ========================================
+   FULLCALENDAR - CONTAINER OVERFLOW FIX
+   ======================================== */
+
+/* Ensure calendar container adapts to content height */
+.fc-view-harness {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+}
+
+.fc-view {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+/* Remove any fixed heights that cause overflow */
+.fc {
+    height: auto !important;
+}
+
+.fc-scrollgrid-sync-table {
+    height: auto !important;
+}
