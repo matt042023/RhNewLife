@@ -560,6 +560,98 @@ class PlanningAssignmentApiController extends AbstractController
     }
 
     /**
+     * Create a new affectation
+     * POST /api/planning-assignment/create
+     */
+    #[Route('/create', methods: ['POST'])]
+    public function create(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        // Validate required fields
+        $villaId = $data['villaId'] ?? null;
+        $type = $data['type'] ?? null;
+        $startAt = $data['startAt'] ?? null;
+        $endAt = $data['endAt'] ?? null;
+
+        if (!$villaId || !$type || !$startAt || !$endAt) {
+            return $this->json(['error' => 'Missing required parameters'], 400);
+        }
+
+        // Find villa
+        $villa = $this->villaRepository->find($villaId);
+        if (!$villa) {
+            return $this->json(['error' => 'Villa not found'], 404);
+        }
+
+        // Parse dates
+        try {
+            $start = new \DateTime($startAt);
+            $end = new \DateTime($endAt);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Invalid date format'], 400);
+        }
+
+        // Extract month and year from start date
+        $month = (int)$start->format('n');
+        $year = (int)$start->format('Y');
+
+        // Find or create PlanningMonth for this villa/month/year
+        $planning = $this->planningRepository->findOneBy([
+            'villa' => $villa,
+            'annee' => $year,
+            'mois' => $month
+        ]);
+
+        if (!$planning) {
+            // Create new PlanningMonth
+            $planning = new \App\Entity\PlanningMonth();
+            $planning->setVilla($villa);
+            $planning->setAnnee($year);
+            $planning->setMois($month);
+            $planning->setStatut('draft');
+            $this->em->persist($planning);
+        }
+
+        // Create new affectation
+        $affectation = new Affectation();
+        $affectation->setPlanningMois($planning);
+        $affectation->setVilla($villa);
+        $affectation->setType($type);
+        $affectation->setStartAt($start);
+        $affectation->setEndAt($end);
+        $affectation->setStatut($data['statut'] ?? Affectation::STATUS_DRAFT);
+        $affectation->setCommentaire($data['commentaire'] ?? null);
+
+        // Assign user if provided
+        $userId = $data['userId'] ?? null;
+        $warnings = [];
+
+        if ($userId) {
+            $user = $this->userRepository->find($userId);
+            if ($user) {
+                $affectation->setUser($user);
+                // Get assignment warnings
+                $warnings = $this->assignmentService->getValidationWarnings($affectation);
+            }
+        }
+
+        // Calculate working days
+        $workingDays = $this->assignmentService->calculateWorkingDays($affectation);
+        $affectation->setJoursTravailes((int)$workingDays);
+
+        $this->em->persist($affectation);
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'affectationId' => $affectation->getId(),
+            'workingDays' => $workingDays,
+            'warnings' => $warnings
+        ]);
+    }
+
+    /**
      * Assign user to affectation (drag & drop)
      * POST /api/planning-assignment/assign
      */

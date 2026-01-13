@@ -171,6 +171,7 @@ export default class extends Controller {
             eventContent: (arg) => this.renderEventContent(arg),
             eventClick: (info) => this.handleEventClick(info),
             drop: (info) => this.handleExternalDrop(info),
+            dateClick: (info) => this.handleDateClick(info),
 
             // View-specific settings
             viewDidMount: (info) => {
@@ -1543,6 +1544,236 @@ export default class extends Controller {
     }
 
     /**
+     * Handle date click (create new assignment)
+     */
+    handleDateClick(info) {
+        // Only allow creation in month view for better UX
+        if (this.calendar.view.type !== 'dayGridMonth') {
+            return;
+        }
+
+        const clickedDate = info.date;
+
+        // Set default start time to 9:00 AM
+        const startAt = new Date(clickedDate);
+        startAt.setHours(9, 0, 0, 0);
+
+        // Set default end time to next day 9:00 AM (24h shift)
+        const endAt = new Date(startAt);
+        endAt.setDate(endAt.getDate() + 1);
+
+        // Open creation modal (reuse edit modal but without eventId)
+        this.renderCreateModal({
+            startAt,
+            endAt
+        });
+    }
+
+    /**
+     * 🆕 Render creation modal for new assignment
+     */
+    renderCreateModal(data) {
+        const { startAt, endAt } = data;
+
+        // Get all users from sidebar
+        const userCards = Array.from(document.querySelectorAll('[data-user-id]'));
+        const users = userCards.map(card => ({
+            id: card.dataset.userId,
+            fullName: card.querySelector('.font-medium')?.textContent?.trim() || 'Utilisateur',
+            remainingDays: card.querySelector('.text-xs')?.textContent?.match(/\d+/)?.[0] || null,
+            color: card.dataset.userColor || '#3B82F6'
+        }));
+
+        // Get all villas from the generate modal template
+        const villaOptions = Array.from(document.querySelectorAll('[data-planning-assignment-target="villaSelect"] option'))
+            .map(opt => ({ id: opt.value, nom: opt.textContent.trim() }))
+            .filter(v => v.id); // Filter out empty values
+
+        const hoursDiff = Math.round((endAt - startAt) / (1000 * 60 * 60));
+        const workingDays = this.calculateWorkingDays(startAt.toISOString(), endAt.toISOString());
+
+        const modalHtml = `
+            <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" id="createAffectationModal">
+                <div class="bg-white rounded-lg p-6 w-full mx-4" style="max-width: 700px;">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900">Nouvelle affectation</h2>
+                        <button onclick="document.getElementById('createAffectationModal').remove()"
+                                class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <form id="createAffectationForm" class="space-y-6">
+                        <!-- Villa (required for creation) -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Villa *</label>
+                            <select id="createVilla" required class="w-full border-gray-300 rounded-lg">
+                                <option value="">-- Sélectionner une villa --</option>
+                                ${villaOptions.map(v => `
+                                    <option value="${v.id}">${v.nom}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Type de garde -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Type de garde</label>
+                            <select id="createType" class="w-full border-gray-300 rounded-lg">
+                                <option value="garde_48h">Garde 48h</option>
+                                <option value="garde_24h" selected>Garde 24h</option>
+                                <option value="renfort">Renfort</option>
+                                <option value="autre">Autre</option>
+                            </select>
+                        </div>
+
+                        <!-- Éducateur assigné -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Éducateur assigné</label>
+                            <select id="createUser" class="w-full border-gray-300 rounded-lg">
+                                <option value="">-- Non assigné --</option>
+                                ${users.map(u => `
+                                    <option value="${u.id}">
+                                        ${u.fullName} ${u.remainingDays ? `(${u.remainingDays}j restants)` : ''}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Horaires -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-2">Début</label>
+                                <input type="datetime-local" id="createStartAt"
+                                       value="${this.formatDateForInput(startAt)}"
+                                       class="w-full border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-2">Fin</label>
+                                <input type="datetime-local" id="createEndAt"
+                                       value="${this.formatDateForInput(endAt)}"
+                                       class="w-full border-gray-300 rounded-lg">
+                            </div>
+                        </div>
+
+                        <!-- Durée calculée -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p class="text-sm text-blue-800">
+                                <span class="font-semibold">Durée calculée :</span>
+                                <span id="createCalculatedDuration">${hoursDiff}h (${workingDays} jour${workingDays > 1 ? 's' : ''} travaillé${workingDays > 1 ? 's' : ''})</span>
+                            </p>
+                        </div>
+
+                        <!-- Commentaire -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Commentaire (optionnel)</label>
+                            <textarea id="createCommentaire" rows="3"
+                                      class="w-full border-gray-300 rounded-lg"
+                                      placeholder="Notes ou observations..."></textarea>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex justify-end items-center pt-4 border-t space-x-2">
+                            <button type="button"
+                                    onclick="document.getElementById('createAffectationModal').remove()"
+                                    class="px-4 py-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium">
+                                Annuler
+                            </button>
+                            <button type="submit"
+                                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium">
+                                Créer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Attach form submit handler
+        document.getElementById('createAffectationForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveNewAffectationFromModal();
+        });
+
+        // Real-time duration calculation
+        const startInput = document.getElementById('createStartAt');
+        const endInput = document.getElementById('createEndAt');
+        const updateDuration = () => {
+            const start = new Date(startInput.value);
+            const end = new Date(endInput.value);
+            const hours = Math.round((end - start) / (1000 * 60 * 60));
+
+            let days;
+            if (hours < 7) {
+                days = 0;
+            } else {
+                days = Math.ceil((hours - 3) / 24);
+            }
+
+            document.getElementById('createCalculatedDuration').textContent =
+                `${hours}h (${days} jour${days > 1 ? 's' : ''} travaillé${days > 1 ? 's' : ''})`;;
+        };
+        startInput.addEventListener('change', updateDuration);
+        endInput.addEventListener('change', updateDuration);
+
+        // Store controller reference
+        window.planningController = this;
+    }
+
+    /**
+     * Save new affectation from creation modal
+     */
+    async saveNewAffectationFromModal() {
+        const villaId = document.getElementById('createVilla').value;
+
+        if (!villaId) {
+            this.showError('Veuillez sélectionner une villa');
+            return;
+        }
+
+        const formData = {
+            villaId: parseInt(villaId),
+            type: document.getElementById('createType').value,
+            userId: document.getElementById('createUser').value || null,
+            startAt: new Date(document.getElementById('createStartAt').value).toISOString(),
+            endAt: new Date(document.getElementById('createEndAt').value).toISOString(),
+            commentaire: document.getElementById('createCommentaire').value,
+            statut: 'draft' // New assignments start as draft
+        };
+
+        try {
+            this.showInfo('Création en cours...');
+
+            const response = await this.fetchAPI('/api/planning-assignment/create', {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            });
+
+            // Close modal
+            document.getElementById('createAffectationModal').remove();
+
+            // Invalidate cache for current month
+            await cacheManager.invalidateRange(this.currentYear, this.currentMonth);
+
+            // Force immediate reload from API
+            this.forceRefreshFromAPI();
+
+            this.showSuccess('Affectation créée avec succès');
+
+            if (response.warnings && response.warnings.length > 0) {
+                this.showWarningsToast(response.warnings);
+            }
+
+        } catch (error) {
+            console.error('Failed to create affectation:', error);
+            this.showError('Échec de la création de l\'affectation');
+        }
+    }
+
+    /**
      * 🆕 Render rich edit modal with all fields
      */
     renderEditModal(eventId, data) {
@@ -2246,7 +2477,7 @@ export default class extends Controller {
         bar.style.left = '0';
         bar.style.right = '0';
         bar.style.bottom = '0';
-        bar.style.border = `3px solid ${hexToRgba(color, 0.8)}`;
+        bar.style.border = `3px solid ${hexToRgba(color, 0.1)}`;
         bar.style.borderRadius = '6px';
         bar.style.pointerEvents = 'none';
         bar.style.zIndex = '0';
@@ -2254,10 +2485,10 @@ export default class extends Controller {
         // Apply hatched pattern background
         const gradient = `repeating-linear-gradient(
             45deg,
-            ${hexToRgba(color, 0.25)},
-            ${hexToRgba(color, 0.25)} 10px,
+            ${hexToRgba(color, 0.10)},
             ${hexToRgba(color, 0.10)} 10px,
-            ${hexToRgba(color, 0.10)} 20px
+            ${hexToRgba(color, 0.05)} 10px,
+            ${hexToRgba(color, 0.05)} 20px
         )`;
         bar.style.background = gradient;
 
@@ -2272,7 +2503,7 @@ export default class extends Controller {
         text.style.lineHeight = '1.3';
         text.style.textShadow = '0 0 3px white, 0 0 5px white, 1px 1px 2px white';
         text.style.whiteSpace = 'nowrap';
-        text.innerHTML = `${astreinte.periodLabel || ''} - ${educateur.fullName}<br><span style="font-size: 11px; font-weight: 600;">${startFormatted} → ${endFormatted}</span>`;
+        text.innerHTML = `Astreinte ${astreinte.periodLabel || ''} - ${educateur.fullName}<br><span style="font-size: 11px; font-weight: 600;">${startFormatted} → ${endFormatted}</span>`;
 
         bar.appendChild(text);
 
