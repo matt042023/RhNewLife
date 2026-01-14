@@ -33,7 +33,7 @@ class Affectation
     private ?User $user = null;
 
     #[ORM\ManyToOne(inversedBy: 'affectations')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Villa $villa = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]

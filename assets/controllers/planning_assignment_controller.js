@@ -356,9 +356,12 @@ export default class extends Controller {
      * Force an immediate refresh from API (bypass cache)
      */
     forceRefreshFromAPI() {
+        console.log('🔥 forceRefreshFromAPI() called - setting forceRefresh flag and clearing calendar');
         this.forceRefresh = true;
         this.calendar.removeAllEvents();
+        console.log('🔥 Calendar events removed, calling refetchEvents()...');
         this.calendar.refetchEvents();
+        console.log('🔥 refetchEvents() called');
     }
 
     /**
@@ -825,8 +828,14 @@ export default class extends Controller {
             info.el.style.backgroundColor = user.color || '#3B82F6';
 
             if (isRenfort) {
-                // Renfort: gray border (identifies type)
-                info.el.style.border = '3px solid #6B7280';
+                // Renfort: bordure grise si sans villa (centre-complet), couleur villa si villa-spécifique
+                if (villa) {
+                    info.el.style.border = `3px solid ${villa.color || '#6B7280'}`;
+                    info.el.setAttribute('title', `Renfort villa-spécifique: ${villa.nom}`);
+                } else {
+                    info.el.style.border = '3px solid #6B7280';
+                    info.el.setAttribute('title', 'Renfort centre-complet (toutes villas)');
+                }
             } else if (villa) {
                 // Villa garde: villa color border
                 info.el.style.border = `3px solid ${villa.color || '#10B981'}`;
@@ -843,7 +852,14 @@ export default class extends Controller {
             info.el.style.color = '#6B7280';
 
             if (isRenfort) {
-                info.el.style.border = '2px dashed #6B7280';
+                // Renfort non assigné: bordure en pointillés
+                if (villa) {
+                    info.el.style.border = `2px dashed ${villa.color || '#6B7280'}`;
+                    info.el.setAttribute('title', `Renfort villa-spécifique: ${villa.nom}`);
+                } else {
+                    info.el.style.border = '2px dashed #6B7280';
+                    info.el.setAttribute('title', 'Renfort centre-complet (toutes villas)');
+                }
             } else if (villa) {
                 info.el.style.border = `2px dashed ${villa.color || '#10B981'}`;
             } else {
@@ -927,6 +943,16 @@ export default class extends Controller {
         const startTime = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const endTime = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
+        // Format day names
+        const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+        const startDay = dayNames[start.getDay()];
+        const endDay = dayNames[end.getDay()];
+        const startHour = start.getHours();
+        const endHour = end.getHours();
+
+        // Check if same day
+        const isSameDay = start.toDateString() === end.toDateString();
+
         // Calculate duration
         const durationHours = Math.round((end - start) / (1000 * 60 * 60));
 
@@ -939,6 +965,11 @@ export default class extends Controller {
             'autre': 'Autre'
         };
         const typeLabel = typeLabels[type] || type;
+        const isRenfort = (type === 'renfort' || type === 'TYPE_RENFORT');
+        const isMainShift = (type === 'garde_24h' || type === 'garde_48h');
+
+        // Get working days from extended props (jours calculés)
+        const workingDays = arg.event.extendedProps.joursTravailes || 0;
 
         // Status labels and styles
         const statusConfig = {
@@ -959,6 +990,9 @@ export default class extends Controller {
             // Get text color for contrast with educator background color
             const textColor = this.getContrastColor(user.color || '#3B82F6');
 
+            // Déterminer si la villa est vraiment présente (pas null et pas id null)
+            const hasVilla = villa && villa.id && villa.nom;
+
             container.innerHTML = `
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
                     <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${textColor}; flex: 1;">
@@ -969,20 +1003,30 @@ export default class extends Controller {
                     </span>
                 </div>
                 ${isMonthView ? `
-                    <div style="opacity: 0.9; font-size: 0.7rem; color: ${textColor};">
-                        ${villa?.nom || 'Villa'} · ${typeLabel}
+                    <div style="display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin-top: 2px;">
+                        ${hasVilla ? `<span style="display: inline-block; background: ${villa.color || '#6366F1'}; color: white; font-size: 0.6rem; font-weight: 600; padding: 2px 5px; border-radius: 3px;">📍 ${villa.nom}</span>` : ''}
+                        ${isRenfort ? '<span style="display: inline-block; background: #F59E0B; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">🔧 RENFORT</span>' : ''}
+                        ${isMainShift ? '<span style="display: inline-block; background: #3B82F6; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">🏠 GARDE PRINCIPALE</span>' : ''}
+                        ${workingDays > 0 ? '<span style="display: inline-block; background: #10B981; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">' + workingDays + ' jours</span>' : ''}
                     </div>
-                    <div style="opacity: 0.8; font-size: 0.65rem; color: ${textColor};">
-                        ${startTime} - ${endTime} (${durationHours}h)
+                    <div style="opacity: 0.8; font-size: 0.65rem; color: ${textColor}; margin-top: 2px;">
+                        ${isSameDay ? `${startDay} ${startHour}h - ${endHour}h` : `${startDay} ${startHour}h - ${endDay} ${endHour}h`}
                     </div>
                 ` : `
-                    <div style="opacity: 0.9; color: ${textColor};">
-                        ${villa?.nom || 'Villa'} · ${typeLabel} · ${durationHours}h
+                    <div style="display: flex; flex-wrap: wrap; gap: 2px; align-items: center; margin-top: 2px;">
+                        ${hasVilla ? `<span style="display: inline-block; background: ${villa.color || '#6366F1'}; color: white; font-size: 0.55rem; font-weight: 600; padding: 1px 3px; border-radius: 2px;">📍</span>` : ''}
+                        ${isRenfort ? '<span style="display: inline-block; background: #F59E0B; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">🔧</span>' : ''}
+                        ${isMainShift ? '<span style="display: inline-block; background: #3B82F6; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">🏠</span>' : ''}
+                        ${isMainShift && workingDays > 0 ? '<span style="display: inline-block; background: #10B981; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">' + workingDays + 'j</span>' : ''}
+                        <span style="opacity: 0.9; color: ${textColor}; font-size: 0.65rem;">${durationHours}h</span>
                     </div>
                 `}
             `;
         } else {
             // GARDE NON AFFECTÉE: Infos de la garde
+            // Déterminer si la villa est vraiment présente (pas null et pas id null)
+            const hasVilla = villa && villa.id && villa.nom;
+
             container.innerHTML = `
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
                     <div style="font-weight: 600; color: #6B7280; flex: 1;">
@@ -993,15 +1037,22 @@ export default class extends Controller {
                     </span>
                 </div>
                 ${isMonthView ? `
-                    <div style="color: #6B7280; font-size: 0.7rem;">
-                        ${villa?.nom || 'Villa'} · ${typeLabel}
+                    <div style="display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin-top: 2px;">
+                        ${hasVilla ? `<span style="display: inline-block; background: ${villa.color || '#6366F1'}; color: white; font-size: 0.6rem; font-weight: 600; padding: 2px 5px; border-radius: 3px;">📍 ${villa.nom}</span>` : ''}
+                        ${isRenfort ? '<span style="display: inline-block; background: #F59E0B; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">🔧 RENFORT</span>' : ''}
+                        ${isMainShift ? '<span style="display: inline-block; background: #3B82F6; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">🏠 GARDE PRINCIPALE</span>' : ''}
+                        ${workingDays > 0 ? '<span style="display: inline-block; background: #10B981; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">' + workingDays + ' jours</span>' : ''}
                     </div>
-                    <div style="color: #6B7280; font-size: 0.65rem;">
-                        ${startTime} - ${endTime} (${durationHours}h)
+                    <div style="color: #6B7280; font-size: 0.65rem; margin-top: 2px;">
+                        ${isSameDay ? `${startDay} ${startHour}h - ${endHour}h` : `${startDay} ${startHour}h - ${endDay} ${endHour}h`}
                     </div>
                 ` : `
-                    <div style="color: #6B7280;">
-                        ${villa?.nom || 'Villa'} · ${typeLabel} · ${durationHours}h
+                    <div style="display: flex; flex-wrap: wrap; gap: 2px; align-items: center; margin-top: 2px;">
+                        ${hasVilla ? `<span style="display: inline-block; background: ${villa.color || '#6366F1'}; color: white; font-size: 0.55rem; font-weight: 600; padding: 1px 3px; border-radius: 2px;">📍</span>` : ''}
+                        ${isRenfort ? '<span style="display: inline-block; background: #F59E0B; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">🔧</span>' : ''}
+                        ${isMainShift ? '<span style="display: inline-block; background: #3B82F6; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">🏠</span>' : ''}
+                        ${isMainShift && workingDays > 0 ? '<span style="display: inline-block; background: #10B981; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">' + workingDays + 'j</span>' : ''}
+                        <span style="color: #6B7280; font-size: 0.65rem;">${durationHours}h</span>
                     </div>
                 `}
             `;
@@ -1606,9 +1657,14 @@ export default class extends Controller {
                     </div>
 
                     <form id="createAffectationForm" class="space-y-6">
-                        <!-- Villa (required for creation) -->
-                        <div>
-                            <label class="block text-sm font-semibold mb-2">Villa *</label>
+                        <!-- Villa (required for main shifts, optional for renfort) -->
+                        <div id="createVillaContainer">
+                            <label class="block text-sm font-semibold mb-2">
+                                Villa <span id="createVillaRequired">*</span>
+                                <span id="createVillaHint" class="text-xs text-gray-500 font-normal" style="display: none;">
+                                    (Optionnel pour renfort centre-complet)
+                                </span>
+                            </label>
                             <select id="createVilla" required class="w-full border-gray-300 rounded-lg">
                                 <option value="">-- Sélectionner une villa --</option>
                                 ${villaOptions.map(v => `
@@ -1719,6 +1775,30 @@ export default class extends Controller {
         startInput.addEventListener('change', updateDuration);
         endInput.addEventListener('change', updateDuration);
 
+        // Toggle villa requirement based on type
+        const typeSelect = document.getElementById('createType');
+        const villaSelect = document.getElementById('createVilla');
+        const villaRequired = document.getElementById('createVillaRequired');
+        const villaHint = document.getElementById('createVillaHint');
+
+        const updateVillaRequirement = () => {
+            const isRenfort = typeSelect.value === 'renfort';
+            villaSelect.required = !isRenfort;
+
+            if (isRenfort) {
+                villaRequired.style.display = 'none';
+                villaHint.style.display = 'inline';
+                villaSelect.parentElement.querySelector('option[value=""]').textContent = '-- Aucune (centre-complet) --';
+            } else {
+                villaRequired.style.display = 'inline';
+                villaHint.style.display = 'none';
+                villaSelect.parentElement.querySelector('option[value=""]').textContent = '-- Sélectionner une villa --';
+            }
+        };
+
+        typeSelect.addEventListener('change', updateVillaRequirement);
+        updateVillaRequirement(); // Initial state
+
         // Store controller reference
         window.planningController = this;
     }
@@ -1728,15 +1808,18 @@ export default class extends Controller {
      */
     async saveNewAffectationFromModal() {
         const villaId = document.getElementById('createVilla').value;
+        const type = document.getElementById('createType').value;
+        const isRenfort = type === 'renfort';
 
-        if (!villaId) {
-            this.showError('Veuillez sélectionner une villa');
+        // Villa required only for main shifts (not renfort)
+        if (!villaId && !isRenfort) {
+            this.showError('Veuillez sélectionner une villa pour les gardes principales');
             return;
         }
 
         const formData = {
-            villaId: parseInt(villaId),
-            type: document.getElementById('createType').value,
+            villaId: villaId ? parseInt(villaId) : null,
+            type: type,
             userId: document.getElementById('createUser').value || null,
             startAt: new Date(document.getElementById('createStartAt').value).toISOString(),
             endAt: new Date(document.getElementById('createEndAt').value).toISOString(),
@@ -1747,19 +1830,49 @@ export default class extends Controller {
         try {
             this.showInfo('Création en cours...');
 
+            console.log('🔵 Creating affectation with data:', formData);
+
             const response = await this.fetchAPI('/api/planning-assignment/create', {
                 method: 'POST',
                 body: JSON.stringify(formData)
             });
 
+            console.log('🔵 Affectation created, response:', response);
+
             // Close modal
             document.getElementById('createAffectationModal').remove();
 
-            // Invalidate cache for current month
+            // Invalidate cache for current month and adjacent months
             await cacheManager.invalidateRange(this.currentYear, this.currentMonth);
+
+            // For main shifts, also invalidate cache for adjacent months in case of month overlap
+            if (!isRenfort) {
+                const startDate = new Date(formData.startAt);
+                const endDate = new Date(formData.endAt);
+                const startMonth = startDate.getMonth() + 1;
+                const startYear = startDate.getFullYear();
+                const endMonth = endDate.getMonth() + 1;
+                const endYear = endDate.getFullYear();
+
+                // Invalidate start and end months if different from current
+                if (startYear !== this.currentYear || startMonth !== this.currentMonth) {
+                    await cacheManager.invalidateRange(startYear, startMonth);
+                }
+                if ((endYear !== this.currentYear || endMonth !== this.currentMonth) &&
+                    (endYear !== startYear || endMonth !== startMonth)) {
+                    await cacheManager.invalidateRange(endYear, endMonth);
+                }
+            }
+
+            // Small delay to ensure backend has fully persisted the data
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            console.log('🔵 Cache invalidated, forcing refresh from API...');
 
             // Force immediate reload from API
             this.forceRefreshFromAPI();
+
+            console.log('🔵 Refresh triggered successfully');
 
             this.showSuccess('Affectation créée avec succès');
 
@@ -1807,7 +1920,7 @@ export default class extends Controller {
                         <!-- Villa (read-only) -->
                         <div>
                             <label class="block text-sm font-semibold mb-2">Villa</label>
-                            <input type="text" value="${villa?.nom || 'N/A'}" disabled
+                            <input type="text" value="${villa?.nom || (affectation.type === 'renfort' ? 'Centre-complet (toutes villas)' : 'N/A')}" disabled
                                    class="w-full border-gray-300 bg-gray-100 rounded-lg px-3 py-2">
                             <p class="text-xs text-gray-500 mt-1">La villa ne peut pas être modifiée après création</p>
                         </div>

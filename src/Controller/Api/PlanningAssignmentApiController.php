@@ -573,15 +573,30 @@ class PlanningAssignmentApiController extends AbstractController
         $type = $data['type'] ?? null;
         $startAt = $data['startAt'] ?? null;
         $endAt = $data['endAt'] ?? null;
+        $warnings = [];
 
-        if (!$villaId || !$type || !$startAt || !$endAt) {
-            return $this->json(['error' => 'Missing required parameters'], 400);
+        // Type is always required
+        if (!$type || !$startAt || !$endAt) {
+            return $this->json(['error' => 'Missing required parameters (type, startAt, endAt)'], 400);
         }
 
-        // Find villa
-        $villa = $this->villaRepository->find($villaId);
-        if (!$villa) {
-            return $this->json(['error' => 'Villa not found'], 404);
+        // Villa obligatoire seulement pour gardes principales
+        if ($type !== Affectation::TYPE_RENFORT && !$villaId) {
+            return $this->json(['error' => 'Villa requise pour les gardes principales'], 400);
+        }
+
+        // Renfort: autoriser villa (renfort villa-spécifique) ou null (centre-complet)
+        if ($type === Affectation::TYPE_RENFORT && $villaId) {
+            $warnings[] = 'Renfort villa-spécifique créé. Laisser villa vide pour un renfort centre-complet.';
+        }
+
+        // Find villa if provided
+        $villa = null;
+        if ($villaId) {
+            $villa = $this->villaRepository->find($villaId);
+            if (!$villa) {
+                return $this->json(['error' => 'Villa not found'], 404);
+            }
         }
 
         // Parse dates
@@ -596,27 +611,51 @@ class PlanningAssignmentApiController extends AbstractController
         $month = (int)$start->format('n');
         $year = (int)$start->format('Y');
 
-        // Find or create PlanningMonth for this villa/month/year
-        $planning = $this->planningRepository->findOneBy([
-            'villa' => $villa,
-            'annee' => $year,
-            'mois' => $month
-        ]);
+        // Find or create PlanningMonth
+        // Pour les renforts sans villa, utiliser le premier planning disponible ou en créer un générique
+        if ($villa) {
+            $planning = $this->planningRepository->findOneBy([
+                'villa' => $villa,
+                'annee' => $year,
+                'mois' => $month
+            ]);
 
-        if (!$planning) {
-            // Create new PlanningMonth
-            $planning = new \App\Entity\PlanningMonth();
-            $planning->setVilla($villa);
-            $planning->setAnnee($year);
-            $planning->setMois($month);
-            $planning->setStatut('draft');
-            $this->em->persist($planning);
+            if (!$planning) {
+                // Create new PlanningMonth for this villa
+                $planning = new \App\Entity\PlanningMonth();
+                $planning->setVilla($villa);
+                $planning->setAnnee($year);
+                $planning->setMois($month);
+                $planning->setStatut('draft');
+                $this->em->persist($planning);
+            }
+        } else {
+            // Renfort sans villa: utiliser le premier planning disponible du mois
+            // ou créer un planning avec la première villa disponible (contrainte technique)
+            $planning = $this->planningRepository->findOneBy([
+                'annee' => $year,
+                'mois' => $month
+            ]);
+
+            if (!$planning) {
+                // Créer un planning avec la première villa (contrainte technique PlanningMonth)
+                $firstVilla = $this->villaRepository->findOneBy([]);
+                if (!$firstVilla) {
+                    return $this->json(['error' => 'Aucune villa disponible'], 500);
+                }
+                $planning = new \App\Entity\PlanningMonth();
+                $planning->setVilla($firstVilla);
+                $planning->setAnnee($year);
+                $planning->setMois($month);
+                $planning->setStatut('draft');
+                $this->em->persist($planning);
+            }
         }
 
         // Create new affectation
         $affectation = new Affectation();
         $affectation->setPlanningMois($planning);
-        $affectation->setVilla($villa);
+        $affectation->setVilla($villa); // Peut être null pour renfort centre-complet
         $affectation->setType($type);
         $affectation->setStartAt($start);
         $affectation->setEndAt($end);
@@ -625,14 +664,14 @@ class PlanningAssignmentApiController extends AbstractController
 
         // Assign user if provided
         $userId = $data['userId'] ?? null;
-        $warnings = [];
 
         if ($userId) {
             $user = $this->userRepository->find($userId);
             if ($user) {
                 $affectation->setUser($user);
-                // Get assignment warnings
-                $warnings = $this->assignmentService->getValidationWarnings($affectation);
+                // Get assignment warnings and merge with existing warnings
+                $assignmentWarnings = $this->assignmentService->getValidationWarnings($affectation);
+                $warnings = array_merge($warnings, $assignmentWarnings);
             }
         }
 

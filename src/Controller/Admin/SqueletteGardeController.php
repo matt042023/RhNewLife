@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\SqueletteGarde;
 use App\Repository\SqueletteGardeRepository;
+use App\Repository\VillaRepository;
 use App\Service\SqueletteGarde\SqueletteGardeManager;
 use App\Service\SqueletteGarde\SqueletteGardeValidator;
 use App\Service\SqueletteGarde\SqueletteGardeValidationException;
@@ -21,7 +22,8 @@ class SqueletteGardeController extends AbstractController
     public function __construct(
         private SqueletteGardeRepository $repository,
         private SqueletteGardeManager $manager,
-        private SqueletteGardeValidator $validator
+        private SqueletteGardeValidator $validator,
+        private VillaRepository $villaRepository
     ) {}
 
     /**
@@ -46,9 +48,12 @@ class SqueletteGardeController extends AbstractController
     #[Route('/builder', name: 'admin_squelette_garde_builder_new', methods: ['GET'])]
     public function builder(?SqueletteGarde $squelette = null): Response
     {
+        $villas = $this->villaRepository->findBy([], ['nom' => 'ASC']);
+
         return $this->render('admin/squelette_garde/builder.html.twig', [
             'squelette' => $squelette,
             'isEdit' => $squelette !== null,
+            'villas' => $villas,
         ]);
     }
 

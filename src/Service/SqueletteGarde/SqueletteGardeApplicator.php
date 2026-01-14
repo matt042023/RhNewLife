@@ -28,7 +28,8 @@ class SqueletteGardeApplicator
         SqueletteGarde $squelette,
         PlanningMonth $planningMois,
         ?\DateTime $periodStart = null,
-        ?\DateTime $periodEnd = null
+        ?\DateTime $periodEnd = null,
+        bool $renfortOnly = false
     ): array {
         $config = $squelette->getConfigurationArray();
         $affectations = [];
@@ -56,28 +57,30 @@ class SqueletteGardeApplicator
 
         // Loop through all weeks in the period
         while ($weekStart <= $lastDay) {
-            // Apply creneaux_garde for this week
-            foreach ($config['creneaux_garde'] ?? [] as $creneau) {
-                $affectation = $this->createAffectationFromCreneauGarde(
-                    $creneau,
-                    $planningMois,
-                    $weekStart,
-                    $squelette->getNom()
-                );
-                if ($affectation) {
-                    // Split if spans multiple months
-                    $segments = $this->splitAffectationByMonth($affectation);
+            // Apply creneaux_garde for this week (skip if renfortOnly mode)
+            if (!$renfortOnly) {
+                foreach ($config['creneaux_garde'] ?? [] as $creneau) {
+                    $affectation = $this->createAffectationFromCreneauGarde(
+                        $creneau,
+                        $planningMois,
+                        $weekStart,
+                        $squelette->getNom()
+                    );
+                    if ($affectation) {
+                        // Split if spans multiple months
+                        $segments = $this->splitAffectationByMonth($affectation);
 
-                    foreach ($segments as $segment) {
-                        $segmentStart = $segment->getStartAt();
+                        foreach ($segments as $segment) {
+                            $segmentStart = $segment->getStartAt();
 
-                        // Include segment if it STARTS within this planning's month
-                        $segmentYear = (int)$segmentStart->format('Y');
-                        $segmentMonth = (int)$segmentStart->format('m');
+                            // Include segment if it STARTS within this planning's month
+                            $segmentYear = (int)$segmentStart->format('Y');
+                            $segmentMonth = (int)$segmentStart->format('m');
 
-                        if ($segmentYear === $planningMois->getAnnee()
-                            && $segmentMonth === $planningMois->getMois()) {
-                            $affectations[] = $segment;
+                            if ($segmentYear === $planningMois->getAnnee()
+                                && $segmentMonth === $planningMois->getMois()) {
+                                $affectations[] = $segment;
+                            }
                         }
                     }
                 }
@@ -89,7 +92,8 @@ class SqueletteGardeApplicator
                     $creneau,
                     $planningMois,
                     $weekStart,
-                    $squelette->getNom()
+                    $squelette->getNom(),
+                    $renfortOnly // Propager le flag renfortOnly depuis le scope d'application
                 );
                 if ($affectation) {
                     // Split if spans multiple months
@@ -207,7 +211,7 @@ class SqueletteGardeApplicator
                 }
 
                 // Apply template to this planning with period constraints
-                $result = $this->applyToPlanning($squelette, $planningMonth, $startDate, $endDate);
+                $result = $this->applyToPlanning($squelette, $planningMonth, $startDate, $endDate, $renfortOnly);
 
                 $totalCreated += $result['created'];
                 $plannings[] = $planningMonth;
@@ -260,17 +264,31 @@ class SqueletteGardeApplicator
         array $creneau,
         PlanningMonth $planningMois,
         \DateTime $weekStart,
-        string $templateName
+        string $templateName,
+        bool $renfortOnly = false
     ): ?Affectation {
         $day = (clone $weekStart)->modify('+' . ($creneau['jour'] - 1) . ' days');
 
         $startAt = (clone $day)->setTime($creneau['heure_debut'], 0, 0);
         $endAt = (clone $day)->setTime($creneau['heure_fin'], 0, 0);
 
+        // Déterminer la villa selon le contexte et la configuration du créneau
+        $villa = null;
+        if (isset($creneau['villa_id']) && $creneau['villa_id']) {
+            // Renfort villa-spécifique défini dans le template
+            $villa = $this->em->getRepository(Villa::class)->find($creneau['villa_id']);
+        } elseif ($renfortOnly) {
+            // Scope "renfort seulement": pas de villa (centre-complet)
+            $villa = null;
+        } else {
+            // Application normale: utiliser villa du planning (compatibilité avec données existantes)
+            $villa = $planningMois->getVilla();
+        }
+
         $affectation = new Affectation();
         $affectation
             ->setPlanningMois($planningMois)
-            ->setVilla($planningMois->getVilla())
+            ->setVilla($villa) // Peut être null pour renfort centre-complet
             ->setStartAt($startAt)
             ->setEndAt($endAt)
             ->setType(Affectation::TYPE_RENFORT)
