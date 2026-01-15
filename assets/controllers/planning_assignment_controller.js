@@ -40,6 +40,9 @@ export default class extends Controller {
             });
         }
 
+        // Expose controller to window for onclick handlers
+        window.planningController = this;
+
         this.initCalendar();
         this.initDraggableUsers();
         this.setupEventDragListeners();
@@ -508,9 +511,24 @@ export default class extends Controller {
                 const endDate = new Date(absence.endAt);
                 endDate.setDate(endDate.getDate() + 1);
 
+                // Format dates for display
+                const startDateFormatted = new Date(absence.startAt).toLocaleDateString('fr-FR', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short'
+                });
+                const endDateFormatted = new Date(absence.endAt).toLocaleDateString('fr-FR', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short'
+                });
+
+                // Enriched title with type and dates
+                const absenceTitle = `🚫 ${absence.user.fullName}\n${absence.absenceType.label}\nDu ${startDateFormatted} au ${endDateFormatted}`;
+
                 events.push({
                     id: `absence-${absence.id}`,
-                    title: `🚫 ${absence.user.fullName} - ${absence.absenceType.label}`,
+                    title: absenceTitle,
                     start: absence.startAt,
                     end: endDate.toISOString().split('T')[0],
                     allDay: true,
@@ -522,7 +540,9 @@ export default class extends Controller {
                         absenceTypeCode: absence.absenceType.code,
                         absenceTypeLabel: absence.absenceType.label,
                         user: absence.user,
-                        absenceData: absence
+                        absenceData: absence,
+                        startDateFormatted,
+                        endDateFormatted
                     }
                 });
             }
@@ -976,7 +996,8 @@ export default class extends Controller {
             'draft': { label: 'Brouillon', icon: '📝', color: '#9CA3AF' },
             'validated': { label: 'Validé', icon: '✓', color: '#10B981' },
             'to_replace_absence': { label: 'À remplacer', icon: '⚠', color: '#F59E0B' },
-            'to_replace_rdv': { label: 'RDV', icon: '📅', color: '#F59E0B' }
+            'to_replace_rdv': { label: 'RDV', icon: '📅', color: '#F59E0B' },
+            'to_replace_schedule_conflict': { label: 'Conflit horaire', icon: '⏰', color: '#EF4444' }
         };
         const statusInfo = statusConfig[statut] || statusConfig['draft'];
 
@@ -1537,19 +1558,27 @@ export default class extends Controller {
 
             const data = await response.json();
 
+            // Handle blocking errors (status 400)
             if (!response.ok) {
-                throw new Error(data.error || 'Erreur lors de la validation');
+                this.showError(data.message || 'Erreur lors de la validation');
+
+                // Display all errors in a detailed modal
+                if (data.errors && data.errors.length > 0) {
+                    this.showValidationErrorsModal(data.errors, data.warnings || []);
+                }
+
+                return; // Don't continue
             }
 
-            // Show success message
+            // Success - show message
             this.showSuccess(data.message || `${data.validated} affectation(s) validée(s)`);
 
-            // Show warnings if any
+            // Show warnings if present (non-blocking)
             if (data.warnings && data.warnings.length > 0) {
                 this.showWarningsToast(data.warnings);
             }
 
-            // Invalidate cache for validated month
+            // Invalidate cache and refresh
             await cacheManager.invalidateRange(year, month);
 
             // Force immediate reload from API (bypass cache)
@@ -1903,6 +1932,24 @@ export default class extends Controller {
 
         const hoursDiff = Math.round((endAt - startAt) / (1000 * 60 * 60));
 
+        // Check if affectation needs replacement
+        const hasConflict = affectation.statut === 'to_replace_absence' ||
+                           affectation.statut === 'to_replace_rdv' ||
+                           affectation.statut === 'to_replace_schedule_conflict';
+        const conflictAlert = hasConflict ? `
+            <div class="bg-red-50 border border-red-300 rounded-lg p-4 mb-4">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-red-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <h4 class="text-sm font-bold text-red-800 mb-1">Affectation à remplacer</h4>
+                        <p class="text-sm text-red-700" id="conflictReasonText">Chargement de la raison...</p>
+                    </div>
+                </div>
+            </div>
+        ` : '';
+
         const modalHtml = `
             <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" id="editAffectationModal">
                 <div class="bg-white rounded-lg p-6 w-full mx-4" style="max-width: 700px;">
@@ -1924,6 +1971,9 @@ export default class extends Controller {
                                    class="w-full border-gray-300 bg-gray-100 rounded-lg px-3 py-2">
                             <p class="text-xs text-gray-500 mt-1">La villa ne peut pas être modifiée après création</p>
                         </div>
+
+                        <!-- Conflict alert -->
+                        ${conflictAlert}
 
                         <!-- Type de garde -->
                         <div>
@@ -2039,12 +2089,57 @@ export default class extends Controller {
         startInput.addEventListener('change', updateDuration);
         endInput.addEventListener('change', updateDuration);
 
+        // Load conflict reason if affectation needs replacement
+        if (hasConflict) {
+            this.loadConflictReason(affectation.id, affectation.statut);
+        }
+
         // Store controller reference
         window.planningController = this;
     }
 
     /**
+     * Load and display conflict reason for an affectation
+     */
+    async loadConflictReason(affectationId, statut) {
+        const reasonElement = document.getElementById('conflictReasonText');
+        if (!reasonElement) return;
+
+        try {
+            console.log('Loading conflict details for affectation:', affectationId);
+
+            // API call to get conflict details
+            const response = await fetch(`/api/planning-assignment/${affectationId}/conflict-details`, {
+                credentials: 'same-origin'
+            });
+
+            console.log('Conflict details response status:', response.status);
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                console.error('Conflict details error:', errorData);
+                reasonElement.textContent = `Impossible de charger les détails du conflit (${response.status}): ${errorData.error || 'erreur inconnue'}`;
+                return;
+            }
+
+            const data = await response.json();
+            console.log('Conflict details data:', data);
+
+            if (data.reason) {
+                reasonElement.textContent = data.reason;
+            } else {
+                reasonElement.textContent = 'Conflit détecté mais détails non disponibles.';
+            }
+
+        } catch (error) {
+            console.error('Failed to load conflict reason:', error);
+            reasonElement.textContent = `Erreur lors du chargement des détails: ${error.message}`;
+        }
+    }
+
+    /**
      * 🆕 Save affectation from modal
+     * Sauvegarde immédiatement vers l'API et recharge les données
      */
     async saveAffectationFromModal(eventId) {
         const formData = {
@@ -2055,16 +2150,42 @@ export default class extends Controller {
             commentaire: document.getElementById('editCommentaire').value
         };
 
-        // Add to pending store
-        this.addPendingChange(eventId, 'update', formData);
-
-        // Update optimistic
-        this.updateEventOptimistic(eventId, formData);
-
-        // Close modal
+        // Close modal immediately
         document.getElementById('editAffectationModal').remove();
 
-        this.showInfo('Modifications enregistrées localement');
+        this.showInfo('Sauvegarde en cours...');
+
+        try {
+            // Send directly to API (immediate save, not pending)
+            const changes = [{
+                affectationId: eventId,
+                type: 'update',
+                data: formData
+            }];
+
+            const response = await this.fetchAPI('/api/planning-assignment/batch-update', {
+                method: 'POST',
+                body: JSON.stringify({ changes })
+            });
+
+            // Invalidate ALL cache to ensure fresh data
+            await cacheManager.invalidateAll();
+
+            // Force reload from API to get updated status
+            this.forceRefresh = true;
+            this.calendar.removeAllEvents();
+            this.calendar.refetchEvents();
+
+            this.showSuccess('Modification sauvegardée');
+
+            if (response.warnings && response.warnings.length > 0) {
+                this.showWarningsToast(response.warnings);
+            }
+
+        } catch (error) {
+            console.error('Failed to save affectation:', error);
+            this.showError('Échec de la sauvegarde');
+        }
     }
 
     /**
@@ -2184,6 +2305,14 @@ export default class extends Controller {
                 event.setEnd(newEndAt);
                 event.setAllDay(false);
             }
+        }
+
+        // Mettre à jour le statut en brouillon si l'affectation était validée ou à remplacer
+        // Cela permet de refléter visuellement que l'affectation doit être re-validée
+        const currentStatut = event.extendedProps.statut;
+        const statusesToReset = ['validated', 'to_replace_absence', 'to_replace_rdv', 'to_replace_schedule_conflict'];
+        if (statusesToReset.includes(currentStatut)) {
+            event.setExtendedProp('statut', 'draft');
         }
     }
 
@@ -2315,88 +2444,84 @@ export default class extends Controller {
     }
 
     /**
-     * Show absence details modal
+     * Show absence details modal with enriched information
      */
     showAbsenceDetails(extendedProps) {
-        const { user, absenceTypeLabel, absenceData } = extendedProps;
+        const { absenceData, absenceTypeLabel, user, startDateFormatted, endDateFormatted } = extendedProps;
 
-        const startDate = new Date(absenceData.startAt);
-        const endDate = new Date(absenceData.endAt);
-
-        const formatDate = (date) => {
-            return date.toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        };
-
-        const formatTime = (date) => {
-            return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        };
-
-        // Calculate duration in days
-        const durationMs = endDate - startDate;
-        const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
-
-        const modal = document.getElementById('details-modal');
-        const title = document.getElementById('details-modal-title');
-        const content = document.getElementById('details-modal-content');
-
-        title.textContent = '🚫 Détails de l\'absence';
-
-        content.innerHTML = `
-            <div class="space-y-4">
-                <div class="flex items-start p-4 bg-gray-50 rounded-lg">
-                    <div class="flex-shrink-0 mr-4">
-                        <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-xl font-bold text-gray-700">
-                            ${user.fullName.charAt(0)}
+        const modalHtml = `
+            <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" id="absenceDetailsModal">
+                <div class="bg-white rounded-lg p-6 w-full mx-4" style="max-width: 600px;">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900">Absence</h2>
+                            <p class="text-sm text-gray-600 mt-1">${user.fullName}</p>
                         </div>
+                        <button onclick="document.getElementById('absenceDetailsModal').remove()"
+                                class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
                     </div>
-                    <div class="flex-1">
-                        <h4 class="font-semibold text-lg text-gray-900">${user.fullName}</h4>
-                        <p class="text-sm text-gray-600">Éducateur</p>
-                    </div>
-                </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="p-3 bg-blue-50 rounded-lg">
-                        <p class="text-xs text-blue-600 font-semibold mb-1">TYPE D'ABSENCE</p>
-                        <p class="text-sm font-medium text-gray-900">${absenceTypeLabel}</p>
-                    </div>
-                    <div class="p-3 bg-purple-50 rounded-lg">
-                        <p class="text-xs text-purple-600 font-semibold mb-1">DURÉE</p>
-                        <p class="text-sm font-medium text-gray-900">${durationDays} jour${durationDays > 1 ? 's' : ''}</p>
-                    </div>
-                </div>
-
-                <div class="border-t pt-4">
-                    <h5 class="font-semibold text-gray-900 mb-3">📅 Période</h5>
-                    <div class="space-y-2">
-                        <div class="flex items-center">
-                            <span class="text-sm text-gray-600 w-20">Début :</span>
-                            <span class="text-sm font-medium text-gray-900">${formatDate(startDate)} à ${formatTime(startDate)}</span>
+                    <div class="space-y-4">
+                        <!-- Type d'absence -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <span class="text-2xl mr-3">🚫</span>
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase">Type d'absence</p>
+                                    <p class="text-lg font-semibold text-gray-900">${absenceTypeLabel}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="flex items-center">
-                            <span class="text-sm text-gray-600 w-20">Fin :</span>
-                            <span class="text-sm font-medium text-gray-900">${formatDate(endDate)} à ${formatTime(endDate)}</span>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p class="text-xs text-green-700 flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span class="font-semibold">Absence approuvée</span>
-                    </p>
+                        <!-- Période -->
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <span class="text-2xl mr-3">📅</span>
+                                <div class="flex-1">
+                                    <p class="text-xs text-blue-600 uppercase mb-1">Période</p>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-xs text-gray-500">Début</p>
+                                            <p class="text-sm font-semibold text-gray-900">${startDateFormatted}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-gray-500">Fin</p>
+                                            <p class="text-sm font-semibold text-gray-900">${endDateFormatted}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${absenceData.reason ? `
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <p class="text-xs text-gray-500 uppercase mb-2">Motif</p>
+                                <p class="text-sm text-gray-700">${absenceData.reason}</p>
+                            </div>
+                        ` : ''}
+
+                        ${absenceData.workingDaysCount ? `
+                            <div class="text-sm text-gray-600 text-center">
+                                <span class="font-semibold">${absenceData.workingDaysCount}</span> jour(s) ouvré(s)
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="flex justify-end mt-6 pt-4 border-t">
+                        <button onclick="document.getElementById('absenceDetailsModal').remove()"
+                                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium">
+                            Fermer
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
 
-        modal.classList.remove('hidden');
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
     }
 
     /**
@@ -2621,5 +2746,124 @@ export default class extends Controller {
         bar.appendChild(text);
 
         return bar;
+    }
+
+    /**
+     * Show modal with detailed list of validation conflicts
+     */
+    showValidationErrorsModal(errors, warnings) {
+        const errorsList = errors.map((err, index) => {
+            // Icon based on type
+            let icon = '⚠️';
+            if (err.type === 'absence_conflict') icon = '🚫';
+            if (err.type === 'rdv_conflict') icon = '📅';
+
+            return `
+                <div class="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-start">
+                        <span class="text-2xl mr-3">${icon}</span>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-red-800">${err.message}</p>
+                            ${err.affectationId ? `
+                                <button onclick="window.planningController.highlightAffectation('${err.affectationId}')"
+                                        class="mt-2 text-xs text-red-600 hover:text-red-800 underline">
+                                    Voir dans le planning
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        const warningsList = warnings.length > 0 ? `
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <h4 class="text-sm font-semibold text-yellow-800 mb-2">Avertissements (non bloquants):</h4>
+                ${warnings.map(warn => `
+                    <div class="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                        <p class="text-xs text-yellow-800">${warn.message}</p>
+                    </div>
+                `).join('')}
+            </div>
+        ` : '';
+
+        const modalHtml = `
+            <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" id="validationErrorsModal">
+                <div class="bg-white rounded-lg p-6 w-full mx-4" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-red-900">Validation impossible</h2>
+                            <p class="text-sm text-gray-600 mt-1">${errors.length} conflit(s) détecté(s)</p>
+                        </div>
+                        <button onclick="document.getElementById('validationErrorsModal').remove()"
+                                class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-700">
+                            Les affectations suivantes présentent des conflits d'absence ou de rendez-vous.
+                            Veuillez réaffecter un autre éducateur pour ces gardes avant de valider le planning.
+                        </p>
+                    </div>
+
+                    <div class="space-y-2">
+                        ${errorsList}
+                    </div>
+
+                    ${warningsList}
+
+                    <div class="flex justify-end mt-6 pt-4 border-t">
+                        <button onclick="document.getElementById('validationErrorsModal').remove()"
+                                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    /**
+     * Highlight an affectation in the calendar
+     */
+    highlightAffectation(affectationId) {
+        // Close the modal
+        const modal = document.getElementById('validationErrorsModal');
+        if (modal) modal.remove();
+
+        // Find the event in the calendar
+        const event = this.calendar.getEventById(affectationId);
+        if (event) {
+            // Center the calendar on the event date
+            this.calendar.gotoDate(event.start);
+
+            // Visual effect: flash the event
+            const eventEl = document.querySelector(`[data-event-id="${affectationId}"]`);
+            if (eventEl) {
+                eventEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Flash animation (3x)
+                let flashCount = 0;
+                const flashInterval = setInterval(() => {
+                    eventEl.style.transform = flashCount % 2 === 0 ? 'scale(1.15)' : 'scale(1)';
+                    eventEl.style.boxShadow = flashCount % 2 === 0
+                        ? '0 0 20px rgba(239, 68, 68, 0.8)'
+                        : '';
+                    flashCount++;
+
+                    if (flashCount > 6) {
+                        clearInterval(flashInterval);
+                        eventEl.style.transform = '';
+                        eventEl.style.boxShadow = '';
+                    }
+                }, 300);
+            }
+        }
     }
 }

@@ -17,6 +17,7 @@ use App\Repository\UserRepository;
 use App\Repository\VillaRepository;
 use App\Service\Planning\PlanningAssignmentService;
 use App\Service\Planning\PlanningAvailabilityService;
+use App\Service\Planning\PlanningConflictService;
 use App\Service\Planning\PlanningValidationService;
 use App\Service\Planning\VillaPlanningService;
 use App\Service\SqueletteGarde\SqueletteGardeApplicator;
@@ -43,6 +44,7 @@ class PlanningAssignmentApiController extends AbstractController
         private AstreinteRepository $astreinteRepository,
         private PlanningAssignmentService $assignmentService,
         private PlanningAvailabilityService $availabilityService,
+        private PlanningConflictService $conflictService,
         private PlanningValidationService $validationService,
         private VillaPlanningService $villaPlanningService,
         private EntityManagerInterface $em
@@ -133,10 +135,224 @@ class PlanningAssignmentApiController extends AbstractController
     }
 
     /**
+     * Get conflict details for an affectation
+     * GET /api/planning-assignment/{id}/conflict-details
+     * IMPORTANT: This route must come BEFORE /{year}/{month} to avoid conflicts
+     */
+    #[Route('/{id}/conflict-details', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function getConflictDetails(int $id): JsonResponse
+    {
+        try {
+            $affectation = $this->affectationRepository->find($id);
+
+            if (!$affectation) {
+                return $this->json([
+                    'error' => 'Affectation non trouvée',
+                    'id' => $id
+                ], 404);
+            }
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Erreur lors de la récupération de l\'affectation',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+
+        $statut = $affectation->getStatut();
+
+        // If no conflict, return null
+        if (!in_array($statut, [Affectation::STATUS_TO_REPLACE_ABSENCE, Affectation::STATUS_TO_REPLACE_RDV])) {
+            return $this->json(['reason' => null]);
+        }
+
+        $user = $affectation->getUser();
+        $userName = $user?->getFullName() ?? 'Éducateur';
+
+        // Log affectation details for debugging
+        error_log(sprintf(
+            '[CONFLICT DEBUG] Affectation #%d: User=%s (%d), Status=%s, Start=%s, End=%s',
+            $affectation->getId(),
+            $userName,
+            $user?->getId() ?? 0,
+            $statut,
+            $affectation->getStartAt()?->format('Y-m-d H:i:s') ?? 'NULL',
+            $affectation->getEndAt()?->format('Y-m-d H:i:s') ?? 'NULL'
+        ));
+
+        // Absence conflict
+        if ($statut === Affectation::STATUS_TO_REPLACE_ABSENCE) {
+            error_log('[CONFLICT DEBUG] Searching for absence conflict...');
+
+            // First, get ALL approved absences for this user to see what's available
+            $allAbsences = $this->absenceRepository->createQueryBuilder('a')
+                ->leftJoin('a.absenceType', 'at')
+                ->where('a.user = :user')
+                ->andWhere('a.status = :status')
+                ->setParameter('user', $user)
+                ->setParameter('status', Absence::STATUS_APPROVED)
+                ->getQuery()
+                ->getResult();
+
+            error_log(sprintf(
+                '[CONFLICT DEBUG] Found %d approved absences for user %s',
+                count($allAbsences),
+                $userName
+            ));
+
+            foreach ($allAbsences as $abs) {
+                error_log(sprintf(
+                    '[CONFLICT DEBUG] - Absence #%d: Type=%s, Start=%s, End=%s',
+                    $abs->getId(),
+                    $abs->getAbsenceType()?->getLabel() ?? 'NULL',
+                    $abs->getStartAt()?->format('Y-m-d H:i:s') ?? 'NULL',
+                    $abs->getEndAt()?->format('Y-m-d H:i:s') ?? 'NULL'
+                ));
+            }
+
+            // Now search for overlapping absence
+            $absence = $this->absenceRepository->createQueryBuilder('a')
+                ->where('a.user = :user')
+                ->andWhere('a.status = :status')
+                ->andWhere('a.startAt <= :end')
+                ->andWhere('a.endAt >= :start')
+                ->setParameter('user', $user)
+                ->setParameter('status', Absence::STATUS_APPROVED)
+                ->setParameter('start', $affectation->getStartAt())
+                ->setParameter('end', $affectation->getEndAt())
+                ->setMaxResults(1)
+                ->getQuery()
+                ->getOneOrNullResult();
+
+            error_log(sprintf(
+                '[CONFLICT DEBUG] Overlapping absence query result: %s',
+                $absence ? 'FOUND (ID: ' . $absence->getId() . ')' : 'NOT FOUND'
+            ));
+
+            if ($absence) {
+                $absenceType = $absence->getAbsenceType()?->getLabel() ?? 'Absence';
+                $startDate = $absence->getStartAt()?->format('d/m/Y') ?? '?';
+                $endDate = $absence->getEndAt()?->format('d/m/Y') ?? '?';
+
+                $reason = sprintf(
+                    '%s ne peut pas assurer cette garde. %s du %s au %s.',
+                    $userName,
+                    $absenceType,
+                    $startDate,
+                    $endDate
+                );
+
+                return $this->json([
+                    'reason' => $reason,
+                    'type' => 'absence',
+                    'absenceId' => $absence->getId(),
+                    'absenceType' => $absenceType,
+                    'startDate' => $startDate,
+                    'endDate' => $endDate
+                ]);
+            }
+        }
+
+        // RDV conflict
+        if ($statut === Affectation::STATUS_TO_REPLACE_RDV) {
+            error_log('[CONFLICT DEBUG] Searching for RDV conflict...');
+
+            // First, get ALL RDVs for this user to see what's available
+            $allRdvs = $this->rendezVousRepository->createQueryBuilder('r')
+                ->join('r.participants', 'p')
+                ->where('p.id = :userId')
+                ->andWhere('r.impactGarde = :impact')
+                ->andWhere('r.statut != :cancelled')
+                ->setParameter('userId', $user->getId())
+                ->setParameter('impact', true)
+                ->setParameter('cancelled', RendezVous::STATUS_CANCELLED)
+                ->getQuery()
+                ->getResult();
+
+            error_log(sprintf(
+                '[CONFLICT DEBUG] Found %d RDVs with impactGarde=true for user %s',
+                count($allRdvs),
+                $userName
+            ));
+
+            foreach ($allRdvs as $rdvItem) {
+                error_log(sprintf(
+                    '[CONFLICT DEBUG] - RDV #%d: Title=%s, Start=%s, End=%s, Status=%s',
+                    $rdvItem->getId(),
+                    $rdvItem->getTitle() ?? 'NULL',
+                    $rdvItem->getStartAt()?->format('Y-m-d H:i:s') ?? 'NULL',
+                    $rdvItem->getEndAt()?->format('Y-m-d H:i:s') ?? 'NULL',
+                    $rdvItem->getStatut() ?? 'NULL'
+                ));
+            }
+
+            $rdv = $this->rendezVousRepository->createQueryBuilder('r')
+                ->join('r.participants', 'p')
+                ->where('p.id = :userId')
+                ->andWhere('r.impactGarde = :impact')
+                ->andWhere('r.startAt <= :end')
+                ->andWhere('r.endAt >= :start')
+                ->andWhere('r.statut != :cancelled')
+                ->setParameter('userId', $user->getId())
+                ->setParameter('impact', true)
+                ->setParameter('start', $affectation->getStartAt())
+                ->setParameter('end', $affectation->getEndAt())
+                ->setParameter('cancelled', RendezVous::STATUS_CANCELLED)
+                ->setMaxResults(1)
+                ->getQuery()
+                ->getOneOrNullResult();
+
+            error_log(sprintf(
+                '[CONFLICT DEBUG] Overlapping RDV query result: %s',
+                $rdv ? 'FOUND (ID: ' . $rdv->getId() . ')' : 'NOT FOUND'
+            ));
+
+            if ($rdv) {
+                $rdvTitle = $rdv->getTitle() ?? 'Rendez-vous';
+                $rdvDate = $rdv->getStartAt()?->format('d/m/Y à H:i') ?? '?';
+
+                $reason = sprintf(
+                    '%s ne peut pas assurer cette garde. Rendez-vous prévu: "%s" le %s.',
+                    $userName,
+                    $rdvTitle,
+                    $rdvDate
+                );
+
+                return $this->json([
+                    'reason' => $reason,
+                    'type' => 'rdv',
+                    'rdvId' => $rdv->getId(),
+                    'rdvTitle' => $rdvTitle,
+                    'rdvDate' => $rdvDate
+                ]);
+            }
+        }
+
+        // Fallback if conflict detected but details not found
+        error_log('[CONFLICT DEBUG] Fallback: No matching absence or RDV found despite conflict status');
+
+        return $this->json([
+            'reason' => sprintf(
+                '%s ne peut pas assurer cette garde. Conflit détecté.',
+                $userName
+            ),
+            'type' => 'unknown',
+            'debug' => [
+                'affectationId' => $affectation->getId(),
+                'userId' => $user?->getId(),
+                'userName' => $userName,
+                'status' => $statut,
+                'affectationStart' => $affectation->getStartAt()?->format('Y-m-d H:i:s'),
+                'affectationEnd' => $affectation->getEndAt()?->format('Y-m-d H:i:s'),
+                'note' => 'Affectation marked as conflicting but no matching absence/RDV found. Check logs for details.'
+            ]
+        ]);
+    }
+
+    /**
      * Get all plannings for a specific month (all villas)
      * GET /api/planning-assignment/{year}/{month}
      */
-    #[Route('/{year}/{month}', methods: ['GET'])]
+    #[Route('/{year}/{month}', methods: ['GET'], requirements: ['year' => '\d+', 'month' => '\d+'])]
     public function getMonth(int $year, int $month): JsonResponse
     {
         // Load all plannings for this month with eager loading
@@ -962,6 +1178,9 @@ class PlanningAssignmentApiController extends AbstractController
                         break;
 
                     case 'update':
+                        // Reset status to draft if validated or to_replace
+                        $this->resetStatusIfNeeded($affectation);
+
                         $datesChanged = false;
 
                         if (isset($changeData['userId'])) {
@@ -989,6 +1208,11 @@ class PlanningAssignmentApiController extends AbstractController
                         if ($datesChanged) {
                             $workingDays = $this->assignmentService->calculateWorkingDays($affectation);
                             $affectation->setJoursTravailes((int)$workingDays);
+                        }
+
+                        // Vérifier conflits si l'utilisateur ou les dates ont changé
+                        if ($affectation->getUser() && (isset($changeData['userId']) || $datesChanged)) {
+                            $this->conflictService->checkAndResolveConflicts($affectation);
                         }
 
                         $processed++;
@@ -1079,19 +1303,24 @@ class PlanningAssignmentApiController extends AbstractController
             return $this->json(['error' => 'Missing year or month'], 400);
         }
 
-        // Get all draft affectations for this month
-        $affectations = $this->affectationRepository->createQueryBuilder('a')
+        // Get affectations to validate (draft and conflicts)
+        $affectationsToValidate = $this->affectationRepository->createQueryBuilder('a')
             ->innerJoin('a.planningMois', 'p')
             ->where('p.annee = :year')
             ->andWhere('p.mois = :month')
-            ->andWhere('a.statut = :draft')
+            ->andWhere('a.statut IN (:statuses)')
             ->setParameter('year', $year)
             ->setParameter('month', $month)
-            ->setParameter('draft', Affectation::STATUS_DRAFT)
+            ->setParameter('statuses', [
+                Affectation::STATUS_DRAFT,
+                Affectation::STATUS_TO_REPLACE_ABSENCE,
+                Affectation::STATUS_TO_REPLACE_RDV,
+                Affectation::STATUS_TO_REPLACE_SCHEDULE_CONFLICT
+            ])
             ->getQuery()
             ->getResult();
 
-        if (empty($affectations)) {
+        if (empty($affectationsToValidate)) {
             return $this->json([
                 'success' => true,
                 'validated' => 0,
@@ -1099,12 +1328,50 @@ class PlanningAssignmentApiController extends AbstractController
             ]);
         }
 
-        // Validate all affectations
+        // Get ALL affectations for the month (including validated) for schedule conflict detection
+        // This ensures we detect conflicts between draft and already validated affectations
+        $allAffectations = $this->affectationRepository->createQueryBuilder('a')
+            ->innerJoin('a.planningMois', 'p')
+            ->where('p.annee = :year')
+            ->andWhere('p.mois = :month')
+            ->setParameter('year', $year)
+            ->setParameter('month', $month)
+            ->getQuery()
+            ->getResult();
+
+        // STEP 1: Check for schedule conflicts (same user on multiple villas at same time)
+        $scheduleConflicts = $this->detectScheduleConflicts($allAffectations);
+
+        // Validate affectations (only those to validate, not already validated ones)
         $validated = 0;
         $warnings = [];
+        $errors = [];
 
-        foreach ($affectations as $affectation) {
-            // Check if affectation has a user assigned
+        foreach ($affectationsToValidate as $affectation) {
+            // 1. D'ABORD vérifier le conflit horaire (déjà marqué par detectScheduleConflicts)
+            // On vérifie AVANT checkAndResolveConflicts pour ne pas écraser le statut
+            if ($affectation->getStatut() === Affectation::STATUS_TO_REPLACE_SCHEDULE_CONFLICT) {
+                $errors[] = $this->buildScheduleConflictError($affectation, $scheduleConflicts);
+                continue; // Skip validation for this affectation
+            }
+
+            // 2. ENSUITE re-vérifier les conflits absences/RDV (uniquement si pas de conflit horaire)
+            // This handles cases where absences/RDVs were deleted or modified after marking
+            $this->conflictService->checkAndResolveConflicts($affectation);
+
+            // 3. Vérifier absence (BLOCKING)
+            if ($affectation->getStatut() === Affectation::STATUS_TO_REPLACE_ABSENCE) {
+                $errors[] = $this->buildAbsenceConflictError($affectation);
+                continue; // Skip validation for this affectation
+            }
+
+            // 4. Vérifier RDV (BLOCKING)
+            if ($affectation->getStatut() === Affectation::STATUS_TO_REPLACE_RDV) {
+                $errors[] = $this->buildRdvConflictError($affectation);
+                continue; // Skip validation for this affectation
+            }
+
+            // Check if affectation has a user assigned (WARNING only)
             if (!$affectation->getUser()) {
                 $warnings[] = [
                     'type' => 'unassigned',
@@ -1119,11 +1386,28 @@ class PlanningAssignmentApiController extends AbstractController
                 ];
             }
 
-            // Change status to validated
-            $affectation->setStatut(Affectation::STATUS_VALIDATED);
-            $validated++;
+            // Validate only if status is DRAFT
+            if ($affectation->getStatut() === Affectation::STATUS_DRAFT) {
+                $affectation->setStatut(Affectation::STATUS_VALIDATED);
+                $validated++;
+            }
         }
 
+        // If there are blocking errors, don't save and return error response
+        if (!empty($errors)) {
+            return $this->json([
+                'success' => false,
+                'validated' => 0,
+                'errors' => $errors,
+                'warnings' => $warnings,
+                'message' => sprintf(
+                    'Validation impossible: %d conflit(s) détecté(s). Veuillez réaffecter les gardes concernées.',
+                    count($errors)
+                )
+            ], 400);
+        }
+
+        // Save only if no errors
         $this->em->flush();
 
         return $this->json([
@@ -1133,4 +1417,241 @@ class PlanningAssignmentApiController extends AbstractController
             'message' => sprintf('%d affectation(s) validée(s)', $validated)
         ]);
     }
+
+    /**
+     * Detect schedule conflicts (same user on multiple affectations at same time)
+     * Returns array of conflicting affectation IDs grouped by user
+     */
+    private function detectScheduleConflicts(array $affectations): array
+    {
+        $conflicts = [];
+
+        // Group affectations by user
+        $byUser = [];
+        foreach ($affectations as $aff) {
+            if (!$aff->getUser()) continue;
+
+            $userId = $aff->getUser()->getId();
+            if (!isset($byUser[$userId])) {
+                $byUser[$userId] = [];
+            }
+            $byUser[$userId][] = $aff;
+        }
+
+        // Check for overlaps within each user's affectations
+        foreach ($byUser as $userId => $userAffectations) {
+            for ($i = 0; $i < count($userAffectations); $i++) {
+                for ($j = $i + 1; $j < count($userAffectations); $j++) {
+                    $aff1 = $userAffectations[$i];
+                    $aff2 = $userAffectations[$j];
+
+                    // Check if they overlap
+                    if ($this->affectationsOverlap($aff1, $aff2)) {
+                        // Mark both as conflicting
+                        $aff1->setStatut(Affectation::STATUS_TO_REPLACE_SCHEDULE_CONFLICT);
+                        $aff2->setStatut(Affectation::STATUS_TO_REPLACE_SCHEDULE_CONFLICT);
+
+                        // Store conflict info
+                        if (!isset($conflicts[$aff1->getId()])) {
+                            $conflicts[$aff1->getId()] = [];
+                        }
+                        if (!isset($conflicts[$aff2->getId()])) {
+                            $conflicts[$aff2->getId()] = [];
+                        }
+
+                        $conflicts[$aff1->getId()][] = $aff2;
+                        $conflicts[$aff2->getId()][] = $aff1;
+                    }
+                }
+            }
+        }
+
+        return $conflicts;
+    }
+
+    /**
+     * Check if two affectations overlap in time
+     */
+    private function affectationsOverlap(Affectation $aff1, Affectation $aff2): bool
+    {
+        $start1 = $aff1->getStartAt();
+        $end1 = $aff1->getEndAt();
+        $start2 = $aff2->getStartAt();
+        $end2 = $aff2->getEndAt();
+
+        if (!$start1 || !$end1 || !$start2 || !$end2) {
+            return false;
+        }
+
+        // Two periods overlap if: start1 < end2 AND start2 < end1
+        return $start1 < $end2 && $start2 < $end1;
+    }
+
+    /**
+     * Build detailed error message for schedule conflict
+     */
+    private function buildScheduleConflictError(Affectation $affectation, array $scheduleConflicts): array
+    {
+        $userName = $affectation->getUser()?->getFullName() ?? 'Éducateur';
+        $villa1Name = $affectation->getVilla()?->getNom() ?? 'Villa inconnue';
+
+        // Get the conflicting affectation(s)
+        $conflictingAffectations = $scheduleConflicts[$affectation->getId()] ?? [];
+
+        if (!empty($conflictingAffectations)) {
+            $conflictingAff = $conflictingAffectations[0]; // Take first conflict
+            $villa2Name = $conflictingAff->getVilla()?->getNom() ?? 'Villa inconnue';
+
+            $message = sprintf(
+                '%s ne peut pas assurer cette garde (%s). Déjà affecté(e) simultanément sur %s du %s au %s',
+                $userName,
+                $villa1Name,
+                $villa2Name,
+                $conflictingAff->getStartAt()?->format('d/m/Y H:i') ?? '?',
+                $conflictingAff->getEndAt()?->format('d/m/Y H:i') ?? '?'
+            );
+        } else {
+            $message = sprintf(
+                '%s ne peut pas assurer cette garde (%s). Conflit d\'horaire détecté avec une autre affectation.',
+                $userName,
+                $villa1Name
+            );
+        }
+
+        return [
+            'type' => 'schedule_conflict',
+            'severity' => 'error',
+            'message' => $message,
+            'affectationId' => $affectation->getId(),
+            'userId' => $affectation->getUser()?->getId()
+        ];
+    }
+
+    /**
+     * Build detailed error message for absence conflict
+     */
+    private function buildAbsenceConflictError(Affectation $affectation): array
+    {
+        // Retrieve the absence causing the conflict
+        $absence = $this->absenceRepository->createQueryBuilder('a')
+            ->where('a.user = :user')
+            ->andWhere('a.status = :status')
+            ->andWhere('a.startAt <= :end')
+            ->andWhere('a.endAt >= :start')
+            ->setParameter('user', $affectation->getUser())
+            ->setParameter('status', Absence::STATUS_APPROVED)
+            ->setParameter('start', $affectation->getStartAt())
+            ->setParameter('end', $affectation->getEndAt())
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        $userName = $affectation->getUser()?->getFullName() ?? 'Éducateur';
+        $villaName = $affectation->getVilla()?->getNom() ?? 'Villa inconnue';
+
+        if ($absence) {
+            $absenceType = $absence->getAbsenceType()?->getLabel() ?? 'Absence';
+            $startDate = $absence->getStartAt()?->format('d/m/Y') ?? '?';
+            $endDate = $absence->getEndAt()?->format('d/m/Y') ?? '?';
+
+            $message = sprintf(
+                '%s ne peut pas assurer cette garde (%s). %s du %s au %s',
+                $userName,
+                $villaName,
+                $absenceType,
+                $startDate,
+                $endDate
+            );
+        } else {
+            $message = sprintf(
+                '%s ne peut pas assurer cette garde (%s). Conflit d\'absence détecté.',
+                $userName,
+                $villaName
+            );
+        }
+
+        return [
+            'type' => 'absence_conflict',
+            'severity' => 'error',
+            'message' => $message,
+            'affectationId' => $affectation->getId(),
+            'userId' => $affectation->getUser()?->getId(),
+            'absenceId' => $absence?->getId()
+        ];
+    }
+
+    /**
+     * Build detailed error message for RDV conflict
+     */
+    private function buildRdvConflictError(Affectation $affectation): array
+    {
+        // Retrieve the RDV causing the conflict
+        $rdv = $this->rendezVousRepository->createQueryBuilder('r')
+            ->join('r.participants', 'p')
+            ->where('p.id = :userId')
+            ->andWhere('r.impactGarde = :impact')
+            ->andWhere('r.startAt <= :end')
+            ->andWhere('r.endAt >= :start')
+            ->andWhere('r.statut != :cancelled')
+            ->setParameter('userId', $affectation->getUser()->getId())
+            ->setParameter('impact', true)
+            ->setParameter('start', $affectation->getStartAt())
+            ->setParameter('end', $affectation->getEndAt())
+            ->setParameter('cancelled', RendezVous::STATUS_CANCELLED)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        $userName = $affectation->getUser()?->getFullName() ?? 'Éducateur';
+        $villaName = $affectation->getVilla()?->getNom() ?? 'Villa inconnue';
+
+        if ($rdv) {
+            $rdvTitle = $rdv->getTitle() ?? 'Rendez-vous';
+            $rdvDate = $rdv->getStartAt()?->format('d/m/Y à H:i') ?? '?';
+
+            $message = sprintf(
+                '%s ne peut pas assurer cette garde (%s). Rendez-vous prévu: "%s" le %s',
+                $userName,
+                $villaName,
+                $rdvTitle,
+                $rdvDate
+            );
+        } else {
+            $message = sprintf(
+                '%s ne peut pas assurer cette garde (%s). Conflit de rendez-vous détecté.',
+                $userName,
+                $villaName
+            );
+        }
+
+        return [
+            'type' => 'rdv_conflict',
+            'severity' => 'error',
+            'message' => $message,
+            'affectationId' => $affectation->getId(),
+            'userId' => $affectation->getUser()?->getId(),
+            'rdvId' => $rdv?->getId()
+        ];
+    }
+
+    /**
+     * Reset affectation status to draft if it was validated or to_replace
+     * This ensures modified affectations are re-validated through monthly validation
+     */
+    private function resetStatusIfNeeded(Affectation $affectation): void
+    {
+        $currentStatus = $affectation->getStatut();
+
+        $statusesToReset = [
+            Affectation::STATUS_VALIDATED,
+            Affectation::STATUS_TO_REPLACE_ABSENCE,
+            Affectation::STATUS_TO_REPLACE_RDV,
+            Affectation::STATUS_TO_REPLACE_SCHEDULE_CONFLICT
+        ];
+
+        if (in_array($currentStatus, $statusesToReset)) {
+            $affectation->setStatut(Affectation::STATUS_DRAFT);
+        }
+    }
+
 }

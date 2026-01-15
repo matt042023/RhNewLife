@@ -18,6 +18,7 @@ class Affectation
     public const STATUS_VALIDATED = 'validated';
     public const STATUS_TO_REPLACE_ABSENCE = 'to_replace_absence';
     public const STATUS_TO_REPLACE_RDV = 'to_replace_rdv';
+    public const STATUS_TO_REPLACE_SCHEDULE_CONFLICT = 'to_replace_schedule_conflict';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

@@ -22,6 +22,9 @@ class PlanningAssignmentService
      */
     public function assignUserToAffectation(Affectation $affectation, User $user): array
     {
+        // Si l'affectation est validée ou à remplacer, la repasser en brouillon
+        $this->resetStatusIfNeeded($affectation);
+
         // Affecter l'éducateur
         $affectation->setUser($user);
 
@@ -46,6 +49,9 @@ class PlanningAssignmentService
      */
     public function updateAffectationHours(Affectation $affectation, \DateTime $start, \DateTime $end): void
     {
+        // Si l'affectation est validée ou à remplacer, la repasser en brouillon
+        $this->resetStatusIfNeeded($affectation);
+
         $affectation->setStartAt($start);
         $affectation->setEndAt($end);
 
@@ -154,5 +160,26 @@ class PlanningAssignmentService
         }
 
         return ($end->getTimestamp() - $start->getTimestamp()) / 3600;
+    }
+
+    /**
+     * Reset affectation status to draft if it was validated or to_replace
+     * This ensures modified affectations are re-validated through monthly validation
+     */
+    private function resetStatusIfNeeded(Affectation $affectation): void
+    {
+        $currentStatus = $affectation->getStatut();
+
+        // Si l'affectation est validée ou à remplacer, la repasser en brouillon
+        $statusesToReset = [
+            Affectation::STATUS_VALIDATED,
+            Affectation::STATUS_TO_REPLACE_ABSENCE,
+            Affectation::STATUS_TO_REPLACE_RDV,
+            Affectation::STATUS_TO_REPLACE_SCHEDULE_CONFLICT
+        ];
+
+        if (in_array($currentStatus, $statusesToReset)) {
+            $affectation->setStatut(Affectation::STATUS_DRAFT);
+        }
     }
 }
