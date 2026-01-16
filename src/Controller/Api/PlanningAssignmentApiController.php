@@ -776,6 +776,145 @@ class PlanningAssignmentApiController extends AbstractController
     }
 
     /**
+     * Get planning data for the current user (educator dashboard)
+     * GET /api/planning-assignment/my-planning/{year}/{month}
+     *
+     * Returns only validated affectations for the authenticated user,
+     * their approved absences, and their rendez-vous.
+     */
+    #[Route('/my-planning/{year}/{month}', methods: ['GET'])]
+    #[IsGranted('ROLE_USER')]
+    public function getMyPlanning(int $year, int $month, Request $request): JsonResponse
+    {
+        /** @var \App\Entity\User $user */
+        $user = $this->getUser();
+
+        if (!$user) {
+            return $this->json(['error' => 'User not authenticated'], 401);
+        }
+
+        // Validate month
+        if ($month < 1 || $month > 12) {
+            return $this->json(['error' => 'Invalid month'], 400);
+        }
+
+        // Get month boundaries
+        $startDate = new \DateTime("$year-$month-01");
+        $endDate = (clone $startDate)->modify('last day of this month')->setTime(23, 59, 59);
+
+        // 1. Get user's validated affectations for this month
+        $affectations = $this->affectationRepository->createQueryBuilder('a')
+            ->innerJoin('a.planningMois', 'p')
+            ->leftJoin('a.villa', 'v')
+            ->addSelect('v')
+            ->where('a.user = :user')
+            ->andWhere('p.annee = :year')
+            ->andWhere('p.mois = :month')
+            ->andWhere('a.statut = :statut')
+            ->setParameter('user', $user)
+            ->setParameter('year', $year)
+            ->setParameter('month', $month)
+            ->setParameter('statut', Affectation::STATUS_VALIDATED)
+            ->orderBy('a.startAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $planningsData = [];
+        foreach ($affectations as $affectation) {
+            $villa = $affectation->getVilla();
+
+            $planningsData[] = [
+                'id' => $affectation->getId(),
+                'startAt' => $affectation->getStartAt()?->format('c'),
+                'endAt' => $affectation->getEndAt()?->format('c'),
+                'type' => $affectation->getType(),
+                'joursTravailes' => $affectation->getJoursTravailes(),
+                'user' => [
+                    'id' => $user->getId(),
+                    'fullName' => $user->getFullName(),
+                    'color' => $user->getColor()
+                ],
+                'villa' => [
+                    'id' => $villa?->getId(),
+                    'nom' => $villa?->getNom(),
+                    'color' => $villa?->getColor()
+                ],
+                'statut' => $affectation->getStatut(),
+                'commentaire' => $affectation->getCommentaire()
+            ];
+        }
+
+        // 2. Get user's approved absences for this month
+        $absences = $this->absenceRepository->createQueryBuilder('a')
+            ->where('a.user = :user')
+            ->andWhere('a.status = :status')
+            ->andWhere('a.startAt <= :endDate')
+            ->andWhere('a.endAt >= :startDate')
+            ->setParameter('user', $user)
+            ->setParameter('status', Absence::STATUS_APPROVED)
+            ->setParameter('startDate', $startDate->format('Y-m-d'))
+            ->setParameter('endDate', $endDate->format('Y-m-d'))
+            ->getQuery()
+            ->getResult();
+
+        $absencesData = [];
+        foreach ($absences as $absence) {
+            $absencesData[] = [
+                'id' => $absence->getId(),
+                'user' => [
+                    'id' => $user->getId(),
+                    'fullName' => $user->getFullName()
+                ],
+                'absenceType' => [
+                    'code' => $absence->getAbsenceType()?->getCode(),
+                    'label' => $absence->getAbsenceType()?->getLabel()
+                ],
+                'startAt' => $absence->getStartAt()?->format('Y-m-d'),
+                'endAt' => $absence->getEndAt()?->format('Y-m-d')
+            ];
+        }
+
+        // 3. Get user's rendez-vous for this month
+        $rdvs = $this->rendezVousRepository->createQueryBuilder('r')
+            ->innerJoin('r.participants', 'rp')
+            ->where('rp.user = :user')
+            ->andWhere('r.startAt <= :endDate')
+            ->andWhere('r.endAt >= :startDate')
+            ->andWhere('r.statut != :cancelled')
+            ->setParameter('user', $user)
+            ->setParameter('startDate', $startDate->format('Y-m-d H:i:s'))
+            ->setParameter('endDate', $endDate->format('Y-m-d H:i:s'))
+            ->setParameter('cancelled', RendezVous::STATUS_CANCELLED)
+            ->getQuery()
+            ->getResult();
+
+        $rdvsData = [];
+        foreach ($rdvs as $rdv) {
+            $participants = [];
+            foreach ($rdv->getParticipants() as $participant) {
+                $participants[] = [
+                    'id' => $participant->getUser()->getId(),
+                    'fullName' => $participant->getUser()->getFullName()
+                ];
+            }
+
+            $rdvsData[] = [
+                'id' => $rdv->getId(),
+                'title' => $rdv->getTitre(),
+                'startAt' => $rdv->getStartAt()->format('c'),
+                'endAt' => $rdv->getEndAt()->format('c'),
+                'participants' => $participants
+            ];
+        }
+
+        return $this->json([
+            'plannings' => $planningsData,
+            'absences' => $absencesData,
+            'rendezvous' => $rdvsData
+        ]);
+    }
+
+    /**
      * Create a new affectation
      * POST /api/planning-assignment/create
      */

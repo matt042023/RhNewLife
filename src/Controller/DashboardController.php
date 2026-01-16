@@ -51,9 +51,14 @@ class DashboardController extends AbstractController
         $currentYear = (int) date('Y');
         $counters = $counterService->getUserCounters($user, $currentYear);
 
+        // Current date for planning widget
+        $now = new \DateTime();
+
         return $this->render('dashboard/employee.html.twig', [
             'user' => $user,
             'counters' => $counters,
+            'currentYear' => (int) $now->format('Y'),
+            'currentMonth' => (int) $now->format('m'),
         ]);
     }
 
@@ -77,9 +82,14 @@ class DashboardController extends AbstractController
             'status' => Absence::STATUS_PENDING
         ], ['createdAt' => 'DESC'], 10);
 
+        // Current date for planning widget
+        $now = new \DateTime();
+
         return $this->render('dashboard/admin.html.twig', [
             'user' => $user,
             'pendingAbsences' => $pendingAbsences,
+            'currentYear' => (int) $now->format('Y'),
+            'currentMonth' => (int) $now->format('m'),
         ]);
     }
 }
