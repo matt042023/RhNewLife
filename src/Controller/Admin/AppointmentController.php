@@ -103,8 +103,7 @@ class AppointmentController extends AbstractController
                     durationMinutes: $appointment->getDurationMinutes(),
                     participants: $participants->toArray(),
                     description: $appointment->getDescription(),
-                    location: $appointment->getLocation(),
-                    createsAbsence: $appointment->isCreatesAbsence()
+                    location: $appointment->getLocation()
                 );
 
                 $this->addFlash('success', 'La convocation a été créée avec succès.');
@@ -159,8 +158,7 @@ class AppointmentController extends AbstractController
                     durationMinutes: $appointment->getDurationMinutes(),
                     participants: [$participant],
                     description: $appointment->getDescription(),
-                    location: $appointment->getLocation(),
-                    createsAbsence: false
+                    location: $appointment->getLocation()
                 );
 
                 // Update type to VISITE_MEDICALE
@@ -243,8 +241,7 @@ class AppointmentController extends AbstractController
                     validator: $user,
                     scheduledAt: $data['scheduledAt'],
                     durationMinutes: $data['durationMinutes'],
-                    location: $data['location'] ?? null,
-                    createsAbsence: $data['createsAbsence'] ?? false
+                    location: $data['location'] ?? null
                 );
 
                 $this->addFlash('success', 'La demande a été validée avec succès.');

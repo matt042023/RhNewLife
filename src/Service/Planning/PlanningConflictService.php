@@ -65,8 +65,15 @@ class PlanningConflictService
         } else {
             // If no conflicts, ensure status is valid (or revert to draft/validated)
             // This logic depends on whether we want to auto-validate or just clear the error flag.
-            // For now, if it was flagged, we might want to reset it.
-            if (in_array($affectation->getStatut(), [Affectation::STATUS_TO_REPLACE_ABSENCE, Affectation::STATUS_TO_REPLACE_RDV])) {
+            $currentStatus = $affectation->getStatut();
+
+            // Ne pas écraser le statut si c'est un conflit horaire (géré par detectScheduleConflicts)
+            if ($currentStatus === Affectation::STATUS_TO_REPLACE_SCHEDULE_CONFLICT) {
+                return; // Préserver le statut conflit horaire
+            }
+
+            // For now, if it was flagged absence/rdv, we reset it.
+            if (in_array($currentStatus, [Affectation::STATUS_TO_REPLACE_ABSENCE, Affectation::STATUS_TO_REPLACE_RDV])) {
                 $affectation->setStatut(Affectation::STATUS_DRAFT); // Reset to draft
             }
         }

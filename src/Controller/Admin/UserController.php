@@ -132,6 +132,12 @@ class UserController extends AbstractController
                         }
                     }
 
+                    // Ajouter la couleur
+                    $color = $request->request->get('color');
+                    if ($color) {
+                        $data['color'] = $color;
+                    }
+
                     $user = $this->userManager->createManualUser($data, $sendInvitation);
 
                     $this->addFlash('success', sprintf(
@@ -258,6 +264,12 @@ class UserController extends AbstractController
                     $data['villa'] = $villa;
                 } else {
                     $data['villa'] = null;
+                }
+
+                // Ajouter la couleur
+                $color = $request->request->get('color');
+                if ($color) {
+                    $data['color'] = $color;
                 }
 
                 $this->userManager->updateUserProfile($user, $data);

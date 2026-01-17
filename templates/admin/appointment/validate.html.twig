@@ -100,22 +100,6 @@
             {{ form_errors(form.location) }}
         </div>
 
-        {# Créer absence automatique #}
-        <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <div class="flex items-start">
-                <div class="flex items-center h-5">
-                    {{ form_widget(form.createsAbsence) }}
-                </div>
-                <div class="ml-3 text-sm">
-                    {{ form_label(form.createsAbsence, null, {'label_attr': {'class': 'font-medium text-gray-700 dark:text-gray-300'}}) }}
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {{ form_help(form.createsAbsence) }}
-                    </p>
-                </div>
-            </div>
-            {{ form_errors(form.createsAbsence) }}
-        </div>
-
         {# Commentaire admin #}
         <div class="mb-6">
             {{ form_label(form.adminComment, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'}}) }}

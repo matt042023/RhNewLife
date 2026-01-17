@@ -16,6 +16,11 @@
 {% endblock %}
 
 {% block admin_content %}
+<script>
+    // Make villas list available globally for the Stimulus controller
+    window.villasList = {{ villas|map(v => {id: v.id, nom: v.nom})|json_encode|raw }};
+</script>
+
 <div data-controller="squelette-builder"
      data-squelette-builder-squelette-id-value="{{ squelette ? squelette.id : 0 }}"
      data-squelette-builder-is-edit-value="{{ isEdit ? 'true' : 'false' }}">
@@ -56,23 +61,12 @@
 
                 {# Créneaux de garde #}
                 <div>
-                    <h3 class="font-semibold text-gray-900 mb-2">Créneaux de garde</h3>
-                    <div class="flex flex-col gap-2 mb-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-semibold text-gray-900">Créneaux de garde</h3>
                         <button type="button"
-                                data-action="click->squelette-builder#addGarde24h"
-                                class="px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
-                            Garde 24h (1 jour)
-                        </button>
-                        <button type="button"
-                                data-action="click->squelette-builder#addGarde48h"
-                                class="px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
-                            Garde 48h (2 jours)
+                                data-action="click->squelette-builder#addGarde"
+                                class="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded">
+                            + Ajouter
                         </button>
                     </div>
                     <div data-squelette-builder-target="gardeList" class="space-y-2">

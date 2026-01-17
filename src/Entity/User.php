@@ -93,6 +93,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $hiringDate = null;
 
+    #[ORM\Column(length: 7, nullable: true)]
+    private ?string $color = null;
+
     /**
      * @var Collection<int, Document>
      */
@@ -669,6 +672,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isOnCall(): bool
     {
         return $this->getCurrentAstreinte() !== null;
+    }
+
+    public function getColor(): ?string
+    {
+        return $this->color;
+    }
+
+    public function setColor(?string $color): self
+    {
+        $this->color = $color;
+        return $this;
     }
 
     #[\Deprecated]

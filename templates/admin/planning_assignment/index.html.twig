@@ -1,0 +1,459 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Affectation des Gardes{% endblock %}
+
+{% block admin_title %}Affectation des Gardes{% endblock %}
+{% block admin_subtitle %}Assignation des éducateurs aux créneaux de garde{% endblock %}
+
+{% block admin_content %}
+<div data-controller="planning-assignment"
+     data-planning-assignment-current-year-value="{{ currentYear }}"
+     data-planning-assignment-current-month-value="{{ currentMonth }}">
+
+    {# Action buttons inside Stimulus controller scope #}
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-800">Planning du mois</h2>
+            <div class="flex space-x-2">
+                <button data-action="click->planning-assignment#openGenerateModal"
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-150">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Générer un squelette
+                </button>
+
+                {# 🆕 Bouton Sauvegarder #}
+                <button data-action="click->planning-assignment#manualSave"
+                        data-planning-assignment-target="saveButton"
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition duration-150">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                    </svg>
+                    Sauvegarder
+                </button>
+
+                {# 🆕 Bouton Supprimer toutes gardes non validées #}
+                <button data-action="click->planning-assignment#openBulkDeleteModal"
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition duration-150">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Nettoyer brouillon
+                </button>
+
+                <button data-action="click->planning-assignment#validatePlanning"
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-150">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Valider le planning
+                </button>
+            </div>
+        </div>
+
+        {# 🆕 Indicateur modifications non sauvegardées #}
+        <div id="unsaved-indicator" class="hidden mt-3 px-4 py-2 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg text-sm flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <span>0 modifications non sauvegardées</span>
+        </div>
+    </div>
+
+    {# Month Selector #}
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <label class="text-sm font-medium text-gray-700">Période :</label>
+                <select data-planning-assignment-target="monthSelector"
+                        data-action="change->planning-assignment#loadMonth"
+                        class="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    {% for month in 1..12 %}
+                        <option value="{{ currentYear }}-{{ '%02d'|format(month) }}"
+                                {% if month == currentMonth %}selected{% endif %}>
+                            {{ ('month.' ~ month)|trans }} {{ currentYear }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="text-sm text-gray-500">
+                <span class="font-medium">Légende :</span>
+                <span class="inline-block ml-2 px-2 py-1 bg-gray-100 rounded">Fond = Éducateur</span>
+                <span class="inline-block ml-2 px-2 py-1 bg-gray-100 rounded">
+                    Bordure : Villa (gardes) | Grise (renfort centre-complet)
+                </span>
+                <span class="inline-block ml-2 px-2 py-1 rounded text-white" style="background: #F59E0B;">
+                    🔧 RENFORT
+                </span>
+                <span class="inline-block ml-2 px-2 py-1 bg-gray-100 rounded">
+                    Statuts :
+                    <span class="inline-block px-1.5 py-0.5 ml-1 rounded text-white" style="background: #9CA3AF;">📝 Brouillon</span>
+                    <span class="inline-block px-1.5 py-0.5 ml-1 rounded text-white" style="background: #10B981;">✓ Validé</span>
+                    <span class="inline-block px-1.5 py-0.5 ml-1 rounded text-white" style="background: #F59E0B;">⚠ À remplacer</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {# Main Layout: Sidebar + Calendar #}
+    <div class="grid grid-cols-12 gap-6">
+        {# Educators Sidebar (col-3) #}
+        <div class="col-span-3">
+            <div class="bg-white rounded-lg shadow-sm p-4 sticky top-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    Éducateurs
+                </h3>
+
+                <div data-planning-assignment-target="usersSidebar" class="space-y-2">
+                    {% include 'admin/planning_assignment/_users_sidebar.html.twig' %}
+                </div>
+            </div>
+        </div>
+
+        {# FullCalendar (col-9) #}
+        <div class="col-span-9">
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div data-planning-assignment-target="calendar"></div>
+            </div>
+        </div>
+    </div>
+
+    {# Generate Modal #}
+    {% include 'admin/planning_assignment/_generate_modal.html.twig' %}
+
+    {# Jour Chômé Modal #}
+    {% include 'admin/planning_assignment/_jour_chome_modal.html.twig' %}
+
+    {# Details Modal for Absence/RDV #}
+    <div id="details-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-start mb-4">
+                <h3 id="details-modal-title" class="text-xl font-semibold text-gray-900"></h3>
+                <button data-action="click->planning-assignment#closeDetailsModal"
+                        type="button"
+                        class="text-gray-400 hover:text-gray-600 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="details-modal-content" class="text-gray-700 space-y-3">
+                {# Content will be dynamically populated #}
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button data-action="click->planning-assignment#closeDetailsModal"
+                        type="button"
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {# FullCalendar will be loaded via Stimulus controller #}
+    <style>
+        .fc-event {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s ease !important;
+            cursor: pointer;
+            z-index: 3 !important; /* Gardes/affectations au premier plan par défaut */
+        }
+
+        .fc-event:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 10 !important; /* Elevé au survol */
+        }
+
+        .fc-event.drag-hover {
+            transform: scale(1.08) !important;
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.7), 0 0 0 4px rgba(59, 130, 246, 0.3) !important;
+            border-style: solid !important;
+            z-index: 100 !important;
+            opacity: 1 !important;
+        }
+
+        /* Sidebar card dragging state */
+        .educateur-card.dragging {
+            opacity: 0.4;
+            border: 2px dashed #3B82F6 !important;
+            transform: scale(0.95);
+        }
+
+        /* Style for the day being hovered by FC default */
+        .fc-day-highlight {
+            background-color: rgba(59, 130, 246, 0.03) !important;
+        }
+
+        /* Custom event content styling */
+        .fc-event-main-custom {
+            padding: 4px 6px;
+            overflow: hidden;
+        }
+
+        .fc-event .fc-event-main {
+            padding: 0 !important;
+        }
+
+        /* Improve readability on small events */
+        .fc-daygrid-event {
+            padding: 2px 4px !important;
+        }
+
+        /* Absence events - rendered as regular events but with lower z-index (background layer) */
+        .fc-event-absence {
+            cursor: pointer !important;
+            opacity: 0.7 !important;
+            border-width: 2px !important;
+            border-style: solid !important;
+            z-index: 1 !important; /* Behind gardes (z-index: 3) and RDVs (z-index: 3) */
+        }
+
+        .fc-event-absence:hover {
+            opacity: 0.85 !important;
+            z-index: 2 !important; /* Slightly raised on hover but still below gardes/RDVs */
+        }
+
+        /* Congé event (CP, RTT, CPSS) - red striped pattern */
+        .fc-event-absence.conge-overlay {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(239, 68, 68, 0.8),
+                rgba(239, 68, 68, 0.8) 10px,
+                rgba(220, 38, 38, 0.6) 10px,
+                rgba(220, 38, 38, 0.6) 20px
+            ) !important;
+            border-color: #DC2626 !important;
+            color: white !important;
+        }
+
+        /* Absence event (MAL, AT) - orange striped pattern */
+        .fc-event-absence.absence-overlay {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(251, 146, 60, 0.8),
+                rgba(251, 146, 60, 0.8) 10px,
+                rgba(234, 88, 12, 0.6) 10px,
+                rgba(234, 88, 12, 0.6) 20px
+            ) !important;
+            border-color: #EA580C !important;
+            color: white !important;
+        }
+
+        /* RDV event styling - same layer as gardes (above absences) */
+        .fc-event-rdv {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(245, 158, 11, 0.8),
+                rgba(245, 158, 11, 0.8) 10px,
+                rgba(245, 158, 11, 0.5) 10px,
+                rgba(245, 158, 11, 0.5) 20px
+            ) !important;
+            border: 2px solid #D97706 !important;
+            cursor: pointer !important;
+            opacity: 0.9 !important;
+            overflow: hidden !important;
+            z-index: 3 !important; /* Same z-index as gardes/affectations */
+        }
+
+        .fc-event-rdv:hover {
+            opacity: 1 !important;
+            z-index: 10 !important; /* Elevated on hover, same as gardes */
+        }
+
+        .fc-event-rdv .fc-event-main {
+            color: #78350F !important;
+            font-weight: 600;
+            overflow: hidden !important;
+        }
+
+        /* Custom RDV content container */
+        .fc-event-rdv-custom {
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .fc-event-rdv-custom > div {
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+        }
+
+        /* Astreinte background - hatched pattern with educator color */
+        .fc-bg-astreinte {
+            z-index: 0 !important; /* Below all events */
+            opacity: 0.1 !important;
+            pointer-events: none; /* Don't interfere with event interactions */
+        }
+
+        /* Loading indicator for calendar */
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .loading::after {
+            content: "Chargement...";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-weight: 600;
+            color: #3B82F6;
+            z-index: 1000;
+        }
+
+        /* Jour chômé (weekly day off) styling */
+        .fc-event-jour-chome {
+            background: linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%) !important;
+            border: 2px dashed #6B7280 !important;
+            color: #374151 !important;
+            opacity: 0.9 !important;
+            cursor: pointer !important;
+            z-index: 2 !important;
+        }
+
+        .fc-event-jour-chome:hover {
+            opacity: 1 !important;
+            background: linear-gradient(135deg, #D1D5DB 0%, #9CA3AF 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+            z-index: 10 !important;
+        }
+
+        .fc-event-jour-chome .fc-event-main {
+            font-weight: 600 !important;
+        }
+
+        /* ==========================================
+           JOUR CHÔMÉ MODAL CALENDAR STYLES
+           ========================================== */
+
+        #jourChomeCalendar {
+            background: white;
+        }
+
+        #jourChomeCalendar .fc-daygrid-day:not(.fc-day-other) {
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        #jourChomeCalendar .fc-daygrid-day:not(.fc-day-other):hover {
+            background-color: rgba(59, 130, 246, 0.08);
+        }
+
+        /* Jour chômé dans la modale - événement qui prend toute la cellule */
+        #jourChomeCalendar .fc-event-jour-chome-modal {
+            background: linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%) !important;
+            border: 3px dashed #6B7280 !important;
+            cursor: pointer !important;
+            border-radius: 8px !important;
+            margin: 2px !important;
+            min-height: 70px !important;
+        }
+
+        #jourChomeCalendar .fc-event-jour-chome-modal:hover {
+            background: linear-gradient(135deg, #D1D5DB 0%, #9CA3AF 100%) !important;
+            border-color: #4B5563 !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        #jourChomeCalendar .fc-event-jour-chome-modal .fc-event-main {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 100% !important;
+            font-size: 0.95rem !important;
+            font-weight: 600 !important;
+            color: #374151 !important;
+        }
+
+        /* Force les cellules à avoir une position relative */
+        #jourChomeCalendar .fc-daygrid-day-frame {
+            position: relative !important;
+            min-height: 85px !important;
+        }
+
+        /* Style des événements planning (gardes) dans la modale */
+        #jourChomeCalendar .fc-event:not(.fc-event-jour-chome-modal):not(.fc-event-absence) {
+            border-radius: 4px !important;
+            padding: 2px !important;
+            margin: 1px 2px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        /* Style des absences dans la modale */
+        #jourChomeCalendar .fc-event-absence {
+            border-radius: 4px !important;
+            margin: 1px 2px !important;
+        }
+
+        #jourChomeCalendar .fc-event-absence.conge-overlay {
+            background: repeating-linear-gradient(
+                45deg,
+                #EF4444,
+                #EF4444 3px,
+                #DC2626 3px,
+                #DC2626 6px
+            ) !important;
+            border: none !important;
+        }
+
+        #jourChomeCalendar .fc-event-absence.absence-overlay {
+            background: repeating-linear-gradient(
+                45deg,
+                #FB923C,
+                #FB923C 3px,
+                #EA580C 3px,
+                #EA580C 6px
+            ) !important;
+            border: none !important;
+        }
+
+        /* Améliorer la lisibilité des jours avec plusieurs événements */
+        #jourChomeCalendar .fc-daygrid-day-events {
+            min-height: 2em !important;
+        }
+
+        #jourChomeCalendar .fc-daygrid-more-link {
+            font-size: 0.7rem !important;
+            font-weight: 600 !important;
+            color: #6366F1 !important;
+        }
+
+        /* Style du header du calendrier */
+        #jourChomeCalendar .fc-col-header-cell {
+            background: #F3F4F6 !important;
+            font-weight: 600 !important;
+            color: #374151 !important;
+            padding: 8px 4px !important;
+        }
+
+        /* Jours du mois précédent/suivant plus discrets */
+        #jourChomeCalendar .fc-day-other {
+            background: #FAFAFA !important;
+        }
+
+        #jourChomeCalendar .fc-day-other .fc-daygrid-day-number {
+            opacity: 0.4 !important;
+        }
+    </style>
+{% endblock %}

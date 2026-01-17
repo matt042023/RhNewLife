@@ -33,7 +33,7 @@ class Villa
     /**
      * @var Collection<int, Contract>
      */
-    #[ORM\OneToMany(mappedBy: 'villa', targetEntity: Contract::class)]
+    #[ORM\OneToMany(mappedBy: 'villa', targetEntity: Contract::class, cascade: ['persist'])]
     private Collection $contracts;
 
     public function __construct()

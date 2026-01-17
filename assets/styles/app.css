@@ -1065,3 +1065,160 @@ body {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* ========================================
+   SYNC INDICATOR (Planning Cache)
+   ======================================== */
+
+.sync-indicator {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    display: none;
+    padding: 0.75rem 1.25rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-glass-lg);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-gray-700);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.sync-indicator.visible {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 1;
+    transform: translateY(0);
+    animation: slide-in-glass 0.3s ease-out;
+}
+
+.sync-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(59, 130, 246, 0.2);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.sync-check {
+    display: inline-block;
+    color: var(--color-success);
+    font-size: 1rem;
+}
+
+.dark .sync-indicator {
+    background: rgba(31, 41, 55, 0.95);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: var(--color-gray-200);
+}
+
+@keyframes spin-sync {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ========================================
+   FULLCALENDAR - ADAPTIVE HEIGHT FIX
+   ======================================== */
+
+/* Force calendar day cells to adapt to content height */
+.fc-daygrid-day-frame {
+    min-height: 120px !important;
+    height: auto !important;
+}
+
+.fc-daygrid-day-events {
+    margin-bottom: 0 !important;
+    min-height: auto !important;
+}
+
+/* Allow week rows to expand based on content */
+.fc-scrollgrid-section-body tr {
+    height: auto !important;
+}
+
+.fc-daygrid-body tr {
+    height: auto !important;
+}
+
+/* Ensure cells don't have fixed heights */
+.fc-daygrid-day {
+    height: auto !important;
+}
+
+.fc-day {
+    height: auto !important;
+}
+
+/* Fix for week rows with astreinte overlays */
+.fc-daygrid-body tbody tr[role="row"] {
+    min-height: 120px;
+    height: auto !important;
+}
+
+/* Force exactly 7 columns (Mon-Sun) and equal width */
+.fc-daygrid-body table {
+    table-layout: fixed !important;
+}
+
+.fc-daygrid-body td.fc-daygrid-day {
+    width: 14.28571% !important; /* 100% / 7 days */
+}
+
+/* Ensure grid alignment */
+.fc-scrollgrid-sync-table {
+    width: 100% !important;
+}
+
+.fc-col-header-cell {
+    width: 14.28571% !important;
+}
+
+/* ========================================
+   FULLCALENDAR - EVENT MARGINS
+   ======================================== */
+
+/* Margins for affectation events */
+.fc-daygrid-event {
+    margin-top: 10px !important;
+}
+
+.fc-event {
+    margin-top: 10px !important;
+}
+
+/* ========================================
+   FULLCALENDAR - CONTAINER OVERFLOW FIX
+   ======================================== */
+
+/* Ensure calendar container adapts to content height */
+.fc-view-harness {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+}
+
+.fc-view {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+/* Remove any fixed heights that cause overflow */
+.fc {
+    height: auto !important;
+}
+
+.fc-scrollgrid-sync-table {
+    height: auto !important;
+}

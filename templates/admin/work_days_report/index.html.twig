@@ -1,0 +1,241 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Rapport des jours travaillés{% endblock %}
+
+{% block admin_title %}Rapport des jours travaillés{% endblock %}
+{% block admin_subtitle %}Distinction entre gardes principales et renforts pour la paie{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    {# Period Selector #}
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <label class="text-sm font-medium text-gray-700">Période :</label>
+                <form method="GET" action="{{ path('admin_work_days_report') }}" class="flex items-center space-x-2">
+                    <select name="month" class="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        {% for m in 1..12 %}
+                            <option value="{{ m }}" {% if m == currentMonth %}selected{% endif %}>
+                                {{ ('month.' ~ m)|trans }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <select name="year" class="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        {% for y in (currentYear - 2)..(currentYear + 1) %}
+                            <option value="{{ y }}" {% if y == currentYear %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
+                        Afficher
+                    </button>
+                </form>
+            </div>
+
+            <div class="flex space-x-2">
+                <a href="{{ path('admin_work_days_report_csv', {year: currentYear, month: currentMonth}) }}"
+                   class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Exporter CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# Summary Cards #}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-100 rounded-lg p-3">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Gardes Principales</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ report.totals.gardes_principales_jours }} jours</p>
+                    <p class="text-xs text-gray-500">{{ report.totals.gardes_principales_heures }}h au total</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-green-100 rounded-lg p-3">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Renforts</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ report.totals.renforts_jours }} jours</p>
+                    <p class="text-xs text-gray-500">{{ report.totals.renforts_heures }}h au total</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
+                    <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ report.totals.total_jours }} jours</p>
+                    <p class="text-xs text-gray-500">{{ report.totals.total_heures }}h au total</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# User Details Table #}
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Détails par éducateur</h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Éducateur
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
+                            Gardes Principales
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
+                            Renforts
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-100">
+                            Total
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for userData in report.users %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ userData.fullName }}</div>
+                            <div class="text-xs text-gray-500">{{ userData.email }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center bg-blue-50">
+                            <div class="text-sm font-bold text-blue-900">{{ userData.gardes_principales.total_jours }} jours</div>
+                            <div class="text-xs text-blue-700">{{ userData.gardes_principales.total_heures }}h</div>
+                            <div class="text-xs text-blue-600">{{ userData.gardes_principales.affectations|length }} garde(s)</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center bg-green-50">
+                            <div class="text-sm font-bold text-green-900">{{ userData.renforts.total_jours }} jours</div>
+                            <div class="text-xs text-green-700">{{ userData.renforts.total_heures }}h</div>
+                            <div class="text-xs text-green-600">{{ userData.renforts.affectations|length }} renfort(s)</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center bg-gray-100">
+                            <div class="text-sm font-bold text-gray-900">{{ userData.total.jours }} jours</div>
+                            <div class="text-xs text-gray-700">{{ userData.total.heures }}h</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <button
+                                onclick="toggleDetails({{ userData.id }})"
+                                class="text-blue-600 hover:text-blue-900 text-xs font-medium">
+                                Détails
+                            </button>
+                        </td>
+                    </tr>
+                    <tr id="details-{{ userData.id }}" class="hidden bg-gray-50">
+                        <td colspan="5" class="px-6 py-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                {# Gardes Principales #}
+                                <div>
+                                    <h4 class="font-semibold text-sm text-blue-900 mb-2">Gardes Principales</h4>
+                                    {% if userData.gardes_principales.affectations is empty %}
+                                        <p class="text-xs text-gray-500 italic">Aucune garde principale</p>
+                                    {% else %}
+                                        <div class="space-y-1 text-xs">
+                                            {% for aff in userData.gardes_principales.affectations %}
+                                                <div class="flex justify-between border-b border-blue-100 pb-1">
+                                                    <span>
+                                                        {{ aff.start|date('d/m H:i') }} → {{ aff.end|date('d/m H:i') }}
+                                                        <span class="text-blue-600">({{ aff.villa }})</span>
+                                                    </span>
+                                                    <span class="font-medium">{{ aff.jours }}j / {{ aff.heures }}h</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                {# Renforts #}
+                                <div>
+                                    <h4 class="font-semibold text-sm text-green-900 mb-2">Renforts</h4>
+                                    {% if userData.renforts.affectations is empty %}
+                                        <p class="text-xs text-gray-500 italic">Aucun renfort</p>
+                                    {% else %}
+                                        <div class="space-y-1 text-xs">
+                                            {% for aff in userData.renforts.affectations %}
+                                                <div class="flex justify-between border-b border-green-100 pb-1">
+                                                    <span>
+                                                        {{ aff.start|date('d/m H:i') }} → {{ aff.end|date('d/m H:i') }}
+                                                        {% if aff.villa %}
+                                                            <span class="text-green-600">({{ aff.villa }})</span>
+                                                        {% else %}
+                                                            <span class="text-gray-600">(Centre-complet)</span>
+                                                        {% endif %}
+                                                    </span>
+                                                    <span class="font-medium">{{ aff.jours }}j / {{ aff.heures }}h</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="bg-gray-100 font-bold">
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-900">TOTAL</td>
+                        <td class="px-6 py-4 text-center bg-blue-100">
+                            <div class="text-sm text-blue-900">{{ report.totals.gardes_principales_jours }} jours</div>
+                            <div class="text-xs text-blue-700">{{ report.totals.gardes_principales_heures }}h</div>
+                        </td>
+                        <td class="px-6 py-4 text-center bg-green-100">
+                            <div class="text-sm text-green-900">{{ report.totals.renforts_jours }} jours</div>
+                            <div class="text-xs text-green-700">{{ report.totals.renforts_heures }}h</div>
+                        </td>
+                        <td class="px-6 py-4 text-center bg-gray-200">
+                            <div class="text-sm text-gray-900">{{ report.totals.total_jours }} jours</div>
+                            <div class="text-xs text-gray-700">{{ report.totals.total_heures }}h</div>
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    {# Legend #}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 class="font-semibold text-blue-900 mb-2">Informations</h4>
+        <ul class="text-sm text-blue-800 space-y-1">
+            <li>• <strong>Gardes Principales</strong> : Gardes 24h et 48h liées à une villa spécifique</li>
+            <li>• <strong>Renforts</strong> : Shifts de renfort (centre-complet ou villa-spécifique)</li>
+            <li>• Seules les affectations validées sont comptabilisées (statut: validé, à remplacer)</li>
+            <li>• Formule de calcul : ceil((heures - 3) / 24) pour heures ≥ 7, sinon 0</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+function toggleDetails(userId) {
+    const detailsRow = document.getElementById('details-' + userId);
+    detailsRow.classList.toggle('hidden');
+}
+</script>
+{% endblock %}

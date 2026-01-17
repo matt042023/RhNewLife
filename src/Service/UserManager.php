@@ -79,6 +79,9 @@ class UserManager
         if (isset($data['villa'])) {
             $user->setVilla($data['villa']);
         }
+        if (isset($data['color'])) {
+            $user->setColor($data['color']);
+        }
 
         // Health information initialization if provided
         $health = $user->getHealth();
@@ -166,6 +169,9 @@ class UserManager
         }
         if (array_key_exists('villa', $data)) {
             $user->setVilla($data['villa']);
+        }
+        if (isset($data['color'])) {
+            $user->setColor($data['color']);
         }
 
         // Health information update

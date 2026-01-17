@@ -18,6 +18,7 @@ class Affectation
     public const STATUS_VALIDATED = 'validated';
     public const STATUS_TO_REPLACE_ABSENCE = 'to_replace_absence';
     public const STATUS_TO_REPLACE_RDV = 'to_replace_rdv';
+    public const STATUS_TO_REPLACE_SCHEDULE_CONFLICT = 'to_replace_schedule_conflict';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -33,7 +34,7 @@ class Affectation
     private ?User $user = null;
 
     #[ORM\ManyToOne(inversedBy: 'affectations')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Villa $villa = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
@@ -53,6 +54,18 @@ class Affectation
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $commentaire = null;
+
+    #[ORM\Column(type: Types::INTEGER, nullable: true)]
+    private ?int $joursTravailes = null;
+
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $isSegmented = false;
+
+    #[ORM\Column(type: Types::INTEGER, nullable: true)]
+    private ?int $segmentNumber = null;
+
+    #[ORM\Column(type: Types::INTEGER, nullable: true)]
+    private ?int $totalSegments = null;
 
     public function getId(): ?int
     {
@@ -163,6 +176,54 @@ class Affectation
     public function setCommentaire(?string $commentaire): static
     {
         $this->commentaire = $commentaire;
+
+        return $this;
+    }
+
+    public function getJoursTravailes(): ?int
+    {
+        return $this->joursTravailes;
+    }
+
+    public function setJoursTravailes(?int $joursTravailes): static
+    {
+        $this->joursTravailes = $joursTravailes;
+
+        return $this;
+    }
+
+    public function getIsSegmented(): bool
+    {
+        return $this->isSegmented;
+    }
+
+    public function setIsSegmented(bool $isSegmented): static
+    {
+        $this->isSegmented = $isSegmented;
+
+        return $this;
+    }
+
+    public function getSegmentNumber(): ?int
+    {
+        return $this->segmentNumber;
+    }
+
+    public function setSegmentNumber(?int $segmentNumber): static
+    {
+        $this->segmentNumber = $segmentNumber;
+
+        return $this;
+    }
+
+    public function getTotalSegments(): ?int
+    {
+        return $this->totalSegments;
+    }
+
+    public function setTotalSegments(?int $totalSegments): static
+    {
+        $this->totalSegments = $totalSegments;
 
         return $this;
     }

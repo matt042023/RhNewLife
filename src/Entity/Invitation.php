@@ -36,6 +36,9 @@ class Invitation
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Villa $villa = null;
 
+    #[ORM\Column(length: 7, nullable: true)]
+    private ?string $color = null;
+
     #[ORM\Column(length: 64, unique: true)]
     private ?string $token = null;
 
@@ -140,6 +143,17 @@ class Invitation
     public function setVilla(?Villa $villa): static
     {
         $this->villa = $villa;
+        return $this;
+    }
+
+    public function getColor(): ?string
+    {
+        return $this->color;
+    }
+
+    public function setColor(?string $color): static
+    {
+        $this->color = $color;
         return $this;
     }
 

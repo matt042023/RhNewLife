@@ -2,21 +2,15 @@
 
 namespace App\DataFixtures;
 
-use App\Entity\Absence;
 use App\Entity\AppointmentParticipant;
 use App\Entity\RendezVous;
-use App\Entity\TypeAbsence;
 use App\Entity\User;
-use App\Repository\TypeAbsenceRepository;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 
 class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInterface
 {
-    public function __construct(
-        private TypeAbsenceRepository $typeAbsenceRepository
-    ) {}
 
     public function load(ObjectManager $manager): void
     {
@@ -28,9 +22,6 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         $admin = $this->getReference('admin', User::class);
         /** @var User $director */
         $director = $this->getReference('director', User::class);
-
-        // Récupérer type absence REUNION
-        $typeReunion = $this->typeAbsenceRepository->findOneBy(['code' => TypeAbsence::CODE_REUNION]);
 
         $totalAppointments = 0;
 
@@ -48,14 +39,14 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
 
         // B. Rendez-vous de groupe (4 au total)
 
-        // 1. Réunion d'équipe mensuelle (passée, TERMINE, avec absences)
-        $totalAppointments += $this->createTeamMeeting($manager, $admin, $typeReunion);
+        // 1. Réunion d'équipe mensuelle (passée, TERMINE)
+        $totalAppointments += $this->createTeamMeeting($manager, $admin);
 
-        // 2. Formation collective (future, CONFIRME, avec absences)
-        $totalAppointments += $this->createTrainingSession($manager, $director, $typeReunion);
+        // 2. Formation collective (future, CONFIRME)
+        $totalAppointments += $this->createTrainingSession($manager, $director);
 
-        // 3. Réunion de supervision (future, CONFIRME, avec absences)
-        $totalAppointments += $this->createSupervisionMeeting($manager, $admin, $typeReunion);
+        // 3. Réunion de supervision (future, CONFIRME)
+        $totalAppointments += $this->createSupervisionMeeting($manager, $admin);
 
         // 4. Réunion annulée (ANNULE)
         $totalAppointments += $this->createCancelledMeeting($manager, $admin);
@@ -93,7 +84,6 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         $appointment->setDurationMinutes(60);
         $appointment->setLocation('Bureau administratif');
         $appointment->setDescription('Bilan de l\'année et perspectives d\'évolution');
-        $appointment->setCreatesAbsence(false);
 
         // Calculer endAt
         $endDate = clone $startDate;
@@ -139,7 +129,7 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         $appointment->setDurationMinutes(45);
         $appointment->setLocation('Salle de réunion B');
         $appointment->setDescription('Rendez-vous individuel sur demande de ' . $educator->getFullName());
-        $appointment->setCreatesAbsence(false);
+        $appointment->setImpactGarde(true); // Impact sur les gardes pour affichage calendrier
 
         // Calculer endAt
         $endDate = clone $startDate;
@@ -156,9 +146,9 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
     }
 
     /**
-     * Crée une réunion d'équipe mensuelle (passée, TERMINE, avec absences)
+     * Crée une réunion d'équipe mensuelle (passée, TERMINE)
      */
-    private function createTeamMeeting(ObjectManager $manager, User $admin, ?TypeAbsence $typeReunion): int
+    private function createTeamMeeting(ObjectManager $manager, User $admin): int
     {
         $startDate = new \DateTime('-14 days'); // Il y a 2 semaines
         $startDate->setTime(9, 0);
@@ -174,7 +164,6 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         $appointment->setDurationMinutes(90);
         $appointment->setLocation('Salle de réunion principale');
         $appointment->setDescription('Ordre du jour: Bilan du mois, projets en cours, points d\'amélioration');
-        $appointment->setCreatesAbsence(true);
 
         // Calculer endAt
         $endDate = clone $startDate;
@@ -189,22 +178,16 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
             $educator = $this->getReference("educator-{$i}", User::class);
             $presenceStatus = ($i === 3) ? AppointmentParticipant::PRESENCE_ABSENT : AppointmentParticipant::PRESENCE_CONFIRMED;
 
-            $participant = $this->addParticipant($manager, $appointment, $educator, $presenceStatus);
-
-            // Créer l'absence automatique pour tous les participants
-            if ($typeReunion) {
-                $absence = $this->createAbsenceForAppointment($manager, $participant, $appointment, $typeReunion, $admin);
-                $participant->setLinkedAbsence($absence);
-            }
+            $this->addParticipant($manager, $appointment, $educator, $presenceStatus);
         }
 
         return 1;
     }
 
     /**
-     * Crée une formation collective (future, CONFIRME, avec absences)
+     * Crée une formation collective (future, CONFIRME)
      */
-    private function createTrainingSession(ObjectManager $manager, User $director, ?TypeAbsence $typeReunion): int
+    private function createTrainingSession(ObjectManager $manager, User $director): int
     {
         $startDate = new \DateTime('+21 days'); // Dans 3 semaines
         $startDate->setTime(9, 0);
@@ -220,7 +203,7 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         $appointment->setDurationMinutes(240); // Demi-journée
         $appointment->setLocation('Centre de formation externe');
         $appointment->setDescription('Formation animée par un formateur spécialisé. Présence obligatoire.');
-        $appointment->setCreatesAbsence(true);
+        $appointment->setImpactGarde(true); // Impact sur les gardes
 
         // Calculer endAt
         $endDate = clone $startDate;
@@ -234,22 +217,16 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         foreach ($selectedEducators as $num) {
             /** @var User $educator */
             $educator = $this->getReference("educator-{$num}", User::class);
-            $participant = $this->addParticipant($manager, $appointment, $educator, AppointmentParticipant::PRESENCE_PENDING);
-
-            // Créer l'absence automatique
-            if ($typeReunion) {
-                $absence = $this->createAbsenceForAppointment($manager, $participant, $appointment, $typeReunion, $director);
-                $participant->setLinkedAbsence($absence);
-            }
+            $this->addParticipant($manager, $appointment, $educator, AppointmentParticipant::PRESENCE_PENDING);
         }
 
         return 1;
     }
 
     /**
-     * Crée une réunion de supervision (future, CONFIRME, avec absences)
+     * Crée une réunion de supervision (future, CONFIRME)
      */
-    private function createSupervisionMeeting(ObjectManager $manager, User $admin, ?TypeAbsence $typeReunion): int
+    private function createSupervisionMeeting(ObjectManager $manager, User $admin): int
     {
         $startDate = new \DateTime('+10 days'); // Dans 10 jours
         $startDate->setTime(14, 0);
@@ -265,7 +242,7 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         $appointment->setDurationMinutes(120);
         $appointment->setLocation('Villa des Roses - Salle polyvalente');
         $appointment->setDescription('Analyse de situations cliniques et partage de pratiques. Équipe Villa des Roses.');
-        $appointment->setCreatesAbsence(true);
+        $appointment->setImpactGarde(true); // Impact sur les gardes
 
         // Calculer endAt
         $endDate = clone $startDate;
@@ -279,13 +256,7 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         foreach ($selectedEducators as $num) {
             /** @var User $educator */
             $educator = $this->getReference("educator-{$num}", User::class);
-            $participant = $this->addParticipant($manager, $appointment, $educator, AppointmentParticipant::PRESENCE_PENDING);
-
-            // Créer l'absence automatique
-            if ($typeReunion) {
-                $absence = $this->createAbsenceForAppointment($manager, $participant, $appointment, $typeReunion, $admin);
-                $participant->setLinkedAbsence($absence);
-            }
+            $this->addParticipant($manager, $appointment, $educator, AppointmentParticipant::PRESENCE_PENDING);
         }
 
         return 1;
@@ -310,7 +281,6 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         $appointment->setDurationMinutes(60);
         $appointment->setLocation('Salle de réunion A');
         $appointment->setDescription('Présentation du nouveau projet éducatif.\n\nAnnulé: Report pour raisons techniques');
-        $appointment->setCreatesAbsence(false);
 
         // Calculer endAt
         $endDate = clone $startDate;
@@ -352,7 +322,7 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         $appointment->setStartAt($startDate);
         $appointment->setDurationMinutes(45);
         $appointment->setDescription('Je souhaiterais faire le point sur mon évolution professionnelle et discuter des perspectives de formation.');
-        $appointment->setCreatesAbsence(false);
+        $appointment->setImpactGarde(true); // Impact sur les gardes
 
         // Calculer endAt
         $endDate = clone $startDate;
@@ -392,7 +362,6 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         $appointment->setDurationMinutes(30);
         $appointment->setDescription('Je souhaite discuter d\'une possible mobilité vers une autre structure.');
         $appointment->setRefusalReason('Cette demande nécessite une réunion collégiale. Merci de renouveler votre demande après la prochaine réunion d\'équipe.');
-        $appointment->setCreatesAbsence(false);
 
         // Calculer endAt
         $endDate = clone $startDate;
@@ -430,37 +399,6 @@ class EducatorAppointmentFixtures extends Fixture implements DependentFixtureInt
         $appointment->addAppointmentParticipant($participant);
 
         return $participant;
-    }
-
-    /**
-     * Crée une absence automatique pour un rendez-vous
-     */
-    private function createAbsenceForAppointment(
-        ObjectManager $manager,
-        AppointmentParticipant $participant,
-        RendezVous $appointment,
-        TypeAbsence $typeReunion,
-        User $validator
-    ): Absence {
-        $absence = new Absence();
-        $absence->setUser($participant->getUser());
-        $absence->setAbsenceType($typeReunion);
-        $absence->setStartAt($appointment->getStartAt());
-        $absence->setEndAt($appointment->getEndAt());
-        $absence->setReason('Réunion: ' . $appointment->getSubject());
-        $absence->setStatus(Absence::STATUS_APPROVED);
-        $absence->setValidatedBy($validator);
-        $absence->setJustificationStatus(Absence::JUSTIF_NOT_REQUIRED);
-        $absence->setAffectsPlanning(true);
-
-        // Calcul simple des heures (convertir minutes en fraction de jour)
-        $durationHours = $appointment->getDurationMinutes() / 60;
-        $workingDays = $durationHours / 7; // Approximation: 7h = 1 jour ouvré
-        $absence->setWorkingDaysCount($workingDays);
-
-        $manager->persist($absence);
-
-        return $absence;
     }
 
     public function getDependencies(): array

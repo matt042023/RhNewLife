@@ -1,0 +1,3473 @@
+import { Controller } from '@hotwired/stimulus';
+import { cacheManager } from '../utils/cache-manager';
+
+export default class extends Controller {
+    static targets = ['calendar', 'usersSidebar', 'generateModal', 'monthSelector', 'scopeSelect', 'villaSelect'];
+    static values = {
+        currentYear: Number,
+        currentMonth: Number
+    };
+
+    connect() {
+        this.draggedUserId = null;
+        this.saveTimeout = null;
+        this.dropTargetEventId = null;
+
+        // 🆕 Pending changes store for batch save
+        this.pendingChanges = new Map();
+        this.hasUnsavedChanges = false;
+
+        // Explicit month tracking properties to avoid Stimulus value sync issues
+        this.currentYear = this.currentYearValue;
+        this.currentMonth = this.currentMonthValue;
+        this.calendarInitialized = false; // Flag to prevent loading before datesSet is called
+
+        // 🆕 Cache and sync state
+        this.isSyncing = false; // Background sync in progress
+        this.prefetchQueue = new Set(); // Months to prefetch
+
+        // 🆕 Store astreintes separately for full-width rendering
+        this.astreintesData = [];
+
+        // 🆕 Check if we need to force refresh (coming from astreintes page or manual refresh)
+        const urlParams = new URLSearchParams(window.location.search);
+        const shouldClearCache = urlParams.has('refresh') || document.referrer.includes('/admin/astreintes');
+        if (shouldClearCache) {
+            console.log('🔄 Force refresh triggered - clearing cache');
+            // Clear cache asynchronously (don't wait for it)
+            cacheManager.invalidateAll().then(() => {
+                console.log('✅ Cache cleared - fresh data will be loaded');
+            });
+        }
+
+        // Expose controller to window for onclick handlers
+        window.planningController = this;
+
+        this.initCalendar();
+        this.initDraggableUsers();
+        this.setupEventDragListeners();
+        this.loadMonth();
+
+        // 🆕 Warn before leaving page with unsaved changes
+        window.addEventListener('beforeunload', (e) => {
+            if (this.hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = 'Modifications non sauvegardées';
+            }
+        });
+    }
+
+    /**
+     * Setup native drag listeners on calendar events
+     */
+    setupEventDragListeners() {
+        // Listen for dragover on the calendar container instead of the whole document for better performance
+        this.calendarTarget.addEventListener('dragover', (e) => {
+            if (!this.draggedUserId) return;
+            e.preventDefault();
+
+            const eventEl = e.target.closest('.fc-event:not(.fc-event-mirror)');
+            
+            if (eventEl) {
+                const eventId = eventEl.getAttribute('data-event-id');
+                if (eventId) {
+                    this.dropTargetEventId = eventId;
+                    
+                    // Visual feedback
+                    if (!eventEl.classList.contains('drag-hover')) {
+                        // Clear others
+                        this.calendarTarget.querySelectorAll('.fc-event.drag-hover').forEach(el => {
+                            el.classList.remove('drag-hover');
+                            el.style.zIndex = '';
+                        });
+                        
+                        eventEl.classList.add('drag-hover');
+                        eventEl.style.zIndex = '100';
+                    }
+                }
+            } else {
+                this.dropTargetEventId = null;
+                this.calendarTarget.querySelectorAll('.fc-event.drag-hover').forEach(el => {
+                    el.classList.remove('drag-hover');
+                    el.style.zIndex = '';
+                });
+            }
+        });
+
+        // Reset on drag end
+        document.addEventListener('dragend', () => {
+            this.cleanupDrag();
+        });
+    }
+
+    /**
+     * Initialize draggable external users
+     */
+    initDraggableUsers() {
+        if (!window.FullCalendar || !window.FullCalendar.Draggable) {
+            console.error('FullCalendar Draggable not loaded!');
+            return;
+        }
+
+        const { Draggable } = window.FullCalendar;
+
+        // Make sidebar users draggable
+        const containerEl = this.usersSidebarTarget;
+
+        new Draggable(containerEl, {
+            itemSelector: '[draggable="true"]',
+            // No eventData: this prevents FullCalendar from creating a new event automatically.
+            // We handle the assignment manually in the drop callback.
+            itemData: (eventEl) => {
+                const userId = eventEl.dataset.userId;
+                this.draggedUserId = userId;
+                return {
+                    userId: userId
+                };
+            }
+        });
+
+        console.log('Draggable users initialized');
+    }
+
+    /**
+     * Initialize FullCalendar with monthly view
+     */
+    initCalendar() {
+        if (!window.FullCalendar) {
+            console.error('FullCalendar not loaded!');
+            return;
+        }
+
+        const { Calendar, dayGridPlugin, timeGridPlugin, interactionPlugin } = window.FullCalendar;
+
+        this.calendar = new Calendar(this.calendarTarget, {
+            plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+            initialView: 'dayGridMonth',
+            height: 'auto',
+            contentHeight: 'auto',
+            aspectRatio: 1.35,
+            editable: true,
+            droppable: true,
+            locale: 'fr',
+            firstDay: 1,
+            displayEventTime: false, // Hide time in monthly view
+
+            // Allow events to overlap (gardes and RDVs can overlay on absences)
+            slotEventOverlap: true,
+            eventOverlap: true,
+
+            // Improve day cell height adaptation
+            dayMaxEvents: false,
+            dayMaxEventRows: false,
+
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+
+            // Event handlers
+            eventDrop: (info) => this.handleEventDrop(info),
+            eventResize: (info) => this.handleEventResize(info),
+            eventDidMount: (info) => this.renderEvent(info),
+            eventContent: (arg) => this.renderEventContent(arg),
+            eventClick: (info) => this.handleEventClick(info),
+            drop: (info) => this.handleExternalDrop(info),
+            dateClick: (info) => this.handleDateClick(info),
+
+            // View-specific settings
+            viewDidMount: (info) => {
+                // Show/hide time based on view
+                if (info.view.type === 'dayGridMonth') {
+                    this.calendar.setOption('displayEventTime', false);
+                } else {
+                    this.calendar.setOption('displayEventTime', true);
+                }
+            },
+
+            // Sync our variables when FullCalendar navigation changes (arrows, today button)
+            datesSet: (dateInfo) => {
+                const currentDate = dateInfo.view.currentStart;
+                const newYear = currentDate.getFullYear();
+                const newMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
+
+                // Check if month/year actually changed (to avoid infinite loops)
+                const hasChanged = (newYear !== this.currentYear || newMonth !== this.currentMonth);
+
+                // Update our tracking variables
+                this.currentYear = newYear;
+                this.currentMonth = newMonth;
+                this.currentYearValue = this.currentYear;
+                this.currentMonthValue = this.currentMonth;
+
+                // Update the custom month selector to match
+                if (this.hasMonthSelectorTarget) {
+                    const value = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}`;
+                    this.monthSelectorTarget.value = value;
+                }
+
+                // Mark calendar as initialized after first datesSet call
+                const wasInitialized = this.calendarInitialized;
+                this.calendarInitialized = true;
+
+                console.log(`📅 Calendar navigated to: ${this.currentYear}/${this.currentMonth}`);
+
+                // If calendar was already initialized and the date changed, refetch events
+                // This ensures we load the correct data after navigation
+                if (wasInitialized && hasChanged) {
+                    console.log(`🔄 Refetching events after navigation`);
+                    this.calendar.refetchEvents();
+                }
+
+                // Render astreinte bars after calendar is ready
+                setTimeout(() => this.renderAstreinteBars(), 100);
+            },
+
+            // Event source
+            events: (fetchInfo, successCallback, failureCallback) => {
+                this.loadEvents(fetchInfo, successCallback, failureCallback);
+            }
+        });
+
+        this.calendar.render();
+        console.log('Calendar initialized successfully');
+    }
+
+    /**
+     * Load events from API for the current view (with cache optimization)
+     */
+    async loadEvents(fetchInfo, successCallback, failureCallback) {
+        // Wait for calendar to be initialized (datesSet to be called at least once)
+        if (!this.calendarInitialized) {
+            console.log('⏸️ Waiting for calendar initialization...');
+            successCallback([]);
+            return;
+        }
+
+        // Use our synchronized variables (updated by datesSet)
+        const year = this.currentYear;
+        const month = this.currentMonth;
+        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+        console.log(`🔄 Loading events for ${year}/${month}`);
+
+        try {
+            // Check if force refresh is requested (bypass cache)
+            if (this.forceRefresh) {
+                console.log(`🔥 Force refresh requested - bypassing cache`);
+                this.forceRefresh = false;
+
+                // Show loading indicator
+                this.calendarTarget.classList.add('loading');
+
+                // Fetch fresh data from API
+                const data = await this.fetchMonthDataFromAPI(year, month);
+
+                // Store in cache
+                await cacheManager.set(monthKey, data);
+
+                // Transform and display
+                const events = await this.transformDataToEvents(data);
+                successCallback(events);
+
+                // Remove loading indicator
+                this.calendarTarget.classList.remove('loading');
+
+                // 🆕 Render astreinte bars after data is loaded
+                setTimeout(() => this.renderAstreinteBars(), 100);
+
+                console.log(`✅ Fresh data loaded (force refresh): ${monthKey}`);
+                return;
+            }
+
+            // Try to load from cache first
+            const cached = await cacheManager.get(monthKey);
+
+            if (cached && !cached.stale) {
+                // Cache HIT (fresh) - display immediately
+                console.log(`⚡ Displaying from cache: ${monthKey}`);
+                const events = await this.transformDataToEvents(cached.data);
+                successCallback(events);
+                this.calendarTarget.classList.remove('loading');
+
+                // 🆕 Render astreinte bars after data is loaded
+                setTimeout(() => this.renderAstreinteBars(), 100);
+
+                // Refresh in background to check for updates
+                this.refreshInBackground(year, month, monthKey, cached.data);
+
+                // Prefetch adjacent months
+                this.schedulePrefetch(year, month);
+
+                return;
+            }
+
+            // Cache MISS or STALE - show loading and fetch fresh data
+            this.calendarTarget.classList.add('loading');
+
+            const data = await this.fetchMonthDataFromAPI(year, month);
+
+            // Store in cache
+            await cacheManager.set(monthKey, data);
+
+            // Transform and display
+            const events = await this.transformDataToEvents(data);
+            successCallback(events);
+
+            // Remove loading indicator
+            this.calendarTarget.classList.remove('loading');
+
+            // 🆕 Render astreinte bars after data is loaded
+            setTimeout(() => this.renderAstreinteBars(), 100);
+
+            console.log(`✅ Fresh data loaded and cached: ${monthKey}`);
+
+            // Prefetch adjacent months
+            this.schedulePrefetch(year, month);
+
+        } catch (error) {
+            console.error('Failed to load events:', error);
+            this.showError('Échec du chargement des événements');
+            this.calendarTarget.classList.remove('loading');
+            failureCallback(error);
+        }
+    }
+
+    /**
+     * Clear entire cache and force refresh
+     */
+    async clearCacheAndRefresh() {
+        try {
+            console.log('🗑️ Clearing all cached data...');
+            await cacheManager.invalidateAll();
+
+            // If calendar is initialized, force a refresh
+            if (this.calendar) {
+                this.forceRefresh = true;
+                this.calendar.removeAllEvents();
+                this.calendar.refetchEvents();
+            }
+
+            console.log('✅ Cache cleared successfully');
+        } catch (error) {
+            console.error('Failed to clear cache:', error);
+        }
+    }
+
+    /**
+     * Force an immediate refresh from API (bypass cache)
+     */
+    forceRefreshFromAPI() {
+        console.log('🔥 forceRefreshFromAPI() called - setting forceRefresh flag and clearing calendar');
+        this.forceRefresh = true;
+        this.calendar.removeAllEvents();
+        console.log('🔥 Calendar events removed, calling refetchEvents()...');
+        this.calendar.refetchEvents();
+        console.log('🔥 refetchEvents() called');
+    }
+
+    /**
+     * Fetch month data from API using consolidated endpoint
+     * (1 request per month instead of 4 = 75% reduction in network requests)
+     */
+    async fetchMonthDataFromAPI(year, month) {
+        // Always load: previous month + current month + next month
+        const monthsToFetch = cacheManager.getAdjacentMonths(year, month);
+
+        console.log(`📅 Fetching data for months: ${monthsToFetch.map(m => m.monthKey).join(', ')}`);
+
+        // Fetch data using consolidated endpoint (1 request per month instead of 4)
+        const allPromises = monthsToFetch.map(monthData =>
+            fetch(`/api/planning-assignment/month-data/${monthData.year}/${monthData.month}`, {
+                credentials: 'same-origin'
+            })
+            .then(r => r.json())
+            .then(data => ({
+                month: monthData.monthKey,
+                plannings: data.plannings || [],
+                absences: data.absences || [],
+                rdvs: data.rendezvous || [],
+                astreintes: data.astreintes || []
+            }))
+        );
+
+        const allResults = await Promise.all(allPromises);
+
+        // Merge results from all months and deduplicate
+        const planningsMap = new Map();
+        const absencesMap = new Map();
+        const rdvsMap = new Map();
+        const astreintesMap = new Map();
+
+        for (const result of allResults) {
+            // Merge plannings
+            for (const planning of result.plannings) {
+                planningsMap.set(planning.id, planning);
+            }
+
+            // Merge absences
+            for (const absence of result.absences) {
+                absencesMap.set(absence.id, absence);
+            }
+
+            // Merge RDVs
+            for (const rdv of result.rdvs) {
+                rdvsMap.set(rdv.id, rdv);
+            }
+
+            // Merge astreintes
+            for (const astreinte of result.astreintes) {
+                astreintesMap.set(astreinte.id, astreinte);
+            }
+        }
+
+        const data = {
+            plannings: { plannings: Array.from(planningsMap.values()) },
+            absences: Array.from(absencesMap.values()),
+            rdvs: Array.from(rdvsMap.values()),
+            astreintes: Array.from(astreintesMap.values())
+        };
+
+        console.log('✅ API Response (consolidated endpoint - 3 requests instead of 12):', {
+            plannings: data.plannings.plannings.length,
+            absences: data.absences.length,
+            rdvs: data.rdvs.length,
+            astreintes: data.astreintes.length
+        });
+
+        return data;
+    }
+
+    /**
+     * Transform raw API data to FullCalendar events
+     */
+    async transformDataToEvents(data) {
+        const planningsData = data.plannings;
+        const absencesData = data.absences;
+        const rdvsData = data.rdvs;
+        const astreintesData = data.astreintes;
+
+        // Convert plannings to FullCalendar events
+        const events = [];
+
+            // 1. Add affectations (shifts) as regular events
+            for (const planning of planningsData.plannings) {
+                for (const affectation of planning.affectations) {
+                    const villaName = affectation.villa?.nom || 'Villa inconnue';
+                    const userName = affectation.user?.fullName || 'À affecter';
+
+                    // Récupérer jours travaillés depuis l'API (avec fallback si null)
+                    const workingDays = affectation.joursTravailes ??
+                        this.calculateWorkingDays(affectation.startAt, affectation.endAt);
+
+                    // Détecter le type de vue actuel
+                    const currentView = this.calendar.view.type;
+                    const isMonthView = currentView === 'dayGridMonth';
+
+                    // Calculer la date de début/fin d'affichage selon la vue
+                    let eventStart, eventEnd;
+
+                    if (isMonthView) {
+                        // Vue mensuelle : utiliser format date uniquement (pas d'heure)
+                        // pour éviter les problèmes de timezone
+                        const startDate = new Date(affectation.startAt);
+                        const displayEnd = new Date(startDate);
+                        displayEnd.setDate(displayEnd.getDate() + workingDays);
+
+                        // Format YYYY-MM-DD pour vue mensuelle (all-day events)
+                        eventStart = startDate.toISOString().split('T')[0];
+                        eventEnd = displayEnd.toISOString().split('T')[0];
+                    } else {
+                        // Vue hebdomadaire/jour : utiliser l'heure de fin réelle avec heures
+                        eventStart = affectation.startAt;
+                        eventEnd = affectation.endAt;
+                    }
+
+                    events.push({
+                        id: affectation.id,
+                        start: eventStart, // Conditionnel selon la vue
+                        end: eventEnd, // Conditionnel selon la vue
+                        title: `${villaName} - ${userName}`,
+                        order: 1, // Affectations en 2ème position (après absences)
+                        extendedProps: {
+                            affectation,
+                            user: affectation.user,
+                            villa: affectation.villa,
+                            type: affectation.type,
+                            statut: affectation.statut,
+                            workingDays: workingDays,
+                            realStart: affectation.startAt,
+                            realEnd: affectation.endAt
+                        }
+                    });
+                }
+            }
+
+            // 2. Add absences as regular events with special rendering (visible with striped pattern)
+            for (const absence of absencesData) {
+                // Les absences sont maintenant des dates (jours complets) - pas d'heures
+                // Il faut ajouter 1 jour à la date de fin pour FullCalendar (end est exclusif)
+                const endDate = new Date(absence.endAt);
+                endDate.setDate(endDate.getDate() + 1);
+
+                // Format dates for display
+                const startDateFormatted = new Date(absence.startAt).toLocaleDateString('fr-FR', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short'
+                });
+                const endDateFormatted = new Date(absence.endAt).toLocaleDateString('fr-FR', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short'
+                });
+
+                // Enriched title with type and dates
+                const absenceTitle = `🚫 ${absence.user.fullName}\n${absence.absenceType.label}\nDu ${startDateFormatted} au ${endDateFormatted}`;
+
+                events.push({
+                    id: `absence-${absence.id}`,
+                    title: absenceTitle,
+                    start: absence.startAt,
+                    end: endDate.toISOString().split('T')[0],
+                    allDay: true,
+                    order: 2, // Absences en 1ère position (en haut)
+                    editable: false,
+                    classNames: ['fc-event-absence', this.getAbsenceClass(absence.absenceType.code)],
+                    extendedProps: {
+                        type: 'absence',
+                        absenceTypeCode: absence.absenceType.code,
+                        absenceTypeLabel: absence.absenceType.label,
+                        user: absence.user,
+                        absenceData: absence,
+                        startDateFormatted,
+                        endDateFormatted
+                    }
+                });
+            }
+
+            // 3. Add RDVs as regular events (same z-index as gardes/affectations)
+            for (const rdv of rdvsData) {
+                events.push({
+                    id: `rdv-${rdv.id}`,
+                    title: rdv.title,
+                    start: rdv.startAt,
+                    end: rdv.endAt,
+                    order: 3, // RDVs en 3ème position (en bas)
+                    editable: false,  // RDVs are not editable in planning view
+                    classNames: ['fc-event-rdv'],
+                    extendedProps: {
+                        type: 'rdv',
+                        participants: rdv.participants,
+                        rdvTitle: rdv.title,
+                        rdvData: rdv
+                    }
+                });
+            }
+
+            // 4. Store astreintes separately for full-width bar rendering
+            // Don't add them as calendar events - we'll render them as custom overlays
+            this.astreintesData = astreintesData.filter(a => a.educateur); // Only keep assigned astreintes
+
+        const affectationsCount = planningsData.plannings.reduce((acc, p) => acc + p.affectations.length, 0);
+        console.log(`Transformed ${events.length} events (${affectationsCount} affectations, ${absencesData.length} absences, ${rdvsData.length} RDVs, ${astreintesData.length} astreintes)`);
+
+        // Debug: Log astreintes specifically
+        if (astreintesData.length > 0) {
+            console.log('🔍 Astreintes loaded:', astreintesData.map(a => ({
+                id: a.id,
+                start: a.startAt,
+                end: a.endAt,
+                educateur: a.educateur?.fullName,
+                label: a.periodLabel
+            })));
+        } else {
+            console.warn('⚠️ No astreintes found for this month');
+        }
+
+        // Debug: Log absences specifically
+        if (absencesData.length > 0) {
+            console.log('Absences loaded:', absencesData);
+            console.log('Sample absence event:', events.find(e => e.extendedProps?.type === 'absence'));
+        } else {
+            console.warn('⚠️ No absences found for this month');
+        }
+
+        return events;
+    }
+
+    /**
+     * Refresh data in background (stale-while-revalidate strategy)
+     */
+    async refreshInBackground(year, month, monthKey, cachedData) {
+        if (this.isSyncing) {
+            console.log('⏭️ Skip background refresh (already syncing)');
+            return;
+        }
+
+        this.isSyncing = true;
+        this.showSyncIndicator();
+
+        try {
+            console.log(`🔄 Background refresh: ${monthKey}`);
+            const freshData = await this.fetchMonthDataFromAPI(year, month);
+
+            // Compare data to detect changes
+            const hasChanges = JSON.stringify(cachedData) !== JSON.stringify(freshData);
+
+            if (hasChanges) {
+                console.log(`🔃 Changes detected, updating cache and calendar: ${monthKey}`);
+
+                // Update cache
+                await cacheManager.set(monthKey, freshData);
+
+                // Refresh calendar display
+                this.calendar.refetchEvents();
+            } else {
+                console.log(`✓ No changes detected: ${monthKey}`);
+
+                // Update cache timestamp anyway to reset TTL
+                await cacheManager.set(monthKey, freshData);
+            }
+
+        } catch (error) {
+            console.error('Background refresh failed:', error);
+        } finally {
+            this.isSyncing = false;
+            this.hideSyncIndicator();
+        }
+    }
+
+    /**
+     * Schedule prefetch of adjacent months (in idle time)
+     */
+    schedulePrefetch(year, month) {
+        // Use requestIdleCallback if available, otherwise setTimeout
+        const scheduleTask = window.requestIdleCallback || ((cb) => setTimeout(cb, 1000));
+
+        scheduleTask(() => {
+            this.prefetchAdjacentMonths(year, month);
+        });
+    }
+
+    /**
+     * Prefetch adjacent months data
+     */
+    async prefetchAdjacentMonths(year, month) {
+        const adjacentMonths = [
+            { year: month === 1 ? year - 1 : year, month: month === 1 ? 12 : month - 1 },
+            { year: month === 12 ? year + 1 : year, month: month === 12 ? 1 : month + 1 }
+        ];
+
+        for (const m of adjacentMonths) {
+            const monthKey = `${m.year}-${String(m.month).padStart(2, '0')}`;
+
+            // Skip if already in prefetch queue
+            if (this.prefetchQueue.has(monthKey)) {
+                continue;
+            }
+
+            this.prefetchQueue.add(monthKey);
+
+            try {
+                // Check if already cached and fresh
+                const cached = await cacheManager.get(monthKey);
+                if (cached && !cached.stale) {
+                    console.log(`⏭️ Skip prefetch (already cached): ${monthKey}`);
+                    continue;
+                }
+
+                // Fetch and cache
+                console.log(`🔮 Prefetching: ${monthKey}`);
+                const data = await this.fetchMonthDataFromAPI(m.year, m.month);
+                await cacheManager.set(monthKey, data);
+                console.log(`✅ Prefetched: ${monthKey}`);
+
+            } catch (error) {
+                console.error(`Prefetch failed for ${monthKey}:`, error);
+            } finally {
+                this.prefetchQueue.delete(monthKey);
+            }
+        }
+    }
+
+    /**
+     * Show sync indicator (discreet badge)
+     */
+    showSyncIndicator() {
+        let indicator = document.getElementById('sync-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'sync-indicator';
+            indicator.className = 'sync-indicator';
+            indicator.innerHTML = '<span class="sync-spinner"></span> Synchronisation...';
+            document.body.appendChild(indicator);
+        }
+        indicator.classList.add('visible');
+    }
+
+    /**
+     * Hide sync indicator
+     */
+    hideSyncIndicator() {
+        const indicator = document.getElementById('sync-indicator');
+        if (indicator) {
+            indicator.classList.remove('visible');
+            // Show "up to date" briefly
+            indicator.innerHTML = '<span class="sync-check">✓</span> Synchronisé';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 2000);
+        }
+    }
+
+    /**
+     * Calculate working days (24h + 3h tolerance rule)
+     * Rule: < 7h = 0 days, else ceil((hours - 3) / 24)
+     * Examples: 7h=1d, 27h=1d, 27h01=2d, 50h=2d, 51h=2d, 51h01=3d, 52h=3d
+     */
+    calculateWorkingDays(startAt, endAt) {
+        const start = new Date(startAt);
+        const end = new Date(endAt);
+
+        const hoursDiff = (end - start) / (1000 * 60 * 60);
+
+        // If less than 7 hours, doesn't count
+        if (hoursDiff < 7) {
+            return 0;
+        }
+
+        // New rule: 24h + 3h tolerance
+        // Each 24h block with >3h additional = 1 more day
+        // Formula: ceil((hours - 3) / 24)
+        return Math.ceil((hoursDiff - 3) / 24);
+    }
+
+    /**
+     * Get absence CSS class based on absence type code
+     */
+    getAbsenceClass(absenceTypeCode) {
+        const mapping = {
+            'CP': 'conge-overlay',     // Congés payés
+            'RTT': 'conge-overlay',    // RTT
+            'MAL': 'absence-overlay',  // Maladie
+            'AT': 'absence-overlay',   // Accident travail
+            'CPSS': 'conge-overlay'    // Congé sans solde
+        };
+        return mapping[absenceTypeCode] || 'absence-overlay';
+    }
+
+
+    /**
+     * Render event with color system (educator background + villa/type border)
+     */
+    renderEvent(info) {
+        const { user, villa, type } = info.event.extendedProps;
+
+        // Add event ID as data-attribute for drag & drop detection
+        info.el.setAttribute('data-event-id', info.event.id);
+
+        // Handle astreinte background events
+        if (type === 'astreinte' && info.event.display === 'background') {
+            const educateur = info.event.extendedProps.educateur;
+            const periodLabel = info.event.extendedProps.periodLabel || '';
+
+            console.log('🎨 Rendering astreinte:', info.event.id, 'educateur:', educateur?.fullName, 'color:', educateur?.color);
+
+            if (educateur && educateur.color) {
+                const color = educateur.color;
+
+                // Convert hex to rgba
+                const hexToRgba = (hex, alpha) => {
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                };
+
+                // Apply hatched pattern background
+                const gradient = `repeating-linear-gradient(
+                    45deg,
+                    ${hexToRgba(color, 0.30)},
+                    ${hexToRgba(color, 0.30)} 10px,
+                    ${hexToRgba(color, 0.15)} 10px,
+                    ${hexToRgba(color, 0.15)} 20px
+                )`;
+
+                info.el.style.setProperty('background', gradient, 'important');
+                info.el.style.setProperty('background-color', 'transparent', 'important');
+                info.el.style.border = `2px solid ${hexToRgba(color, 0.6)}`;
+                info.el.style.borderRadius = '4px';
+
+                // Create custom overlay text for background events
+                const textOverlay = document.createElement('div');
+                textOverlay.style.position = 'absolute';
+                textOverlay.style.top = '50%';
+                textOverlay.style.left = '50%';
+                textOverlay.style.transform = 'translate(-50%, -50%)';
+                textOverlay.style.color = color;
+                textOverlay.style.fontWeight = '700';
+                textOverlay.style.fontSize = '12px';
+                textOverlay.style.textAlign = 'center';
+                textOverlay.style.lineHeight = '1.4';
+                textOverlay.style.whiteSpace = 'pre-line';
+                textOverlay.style.pointerEvents = 'none';
+                textOverlay.style.zIndex = '10';
+                textOverlay.style.textShadow = '0 0 3px white, 0 0 5px white';
+                textOverlay.innerHTML = info.event.title || '';
+
+                // Position the parent relatively
+                info.el.style.position = 'relative';
+                info.el.appendChild(textOverlay);
+
+                console.log('✅ Applied astreinte hatched pattern with text overlay:', color);
+            }
+            return; // Don't process further for background events
+        }
+
+        const isRenfort = (type === 'renfort' || type === 'TYPE_RENFORT');
+        const isAssigned = !!user;
+
+        // Drag-hover feedback for ALL events (assigned or not)
+        info.el.addEventListener('dragenter', (e) => {
+            if (!this.draggedUserId) return;
+            info.el.classList.add('drag-hover');
+        });
+
+        info.el.addEventListener('dragleave', (e) => {
+            info.el.classList.remove('drag-hover');
+        });
+
+        info.el.addEventListener('drop', (e) => {
+            info.el.classList.remove('drag-hover');
+        });
+
+        if (isAssigned) {
+            // ASSIGNED: Educator color background
+            info.el.style.backgroundColor = user.color || '#3B82F6';
+
+            if (isRenfort) {
+                // Renfort: bordure grise si sans villa (centre-complet), couleur villa si villa-spécifique
+                if (villa) {
+                    info.el.style.border = `3px solid ${villa.color || '#6B7280'}`;
+                    info.el.setAttribute('title', `Renfort villa-spécifique: ${villa.nom}`);
+                } else {
+                    info.el.style.border = '3px solid #6B7280';
+                    info.el.setAttribute('title', 'Renfort centre-complet (toutes villas)');
+                }
+            } else if (villa) {
+                // Villa garde: villa color border
+                info.el.style.border = `3px solid ${villa.color || '#10B981'}`;
+            } else {
+                info.el.style.border = '3px solid #10B981';
+            }
+
+            // Auto-adjust text color for contrast
+            info.el.style.color = this.getContrastColor(user.color || '#3B82F6');
+
+        } else {
+            // NOT ASSIGNED: white background, dashed border
+            info.el.style.backgroundColor = '#FFFFFF';
+            info.el.style.color = '#6B7280';
+
+            if (isRenfort) {
+                // Renfort non assigné: bordure en pointillés
+                if (villa) {
+                    info.el.style.border = `2px dashed ${villa.color || '#6B7280'}`;
+                    info.el.setAttribute('title', `Renfort villa-spécifique: ${villa.nom}`);
+                } else {
+                    info.el.style.border = '2px dashed #6B7280';
+                    info.el.setAttribute('title', 'Renfort centre-complet (toutes villas)');
+                }
+            } else if (villa) {
+                info.el.style.border = `2px dashed ${villa.color || '#10B981'}`;
+            } else {
+                info.el.style.border = '2px dashed #10B981';
+            }
+        }
+
+        // Note: Absences/RDV overlays are now rendered as independent background events
+        // No need to call renderEventOverlay() here
+    }
+
+    /**
+     * Render RDV event content with participant list
+     */
+    renderRdvContent(arg, participants, title) {
+        const isMonthView = arg.view.type === 'dayGridMonth';
+        const start = new Date(arg.event.start);
+        const end = arg.event.end ? new Date(arg.event.end) : start;
+
+        const startTime = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const endTime = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        const container = document.createElement('div');
+        container.className = 'fc-event-rdv-custom p-1';
+        container.style.cssText = 'height: 100%; display: flex; flex-direction: column; font-size: 0.75rem; line-height: 1.2; overflow: hidden;';
+
+        // Build participants list - limit to 3 names max for readability
+        const participantCount = participants.length;
+        let participantText;
+
+        if (participantCount <= 2) {
+            participantText = participants.map(p => p.fullName).join(', ');
+        } else {
+            // Show first 2 names + count
+            const firstTwo = participants.slice(0, 2).map(p => p.fullName).join(', ');
+            participantText = `${firstTwo} +${participantCount - 2}`;
+        }
+
+        container.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; overflow: hidden;">
+                <div style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0;">
+                    📅 ${title}
+                </div>
+                <span style="font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; background: #D97706; color: white; white-space: nowrap; flex-shrink: 0;">
+                    ${participantCount} pers.
+                </span>
+            </div>
+            <div style="opacity: 0.9; font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${participantText}
+            </div>
+            <div style="opacity: 0.8; font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${startTime} - ${endTime}
+            </div>
+        `;
+
+        return { domNodes: [container] };
+    }
+
+    /**
+     * Custom event content rendering
+     */
+    renderEventContent(arg) {
+        const { user, villa, type, realStart, realEnd, statut, participants, rdvTitle } = arg.event.extendedProps;
+        const isAssigned = !!user;
+        const isMonthView = arg.view.type === 'dayGridMonth';
+        const isRdv = type === 'rdv';
+
+        // Note: Absence events are now background events (display: 'background')
+        // FullCalendar doesn't call eventContent for background events - they only show the title
+
+        // Special rendering for RDV events
+        if (isRdv && participants) {
+            return this.renderRdvContent(arg, participants, rdvTitle);
+        }
+
+        // Parse dates
+        const start = new Date(realStart);
+        const end = new Date(realEnd);
+
+        // Format time
+        const startTime = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const endTime = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        // Format day names
+        const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+        const startDay = dayNames[start.getDay()];
+        const endDay = dayNames[end.getDay()];
+        const startHour = start.getHours();
+        const endHour = end.getHours();
+
+        // Check if same day
+        const isSameDay = start.toDateString() === end.toDateString();
+
+        // Calculate duration
+        const durationHours = Math.round((end - start) / (1000 * 60 * 60));
+
+        // Type labels
+        const typeLabels = {
+            'garde_48h': '48h',
+            'garde_24h': '24h',
+            'renfort': 'Renfort',
+            'TYPE_RENFORT': 'Renfort',
+            'autre': 'Autre'
+        };
+        const typeLabel = typeLabels[type] || type;
+        const isRenfort = (type === 'renfort' || type === 'TYPE_RENFORT');
+        const isMainShift = (type === 'garde_24h' || type === 'garde_48h');
+
+        // Get working days from extended props (jours calculés)
+        const workingDays = arg.event.extendedProps.joursTravailes || 0;
+
+        // Status labels and styles
+        const statusConfig = {
+            'draft': { label: 'Brouillon', icon: '📝', color: '#9CA3AF' },
+            'validated': { label: 'Validé', icon: '✓', color: '#10B981' },
+            'to_replace_absence': { label: 'À remplacer', icon: '⚠', color: '#F59E0B' },
+            'to_replace_rdv': { label: 'RDV', icon: '📅', color: '#F59E0B' },
+            'to_replace_schedule_conflict': { label: 'Conflit horaire', icon: '⏰', color: '#EF4444' }
+        };
+        const statusInfo = statusConfig[statut] || statusConfig['draft'];
+
+        // Create custom HTML content
+        const container = document.createElement('div');
+        container.className = 'fc-event-main-custom p-1';
+        container.style.cssText = 'height: 100%; display: flex; flex-direction: column; font-size: 0.75rem; line-height: 1.2;';
+
+        if (isAssigned) {
+            // GARDE AFFECTÉE: Nom éducateur + infos
+            // Get text color for contrast with educator background color
+            const textColor = this.getContrastColor(user.color || '#3B82F6');
+
+            // Déterminer si la villa est vraiment présente (pas null et pas id null)
+            const hasVilla = villa && villa.id && villa.nom;
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                    <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${textColor}; flex: 1;">
+                        ${user.fullName}
+                    </div>
+                    <span style="font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; background: ${statusInfo.color}; color: white; white-space: nowrap; flex-shrink: 0;" title="${statusInfo.label}">
+                        ${statusInfo.icon}
+                    </span>
+                </div>
+                ${isMonthView ? `
+                    <div style="display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin-top: 2px;">
+                        ${hasVilla ? `<span style="display: inline-block; background: ${villa.color || '#6366F1'}; color: white; font-size: 0.6rem; font-weight: 600; padding: 2px 5px; border-radius: 3px;">📍 ${villa.nom}</span>` : ''}
+                        ${isRenfort ? '<span style="display: inline-block; background: #F59E0B; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">🔧 RENFORT</span>' : ''}
+                        ${isMainShift ? '<span style="display: inline-block; background: #3B82F6; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">🏠 GARDE PRINCIPALE</span>' : ''}
+                        ${workingDays > 0 ? '<span style="display: inline-block; background: #10B981; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">' + workingDays + ' jours</span>' : ''}
+                    </div>
+                    <div style="opacity: 0.8; font-size: 0.65rem; color: ${textColor}; margin-top: 2px;">
+                        ${isSameDay ? `${startDay} ${startHour}h - ${endHour}h` : `${startDay} ${startHour}h - ${endDay} ${endHour}h`}
+                    </div>
+                ` : `
+                    <div style="display: flex; flex-wrap: wrap; gap: 2px; align-items: center; margin-top: 2px;">
+                        ${hasVilla ? `<span style="display: inline-block; background: ${villa.color || '#6366F1'}; color: white; font-size: 0.55rem; font-weight: 600; padding: 1px 3px; border-radius: 2px;">📍</span>` : ''}
+                        ${isRenfort ? '<span style="display: inline-block; background: #F59E0B; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">🔧</span>' : ''}
+                        ${isMainShift ? '<span style="display: inline-block; background: #3B82F6; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">🏠</span>' : ''}
+                        ${isMainShift && workingDays > 0 ? '<span style="display: inline-block; background: #10B981; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">' + workingDays + 'j</span>' : ''}
+                        <span style="opacity: 0.9; color: ${textColor}; font-size: 0.65rem;">${durationHours}h</span>
+                    </div>
+                `}
+            `;
+        } else {
+            // GARDE NON AFFECTÉE: Infos de la garde
+            // Déterminer si la villa est vraiment présente (pas null et pas id null)
+            const hasVilla = villa && villa.id && villa.nom;
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                    <div style="font-weight: 600; color: #6B7280; flex: 1;">
+                        À affecter
+                    </div>
+                    <span style="font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; background: ${statusInfo.color}; color: white; white-space: nowrap; flex-shrink: 0;" title="${statusInfo.label}">
+                        ${statusInfo.icon}
+                    </span>
+                </div>
+                ${isMonthView ? `
+                    <div style="display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin-top: 2px;">
+                        ${hasVilla ? `<span style="display: inline-block; background: ${villa.color || '#6366F1'}; color: white; font-size: 0.6rem; font-weight: 600; padding: 2px 5px; border-radius: 3px;">📍 ${villa.nom}</span>` : ''}
+                        ${isRenfort ? '<span style="display: inline-block; background: #F59E0B; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">🔧 RENFORT</span>' : ''}
+                        ${isMainShift ? '<span style="display: inline-block; background: #3B82F6; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">🏠 GARDE PRINCIPALE</span>' : ''}
+                        ${workingDays > 0 ? '<span style="display: inline-block; background: #10B981; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 5px; border-radius: 3px;">' + workingDays + ' jours</span>' : ''}
+                    </div>
+                    <div style="color: #6B7280; font-size: 0.65rem; margin-top: 2px;">
+                        ${isSameDay ? `${startDay} ${startHour}h - ${endHour}h` : `${startDay} ${startHour}h - ${endDay} ${endHour}h`}
+                    </div>
+                ` : `
+                    <div style="display: flex; flex-wrap: wrap; gap: 2px; align-items: center; margin-top: 2px;">
+                        ${hasVilla ? `<span style="display: inline-block; background: ${villa.color || '#6366F1'}; color: white; font-size: 0.55rem; font-weight: 600; padding: 1px 3px; border-radius: 2px;">📍</span>` : ''}
+                        ${isRenfort ? '<span style="display: inline-block; background: #F59E0B; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">🔧</span>' : ''}
+                        ${isMainShift ? '<span style="display: inline-block; background: #3B82F6; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">🏠</span>' : ''}
+                        ${isMainShift && workingDays > 0 ? '<span style="display: inline-block; background: #10B981; color: white; font-size: 0.55rem; font-weight: 700; padding: 1px 3px; border-radius: 2px;">' + workingDays + 'j</span>' : ''}
+                        <span style="color: #6B7280; font-size: 0.65rem;">${durationHours}h</span>
+                    </div>
+                `}
+            `;
+        }
+
+        return { domNodes: [container] };
+    }
+
+    /**
+     * DEPRECATED: This method is no longer used.
+     * Absences and RDVs are now rendered as independent background events,
+     * not as overlays on shift events.
+     */
+    // async renderEventOverlay(info) { ... }
+    // getOverlayPattern(type) { ... }
+
+    /**
+     * Calculate contrasting text color (black/white) based on background
+     */
+    getContrastColor(hexColor) {
+        if (!hexColor || hexColor.length !== 7) return '#000000';
+
+        const r = parseInt(hexColor.substr(1, 2), 16);
+        const g = parseInt(hexColor.substr(3, 2), 16);
+        const b = parseInt(hexColor.substr(5, 2), 16);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness > 128 ? '#000000' : '#FFFFFF';
+    }
+
+    /**
+     * Handle event drop (moved within calendar)
+     */
+    async handleEventDrop(info) {
+        const affectationId = info.event.id;
+        const newStart = info.event.start;
+        const newEnd = info.event.end;
+
+        // 🆕 Add to pending store instead of debounced PUT
+        this.addPendingChange(affectationId, 'update', {
+            startAt: newStart.toISOString(),
+            endAt: newEnd.toISOString()
+        });
+
+        // No refetch, update is optimistic
+        this.showInfo('Horaires modifiés localement');
+    }
+
+    /**
+     * Handle event resize
+     */
+    handleEventResize(info) {
+        this.handleEventDrop(info); // Same logic as drop
+    }
+
+    /**
+     * Handle external drop (user from sidebar)
+     */
+    async handleExternalDrop(info) {
+        // userId should be on the dragged element
+        const userId = info.draggedEl?.dataset.userId || this.draggedUserId;
+        const jsEvent = info.jsEvent;
+
+        if (!userId) {
+            console.error('No user ID found for drop');
+            return;
+        }
+
+        console.log('Drop detected:', { userId, dropTargetEventId: this.dropTargetEventId });
+
+        // Identify the exact event targeted
+        let affectationId = this.dropTargetEventId;
+
+        // Force detection via point if not already found (more reliable at the exact moment of drop)
+        if (!affectationId && jsEvent) {
+            const el = document.elementFromPoint(jsEvent.clientX, jsEvent.clientY);
+            const eventEl = el ? el.closest('.fc-event:not(.fc-event-mirror)') : null;
+            if (eventEl) {
+                affectationId = eventEl.getAttribute('data-event-id');
+                console.log('Detected event via coordinates on drop:', affectationId);
+            }
+        }
+
+        if (!affectationId) {
+            // Fallback: search by date if no specific event was detected
+            const dropDate = info.date;
+            const currentView = this.calendar.view.type;
+            const isMonthView = currentView === 'dayGridMonth';
+
+            const events = this.calendar.getEvents().filter(event => {
+                const eventStart = event.start;
+                const eventEnd = event.end;
+
+                if (isMonthView) {
+                    const dropDay = dropDate.toDateString();
+                    const eventStartDay = eventStart.toDateString();
+                    return dropDay === eventStartDay ||
+                           (dropDate >= eventStart && dropDate < eventEnd);
+                } else {
+                    return dropDate >= eventStart && dropDate < eventEnd;
+                }
+            });
+
+            console.log('Events found at drop position:', events.length, events.map(e => e.id));
+
+            if (events.length === 0) {
+                this.showError('Déposez l\'éducateur sur une garde (encadré pointillé)');
+                this.cleanupDrag();
+                return;
+            }
+
+            if (events.length > 1) {
+                this.showEventSelectionModal(events, userId);
+                this.cleanupDrag();
+                return;
+            }
+
+            affectationId = events[0].id;
+        }
+
+        console.log('Assigning user to affectation:', { userId, affectationId });
+
+        // 🆕 Add to pending store instead of immediate POST
+        this.addPendingChange(affectationId, 'assign', { userId });
+
+        // 🆕 Update UI optimistically (without refetch API)
+        this.updateEventOptimistic(affectationId, { userId });
+
+        this.showInfo('Modification enregistrée localement');
+        this.cleanupDrag();
+    }
+
+    /**
+     * Cleanup drag state and visual feedback
+     */
+    cleanupDrag() {
+        this.draggedUserId = null;
+        this.dropTargetEventId = null;
+
+        document.querySelectorAll('.fc-event').forEach(el => {
+            el.classList.remove('drag-hover');
+            el.style.opacity = '';
+            el.style.transform = '';
+            el.style.zIndex = '';
+        });
+    }
+
+    /**
+     * Show modal to select which event to assign when multiple events on same day
+     */
+    showEventSelectionModal(events, userId) {
+        const eventsList = events.map(event => {
+            const props = event.extendedProps;
+            const villa = props.villa?.nom || 'Villa inconnue';
+            const startTime = event.start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            const endTime = event.end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+            return `
+                <button onclick="window.planningController.assignUserToEvent('${event.id}', '${userId}')"
+                        class="w-full text-left p-3 border rounded hover:bg-blue-50 mb-2">
+                    <div class="font-semibold">${villa}</div>
+                    <div class="text-sm text-gray-600">${startTime} - ${endTime}</div>
+                </button>
+            `;
+        }).join('');
+
+        const modalHtml = `
+            <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" id="eventSelectionModal">
+                <div class="bg-white rounded-lg p-6 w-full mx-4" style="max-width: 500px;">
+                    <h2 class="text-xl font-bold mb-4">Choisir la garde</h2>
+                    <p class="text-gray-600 mb-4">Plusieurs gardes trouvées ce jour. Laquelle voulez-vous affecter ?</p>
+                    <div class="space-y-2 mb-4">
+                        ${eventsList}
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="document.getElementById('eventSelectionModal').remove()"
+                                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded">
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    /**
+     * Assign user to a specific event (called from selection modal)
+     */
+    async assignUserToEvent(affectationId, userId) {
+        // Close modal
+        const modal = document.getElementById('eventSelectionModal');
+        if (modal) modal.remove();
+
+        console.log('Assigning user to affectation:', { userId, affectationId });
+
+        try {
+            const response = await this.fetchAPI('/api/planning-assignment/assign', {
+                method: 'POST',
+                body: JSON.stringify({
+                    affectationId,
+                    userId
+                })
+            });
+
+            if (response.warnings && response.warnings.length > 0) {
+                this.showWarningsToast(response.warnings);
+            }
+
+            // Reload calendar
+            this.calendar.refetchEvents();
+            this.showSuccess('Éducateur affecté avec succès');
+
+        } catch (error) {
+            console.error('Failed to assign user:', error);
+            this.showError('Échec de l\'affectation');
+        }
+    }
+
+    /**
+     * Handle drag start from sidebar
+     */
+    handleDragStart(event) {
+        this.draggedUserId = event.currentTarget.dataset.userId;
+        event.currentTarget.classList.add('dragging');
+        console.log('Drag start:', this.draggedUserId);
+    }
+
+    handleDragEnd(event) {
+        if (event.currentTarget) {
+            event.currentTarget.classList.remove('dragging');
+        }
+        this.cleanupDrag();
+    }
+
+    /**
+     * Load month data
+     */
+    loadMonth(event = null) {
+        if (event) {
+            const [year, month] = event.target.value.split('-');
+            this.currentYear = parseInt(year);
+            this.currentMonth = parseInt(month);
+            this.currentYearValue = this.currentYear;
+            this.currentMonthValue = this.currentMonth;
+
+            console.log(`📅 Loading month changed to: ${this.currentYear}/${this.currentMonth}`);
+        }
+
+        // Show loading indicator and navigate calendar to the selected month
+        if (this.calendar) {
+            this.calendarTarget.classList.add('loading');
+
+            // Navigate FullCalendar to the correct month
+            const targetDate = new Date(this.currentYear, this.currentMonth - 1, 1);
+            this.calendar.gotoDate(targetDate);
+
+            // Refetch events for the new month
+            this.calendar.refetchEvents();
+        }
+    }
+
+    /**
+     * Open generate modal
+     */
+    openGenerateModal() {
+        console.log('Opening generate modal');
+        if (!this.hasGenerateModalTarget) {
+            console.error('Generate modal target not found');
+            return;
+        }
+        this.generateModalTarget.classList.remove('hidden');
+        console.log('Modal opened');
+    }
+
+    /**
+     * Close modal
+     */
+    closeModal() {
+        this.generateModalTarget.classList.add('hidden');
+    }
+
+    /**
+     * 🆕 Open bulk delete modal for draft shifts cleanup
+     */
+    openBulkDeleteModal() {
+        // Get villas from generate modal template (already rendered)
+        const villaOptions = Array.from(document.querySelectorAll('[data-planning-assignment-target="villaSelect"] option'))
+            .map(opt => ({ id: opt.value, nom: opt.textContent.trim() }))
+            .filter(v => v.id); // Filter out empty values
+
+        const modalHtml = `
+            <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" id="bulkDeleteModal">
+                <div class="bg-white rounded-lg p-6 w-full mx-4" style="max-width: 600px;">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Supprimer les gardes brouillon</h2>
+
+                    <div class="mb-6">
+                        <p class="text-gray-700 mb-4">
+                            Cette action supprimera <strong>toutes les gardes non validées</strong>
+                            (statut brouillon) sur la période sélectionnée.
+                        </p>
+
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-red-800 flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                                <span>
+                                    <strong>Attention :</strong> Cette action est irréversible.
+                                    Les gardes déjà validées ne seront pas affectées.
+                                </span>
+                            </p>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-2">Période</label>
+                                <select id="bulkDeletePeriod" class="w-full border-gray-300 rounded-lg">
+                                    <option value="current-month">Mois en cours uniquement</option>
+                                    <option value="all">Tous les mois (année complète)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2">Villas concernées</label>
+                                <select id="bulkDeleteVilla" class="w-full border-gray-300 rounded-lg">
+                                    <option value="all">Toutes les villas</option>
+                                    ${villaOptions.map(v => `<option value="${v.id}">${v.nom}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-3">
+                        <button type="button"
+                                onclick="document.getElementById('bulkDeleteModal').remove()"
+                                class="px-4 py-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium">
+                            Annuler
+                        </button>
+                        <button type="button"
+                                id="confirmBulkDeleteButton"
+                                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium">
+                            Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Attach confirm handler
+        document.getElementById('confirmBulkDeleteButton').addEventListener('click', () => {
+            this.confirmBulkDelete();
+        });
+    }
+
+    /**
+     * 🆕 Confirm and execute bulk delete
+     */
+    async confirmBulkDelete() {
+        const period = document.getElementById('bulkDeletePeriod').value;
+        const villaId = document.getElementById('bulkDeleteVilla').value;
+
+        const year = this.currentYearValue;
+        const month = this.currentMonthValue;
+
+        try {
+            this.showInfo('Suppression en cours...');
+
+            const response = await this.fetchAPI('/api/planning-assignment/bulk-delete', {
+                method: 'POST',
+                body: JSON.stringify({
+                    year,
+                    month: period === 'current-month' ? month : null,
+                    villaId: villaId === 'all' ? null : parseInt(villaId)
+                })
+            });
+
+            // Close modal
+            const modal = document.getElementById('bulkDeleteModal');
+            if (modal) modal.remove();
+
+            // Invalidate cache (may affect multiple months if period = 'all')
+            if (period === 'all') {
+                await cacheManager.invalidateAll();
+            } else {
+                await cacheManager.invalidateRange(year, month);
+            }
+
+            // Force immediate reload from API (bypass cache)
+            this.forceRefreshFromAPI();
+
+            this.showSuccess(`${response.deleted} garde${response.deleted > 1 ? 's' : ''} supprimée${response.deleted > 1 ? 's' : ''}`);
+
+        } catch (error) {
+            console.error('Failed to bulk delete:', error);
+            this.showError('Échec de la suppression en masse');
+        }
+    }
+
+    /**
+     * Toggle villa select based on scope
+     */
+    toggleVillaSelect(event) {
+        const scope = event.target.value;
+        if (scope === 'villa') {
+            this.villaSelectTarget.classList.remove('hidden');
+        } else {
+            this.villaSelectTarget.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Submit generate form
+     */
+    async submitGenerate(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        const data = {
+            templateId: parseInt(formData.get('templateId')),
+            startDate: formData.get('startDate'),
+            endDate: formData.get('endDate'),
+            scope: formData.get('scope'),
+            villaId: formData.get('villaId') ? parseInt(formData.get('villaId')) : null
+        };
+
+        try {
+            const response = await this.fetchAPI('/api/planning-assignment/generate', {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+
+            this.closeModal();
+
+            // Invalidate cache for affected months
+            const startDate = new Date(data.startDate);
+            const endDate = new Date(data.endDate);
+            const startMonth = startDate.getMonth() + 1;
+            const startYear = startDate.getFullYear();
+            const endMonth = endDate.getMonth() + 1;
+            const endYear = endDate.getFullYear();
+
+            // Simple invalidation of start and end months (covers most cases)
+            await cacheManager.invalidateRange(startYear, startMonth);
+            if (startYear !== endYear || startMonth !== endMonth) {
+                await cacheManager.invalidateRange(endYear, endMonth);
+            }
+
+            // Force immediate reload from API (bypass cache)
+            this.forceRefreshFromAPI();
+
+            this.showSuccess(`${response.created} affectations créées avec succès`);
+
+        } catch (error) {
+            console.error('Failed to generate skeleton:', error);
+            this.showError('Échec de la génération du squelette');
+        }
+    }
+
+    /**
+     * Validate planning for current month
+     */
+    async validatePlanning() {
+        const year = this.currentYearValue;
+        const month = this.currentMonthValue;
+
+        // Confirm with user
+        if (!confirm(`Êtes-vous sûr de vouloir valider toutes les affectations du mois ${month}/${year} ?\n\nToutes les gardes en brouillon seront marquées comme validées et apparaîtront dans le planning des éducateurs.`)) {
+            return;
+        }
+
+        this.showInfo('Validation du planning en cours...');
+
+        try {
+            const response = await fetch('/api/planning-assignment/validate-month', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year, month })
+            });
+
+            const data = await response.json();
+
+            // Handle blocking errors (status 400)
+            if (!response.ok) {
+                this.showError(data.message || 'Erreur lors de la validation');
+
+                // Display all errors in a detailed modal
+                if (data.errors && data.errors.length > 0) {
+                    this.showValidationErrorsModal(data.errors, data.warnings || []);
+                }
+
+                return; // Don't continue
+            }
+
+            // Success - show message
+            this.showSuccess(data.message || `${data.validated} affectation(s) validée(s)`);
+
+            // Show warnings if present (non-blocking)
+            if (data.warnings && data.warnings.length > 0) {
+                this.showWarningsToast(data.warnings);
+            }
+
+            // Invalidate cache and refresh
+            await cacheManager.invalidateRange(year, month);
+
+            // Force immediate reload from API (bypass cache)
+            this.forceRefreshFromAPI();
+
+        } catch (error) {
+            console.error('Failed to validate planning:', error);
+            this.showError('Échec de la validation du planning');
+        }
+    }
+
+    /**
+     * Handle event click (monthly view) - opens edit modal
+     */
+    handleEventClick(info) {
+        const { type } = info.event.extendedProps;
+
+        // Handle absence click
+        if (type === 'absence') {
+            this.showAbsenceDetails(info.event.extendedProps);
+            return;
+        }
+
+        // Handle RDV click
+        if (type === 'rdv') {
+            this.showRdvDetails(info.event.extendedProps);
+            return;
+        }
+
+        // Handle regular affectation click - open modal in ALL views
+        const { affectation, user, villa, realStart, realEnd, workingDays } = info.event.extendedProps;
+        const eventId = info.event.id;
+
+        // Render rich edit modal (works in monthly, weekly, and daily views)
+        this.renderEditModal(eventId, {
+            affectation,
+            user,
+            villa,
+            startAt: new Date(realStart),
+            endAt: new Date(realEnd),
+            workingDays
+        });
+    }
+
+    /**
+     * Handle date click (create new assignment)
+     */
+    handleDateClick(info) {
+        // Only allow creation in month view for better UX
+        if (this.calendar.view.type !== 'dayGridMonth') {
+            return;
+        }
+
+        const clickedDate = info.date;
+
+        // Set default start time to 9:00 AM
+        const startAt = new Date(clickedDate);
+        startAt.setHours(9, 0, 0, 0);
+
+        // Set default end time to next day 9:00 AM (24h shift)
+        const endAt = new Date(startAt);
+        endAt.setDate(endAt.getDate() + 1);
+
+        // Open creation modal (reuse edit modal but without eventId)
+        this.renderCreateModal({
+            startAt,
+            endAt
+        });
+    }
+
+    /**
+     * 🆕 Render creation modal for new assignment
+     */
+    renderCreateModal(data) {
+        const { startAt, endAt } = data;
+
+        // Get all users from sidebar
+        const userCards = Array.from(document.querySelectorAll('[data-user-id]'));
+        const users = userCards.map(card => ({
+            id: card.dataset.userId,
+            fullName: card.querySelector('.font-medium')?.textContent?.trim() || 'Utilisateur',
+            remainingDays: card.querySelector('.text-xs')?.textContent?.match(/\d+/)?.[0] || null,
+            color: card.dataset.userColor || '#3B82F6'
+        }));
+
+        // Get all villas from the generate modal template
+        const villaOptions = Array.from(document.querySelectorAll('[data-planning-assignment-target="villaSelect"] option'))
+            .map(opt => ({ id: opt.value, nom: opt.textContent.trim() }))
+            .filter(v => v.id); // Filter out empty values
+
+        const hoursDiff = Math.round((endAt - startAt) / (1000 * 60 * 60));
+        const workingDays = this.calculateWorkingDays(startAt.toISOString(), endAt.toISOString());
+
+        const modalHtml = `
+            <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" id="createAffectationModal">
+                <div class="bg-white rounded-lg p-6 w-full mx-4" style="max-width: 700px;">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900">Nouvelle affectation</h2>
+                        <button onclick="document.getElementById('createAffectationModal').remove()"
+                                class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <form id="createAffectationForm" class="space-y-6">
+                        <!-- Villa (required for main shifts, optional for renfort) -->
+                        <div id="createVillaContainer">
+                            <label class="block text-sm font-semibold mb-2">
+                                Villa <span id="createVillaRequired">*</span>
+                                <span id="createVillaHint" class="text-xs text-gray-500 font-normal" style="display: none;">
+                                    (Optionnel pour renfort centre-complet)
+                                </span>
+                            </label>
+                            <select id="createVilla" required class="w-full border-gray-300 rounded-lg">
+                                <option value="">-- Sélectionner une villa --</option>
+                                ${villaOptions.map(v => `
+                                    <option value="${v.id}">${v.nom}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Type de garde -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Type de garde</label>
+                            <select id="createType" class="w-full border-gray-300 rounded-lg">
+                                <option value="garde_48h">Garde 48h</option>
+                                <option value="garde_24h" selected>Garde 24h</option>
+                                <option value="renfort">Renfort</option>
+                                <option value="autre">Autre</option>
+                            </select>
+                        </div>
+
+                        <!-- Éducateur assigné -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Éducateur assigné</label>
+                            <select id="createUser" class="w-full border-gray-300 rounded-lg">
+                                <option value="">-- Non assigné --</option>
+                                ${users.map(u => `
+                                    <option value="${u.id}">
+                                        ${u.fullName} ${u.remainingDays ? `(${u.remainingDays}j restants)` : ''}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Horaires -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-2">Début</label>
+                                <input type="datetime-local" id="createStartAt"
+                                       value="${this.formatDateForInput(startAt)}"
+                                       class="w-full border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-2">Fin</label>
+                                <input type="datetime-local" id="createEndAt"
+                                       value="${this.formatDateForInput(endAt)}"
+                                       class="w-full border-gray-300 rounded-lg">
+                            </div>
+                        </div>
+
+                        <!-- Durée calculée -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p class="text-sm text-blue-800">
+                                <span class="font-semibold">Durée calculée :</span>
+                                <span id="createCalculatedDuration">${hoursDiff}h (${workingDays} jour${workingDays > 1 ? 's' : ''} travaillé${workingDays > 1 ? 's' : ''})</span>
+                            </p>
+                        </div>
+
+                        <!-- Commentaire -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Commentaire (optionnel)</label>
+                            <textarea id="createCommentaire" rows="3"
+                                      class="w-full border-gray-300 rounded-lg"
+                                      placeholder="Notes ou observations..."></textarea>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex justify-end items-center pt-4 border-t space-x-2">
+                            <button type="button"
+                                    onclick="document.getElementById('createAffectationModal').remove()"
+                                    class="px-4 py-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium">
+                                Annuler
+                            </button>
+                            <button type="submit"
+                                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium">
+                                Créer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Attach form submit handler
+        document.getElementById('createAffectationForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveNewAffectationFromModal();
+        });
+
+        // Real-time duration calculation
+        const startInput = document.getElementById('createStartAt');
+        const endInput = document.getElementById('createEndAt');
+        const updateDuration = () => {
+            const start = new Date(startInput.value);
+            const end = new Date(endInput.value);
+            const hours = Math.round((end - start) / (1000 * 60 * 60));
+
+            let days;
+            if (hours < 7) {
+                days = 0;
+            } else {
+                days = Math.ceil((hours - 3) / 24);
+            }
+
+            document.getElementById('createCalculatedDuration').textContent =
+                `${hours}h (${days} jour${days > 1 ? 's' : ''} travaillé${days > 1 ? 's' : ''})`;;
+        };
+        startInput.addEventListener('change', updateDuration);
+        endInput.addEventListener('change', updateDuration);
+
+        // Toggle villa requirement based on type
+        const typeSelect = document.getElementById('createType');
+        const villaSelect = document.getElementById('createVilla');
+        const villaRequired = document.getElementById('createVillaRequired');
+        const villaHint = document.getElementById('createVillaHint');
+
+        const updateVillaRequirement = () => {
+            const isRenfort = typeSelect.value === 'renfort';
+            villaSelect.required = !isRenfort;
+
+            if (isRenfort) {
+                villaRequired.style.display = 'none';
+                villaHint.style.display = 'inline';
+                villaSelect.parentElement.querySelector('option[value=""]').textContent = '-- Aucune (centre-complet) --';
+            } else {
+                villaRequired.style.display = 'inline';
+                villaHint.style.display = 'none';
+                villaSelect.parentElement.querySelector('option[value=""]').textContent = '-- Sélectionner une villa --';
+            }
+        };
+
+        typeSelect.addEventListener('change', updateVillaRequirement);
+        updateVillaRequirement(); // Initial state
+
+        // Store controller reference
+        window.planningController = this;
+    }
+
+    /**
+     * Save new affectation from creation modal
+     */
+    async saveNewAffectationFromModal() {
+        const villaId = document.getElementById('createVilla').value;
+        const type = document.getElementById('createType').value;
+        const isRenfort = type === 'renfort';
+
+        // Villa required only for main shifts (not renfort)
+        if (!villaId && !isRenfort) {
+            this.showError('Veuillez sélectionner une villa pour les gardes principales');
+            return;
+        }
+
+        const formData = {
+            villaId: villaId ? parseInt(villaId) : null,
+            type: type,
+            userId: document.getElementById('createUser').value || null,
+            startAt: new Date(document.getElementById('createStartAt').value).toISOString(),
+            endAt: new Date(document.getElementById('createEndAt').value).toISOString(),
+            commentaire: document.getElementById('createCommentaire').value,
+            statut: 'draft' // New assignments start as draft
+        };
+
+        try {
+            this.showInfo('Création en cours...');
+
+            console.log('🔵 Creating affectation with data:', formData);
+
+            const response = await this.fetchAPI('/api/planning-assignment/create', {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            });
+
+            console.log('🔵 Affectation created, response:', response);
+
+            // Close modal
+            document.getElementById('createAffectationModal').remove();
+
+            // Invalidate cache for current month and adjacent months
+            await cacheManager.invalidateRange(this.currentYear, this.currentMonth);
+
+            // For main shifts, also invalidate cache for adjacent months in case of month overlap
+            if (!isRenfort) {
+                const startDate = new Date(formData.startAt);
+                const endDate = new Date(formData.endAt);
+                const startMonth = startDate.getMonth() + 1;
+                const startYear = startDate.getFullYear();
+                const endMonth = endDate.getMonth() + 1;
+                const endYear = endDate.getFullYear();
+
+                // Invalidate start and end months if different from current
+                if (startYear !== this.currentYear || startMonth !== this.currentMonth) {
+                    await cacheManager.invalidateRange(startYear, startMonth);
+                }
+                if ((endYear !== this.currentYear || endMonth !== this.currentMonth) &&
+                    (endYear !== startYear || endMonth !== startMonth)) {
+                    await cacheManager.invalidateRange(endYear, endMonth);
+                }
+            }
+
+            // Small delay to ensure backend has fully persisted the data
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            console.log('🔵 Cache invalidated, forcing refresh from API...');
+
+            // Force immediate reload from API
+            this.forceRefreshFromAPI();
+
+            console.log('🔵 Refresh triggered successfully');
+
+            this.showSuccess('Affectation créée avec succès');
+
+            if (response.warnings && response.warnings.length > 0) {
+                this.showWarningsToast(response.warnings);
+            }
+
+        } catch (error) {
+            console.error('Failed to create affectation:', error);
+            this.showError('Échec de la création de l\'affectation');
+        }
+    }
+
+    /**
+     * 🆕 Render rich edit modal with all fields
+     */
+    renderEditModal(eventId, data) {
+        const { affectation, user, villa, startAt, endAt, workingDays } = data;
+
+        // Get all users from sidebar
+        const userCards = Array.from(document.querySelectorAll('[data-user-id]'));
+        const users = userCards.map(card => ({
+            id: card.dataset.userId,
+            fullName: card.querySelector('.font-medium')?.textContent?.trim() || 'Utilisateur',
+            remainingDays: card.querySelector('.text-xs')?.textContent?.match(/\d+/)?.[0] || null,
+            color: card.dataset.userColor || '#3B82F6'
+        }));
+
+        const hoursDiff = Math.round((endAt - startAt) / (1000 * 60 * 60));
+
+        // Check if affectation needs replacement
+        const hasConflict = affectation.statut === 'to_replace_absence' ||
+                           affectation.statut === 'to_replace_rdv' ||
+                           affectation.statut === 'to_replace_schedule_conflict';
+        const conflictAlert = hasConflict ? `
+            <div class="bg-red-50 border border-red-300 rounded-lg p-4 mb-4">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-red-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <h4 class="text-sm font-bold text-red-800 mb-1">Affectation à remplacer</h4>
+                        <p class="text-sm text-red-700" id="conflictReasonText">Chargement de la raison...</p>
+                    </div>
+                </div>
+            </div>
+        ` : '';
+
+        const modalHtml = `
+            <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" id="editAffectationModal">
+                <div class="bg-white rounded-lg p-6 w-full mx-4" style="max-width: 700px;">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900">Édition de la garde</h2>
+                        <button onclick="document.getElementById('editAffectationModal').remove()"
+                                class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <form id="editAffectationForm" class="space-y-6">
+                        <!-- Villa (read-only) -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Villa</label>
+                            <input type="text" value="${villa?.nom || (affectation.type === 'renfort' ? 'Centre-complet (toutes villas)' : 'N/A')}" disabled
+                                   class="w-full border-gray-300 bg-gray-100 rounded-lg px-3 py-2">
+                            <p class="text-xs text-gray-500 mt-1">La villa ne peut pas être modifiée après création</p>
+                        </div>
+
+                        <!-- Conflict alert -->
+                        ${conflictAlert}
+
+                        <!-- Type de garde -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Type de garde</label>
+                            <select id="editType" class="w-full border-gray-300 rounded-lg">
+                                <option value="garde_48h" ${affectation.type === 'garde_48h' ? 'selected' : ''}>Garde 48h</option>
+                                <option value="garde_24h" ${affectation.type === 'garde_24h' ? 'selected' : ''}>Garde 24h</option>
+                                <option value="renfort" ${affectation.type === 'renfort' ? 'selected' : ''}>Renfort</option>
+                                <option value="autre" ${affectation.type === 'autre' ? 'selected' : ''}>Autre</option>
+                            </select>
+                        </div>
+
+                        <!-- Éducateur assigné -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Éducateur assigné</label>
+                            <select id="editUser" class="w-full border-gray-300 rounded-lg">
+                                <option value="">-- Non assigné --</option>
+                                ${users.map(u => `
+                                    <option value="${u.id}" ${u.id == user?.id ? 'selected' : ''}>
+                                        ${u.fullName} ${u.remainingDays ? `(${u.remainingDays}j restants)` : ''}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Horaires -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-2">Début</label>
+                                <input type="datetime-local" id="editStartAt"
+                                       value="${this.formatDateForInput(startAt)}"
+                                       class="w-full border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-2">Fin</label>
+                                <input type="datetime-local" id="editEndAt"
+                                       value="${this.formatDateForInput(endAt)}"
+                                       class="w-full border-gray-300 rounded-lg">
+                            </div>
+                        </div>
+
+                        <!-- Durée calculée -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p class="text-sm text-blue-800">
+                                <span class="font-semibold">Durée calculée :</span>
+                                <span id="calculatedDuration">${hoursDiff}h (${workingDays} jour${workingDays > 1 ? 's' : ''} travaillé${workingDays > 1 ? 's' : ''})</span>
+                            </p>
+                        </div>
+
+                        <!-- Commentaire -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Commentaire (optionnel)</label>
+                            <textarea id="editCommentaire" rows="3"
+                                      class="w-full border-gray-300 rounded-lg"
+                                      placeholder="Notes ou observations...">${affectation.commentaire || ''}</textarea>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex justify-between items-center pt-4 border-t">
+                            <button type="button"
+                                    onclick="window.planningController.deleteAffectation('${eventId}')"
+                                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                                Supprimer
+                            </button>
+
+                            <div class="flex space-x-2">
+                                <button type="button"
+                                        onclick="document.getElementById('editAffectationModal').remove()"
+                                        class="px-4 py-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium">
+                                    Annuler
+                                </button>
+                                <button type="submit"
+                                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+                                    Enregistrer
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Attach form submit handler
+        document.getElementById('editAffectationForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveAffectationFromModal(eventId);
+        });
+
+        // Real-time duration calculation with new formula
+        const startInput = document.getElementById('editStartAt');
+        const endInput = document.getElementById('editEndAt');
+        const updateDuration = () => {
+            const start = new Date(startInput.value);
+            const end = new Date(endInput.value);
+            const hours = Math.round((end - start) / (1000 * 60 * 60));
+
+            // Apply new working days formula: ceil((hours - 3) / 24)
+            let days;
+            if (hours < 7) {
+                days = 0;
+            } else {
+                days = Math.ceil((hours - 3) / 24);
+            }
+
+            document.getElementById('calculatedDuration').textContent =
+                `${hours}h (${days} jour${days > 1 ? 's' : ''} travaillé${days > 1 ? 's' : ''})`;
+        };
+        startInput.addEventListener('change', updateDuration);
+        endInput.addEventListener('change', updateDuration);
+
+        // Load conflict reason if affectation needs replacement
+        if (hasConflict) {
+            this.loadConflictReason(affectation.id, affectation.statut);
+        }
+
+        // Store controller reference
+        window.planningController = this;
+    }
+
+    /**
+     * Load and display conflict reason for an affectation
+     */
+    async loadConflictReason(affectationId, statut) {
+        const reasonElement = document.getElementById('conflictReasonText');
+        if (!reasonElement) return;
+
+        try {
+            console.log('Loading conflict details for affectation:', affectationId);
+
+            // API call to get conflict details
+            const response = await fetch(`/api/planning-assignment/${affectationId}/conflict-details`, {
+                credentials: 'same-origin'
+            });
+
+            console.log('Conflict details response status:', response.status);
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                console.error('Conflict details error:', errorData);
+                reasonElement.textContent = `Impossible de charger les détails du conflit (${response.status}): ${errorData.error || 'erreur inconnue'}`;
+                return;
+            }
+
+            const data = await response.json();
+            console.log('Conflict details data:', data);
+
+            if (data.reason) {
+                reasonElement.textContent = data.reason;
+            } else {
+                reasonElement.textContent = 'Conflit détecté mais détails non disponibles.';
+            }
+
+        } catch (error) {
+            console.error('Failed to load conflict reason:', error);
+            reasonElement.textContent = `Erreur lors du chargement des détails: ${error.message}`;
+        }
+    }
+
+    /**
+     * 🆕 Save affectation from modal
+     * Sauvegarde immédiatement vers l'API et recharge les données
+     */
+    async saveAffectationFromModal(eventId) {
+        const formData = {
+            type: document.getElementById('editType').value,
+            userId: document.getElementById('editUser').value || null,
+            startAt: new Date(document.getElementById('editStartAt').value).toISOString(),
+            endAt: new Date(document.getElementById('editEndAt').value).toISOString(),
+            commentaire: document.getElementById('editCommentaire').value
+        };
+
+        // Close modal immediately
+        document.getElementById('editAffectationModal').remove();
+
+        this.showInfo('Sauvegarde en cours...');
+
+        try {
+            // Send directly to API (immediate save, not pending)
+            const changes = [{
+                affectationId: eventId,
+                type: 'update',
+                data: formData
+            }];
+
+            const response = await this.fetchAPI('/api/planning-assignment/batch-update', {
+                method: 'POST',
+                body: JSON.stringify({ changes })
+            });
+
+            // Invalidate ALL cache to ensure fresh data
+            await cacheManager.invalidateAll();
+
+            // Force reload from API to get updated status
+            this.forceRefresh = true;
+            this.calendar.removeAllEvents();
+            this.calendar.refetchEvents();
+
+            this.showSuccess('Modification sauvegardée');
+
+            if (response.warnings && response.warnings.length > 0) {
+                this.showWarningsToast(response.warnings);
+            }
+
+        } catch (error) {
+            console.error('Failed to save affectation:', error);
+            this.showError('Échec de la sauvegarde');
+        }
+    }
+
+    /**
+     * 🆕 Delete affectation
+     */
+    async deleteAffectation(eventId) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer cette garde ?')) {
+            return;
+        }
+
+        // Add to pending store
+        this.addPendingChange(eventId, 'delete', {});
+
+        // Remove from calendar (optimistic)
+        const event = this.calendar.getEventById(eventId);
+        if (event) event.remove();
+
+        // Close modal
+        const modal = document.getElementById('editAffectationModal');
+        if (modal) modal.remove();
+
+        this.showInfo('Garde supprimée localement');
+    }
+
+    /**
+     * Format date for datetime-local input
+     */
+    formatDateForInput(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    /**
+     * 🆕 PENDING CHANGES STORE MANAGEMENT
+     */
+
+    /**
+     * Add a modification to the pending store
+     */
+    addPendingChange(affectationId, type, data) {
+        this.pendingChanges.set(affectationId, { type, data, timestamp: Date.now() });
+        this.hasUnsavedChanges = true;
+        this.updateSaveIndicator();
+    }
+
+    /**
+     * Update event optimistically (without refetch API)
+     */
+    updateEventOptimistic(affectationId, updates) {
+        const event = this.calendar.getEventById(affectationId);
+        if (!event) return;
+
+        // If userId changed, update user info
+        if (updates.userId) {
+            // Find user from data passed to template
+            const userCard = document.querySelector(`[data-user-id="${updates.userId}"]`);
+            if (userCard) {
+                const userName = userCard.querySelector('.font-medium')?.textContent?.trim() || 'Utilisateur';
+                const userColor = userCard.dataset.userColor || '#3B82F6';
+
+                // Update event extended props
+                event.setExtendedProp('user', {
+                    id: updates.userId,
+                    fullName: userName,
+                    color: userColor
+                });
+
+                // Update title
+                const villaName = event.extendedProps.villa?.nom || 'Villa';
+                event.setProp('title', `${villaName} - ${userName}`);
+
+                // Update background color (educator color)
+                event.setProp('backgroundColor', userColor);
+
+                // Keep border color as villa color (not educator color)
+                const villaColor = event.extendedProps.villa?.color || '#10B981';
+                const isRenfort = event.extendedProps.type === 'renfort' || event.extendedProps.type === 'TYPE_RENFORT';
+                const borderColor = isRenfort ? '#6B7280' : villaColor;
+                event.setProp('borderColor', borderColor);
+            }
+        }
+
+        // If dates changed, recalculate working days and update calendar display
+        if (updates.startAt || updates.endAt) {
+            // Update real times
+            const newStartAt = updates.startAt || event.extendedProps.realStart;
+            const newEndAt = updates.endAt || event.extendedProps.realEnd;
+
+            event.setExtendedProp('realStart', newStartAt);
+            event.setExtendedProp('realEnd', newEndAt);
+
+            // Recalculate working days with new formula
+            const workingDays = this.calculateWorkingDays(newStartAt, newEndAt);
+            event.setExtendedProp('workingDays', workingDays);
+
+            // Update calendar display based on current view
+            const currentView = this.calendar.view.type;
+            const isMonthView = currentView === 'dayGridMonth';
+
+            if (isMonthView) {
+                // Monthly view: display as all-day spanning working days
+                const startDate = new Date(newStartAt);
+                const displayEnd = new Date(startDate);
+                displayEnd.setDate(displayEnd.getDate() + workingDays);
+
+                event.setStart(startDate.toISOString().split('T')[0]);
+                event.setEnd(displayEnd.toISOString().split('T')[0]);
+                event.setAllDay(true);
+            } else {
+                // Weekly/daily view: display with actual times
+                event.setStart(newStartAt);
+                event.setEnd(newEndAt);
+                event.setAllDay(false);
+            }
+        }
+
+        // Mettre à jour le statut en brouillon si l'affectation était validée ou à remplacer
+        // Cela permet de refléter visuellement que l'affectation doit être re-validée
+        const currentStatut = event.extendedProps.statut;
+        const statusesToReset = ['validated', 'to_replace_absence', 'to_replace_rdv', 'to_replace_schedule_conflict'];
+        if (statusesToReset.includes(currentStatut)) {
+            event.setExtendedProp('statut', 'draft');
+        }
+    }
+
+    /**
+     * Update visual indicator of unsaved changes
+     */
+    updateSaveIndicator() {
+        const count = this.pendingChanges.size;
+        const indicator = document.getElementById('unsaved-indicator');
+
+        if (indicator) {
+            if (count > 0) {
+                indicator.classList.remove('hidden');
+                indicator.querySelector('span').textContent =
+                    `${count} modification${count > 1 ? 's' : ''} non sauvegardée${count > 1 ? 's' : ''}`;
+            } else {
+                indicator.classList.add('hidden');
+            }
+        }
+    }
+
+    /**
+     * Save all pending changes in batch
+     */
+    async savePendingChanges() {
+        if (this.pendingChanges.size === 0) return;
+
+        const changes = Array.from(this.pendingChanges.entries()).map(([id, change]) => ({
+            affectationId: id,
+            ...change
+        }));
+
+        try {
+            this.showInfo('Sauvegarde en cours...');
+
+            const response = await this.fetchAPI('/api/planning-assignment/batch-update', {
+                method: 'POST',
+                body: JSON.stringify({ changes })
+            });
+
+            // Clear pending changes
+            this.pendingChanges.clear();
+            this.hasUnsavedChanges = false;
+            this.updateSaveIndicator();
+
+            // Invalidate cache for current month and adjacent months
+            await cacheManager.invalidateRange(this.currentYear, this.currentMonth);
+
+            // Force immediate reload from API (bypass cache)
+            this.forceRefreshFromAPI();
+
+            this.showSuccess(`${changes.length} modification${changes.length > 1 ? 's' : ''} sauvegardée${changes.length > 1 ? 's' : ''}`);
+
+            if (response.warnings && response.warnings.length > 0) {
+                this.showWarningsToast(response.warnings);
+            }
+
+        } catch (error) {
+            console.error('Failed to save pending changes:', error);
+            this.showError('Échec de la sauvegarde');
+        }
+    }
+
+    /**
+     * Manual save (triggered by "Sauvegarder" button)
+     */
+    async manualSave() {
+        await this.savePendingChanges();
+    }
+
+    /**
+     * Helper: fetch with JSON and CSRF
+     */
+    async fetchAPI(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...options.headers
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    /**
+     * Show warnings toast (using Flowbite or custom)
+     */
+    showWarningsToast(warnings) {
+        warnings.forEach(warning => {
+            const severity = warning.severity || 'warning';
+            const color = severity === 'error' ? 'red' : severity === 'warning' ? 'yellow' : 'blue';
+
+            // Simple toast implementation (can be enhanced with Flowbite)
+            this.showToast(warning.message, color);
+        });
+    }
+
+    /**
+     * Simple toast notification
+     */
+    showToast(message, color = 'blue') {
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-4 right-4 bg-${color}-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+
+    showSuccess(message) {
+        this.showToast(message, 'green');
+    }
+
+    showError(message) {
+        this.showToast(message, 'red');
+    }
+
+    showInfo(message) {
+        this.showToast(message, 'blue');
+    }
+
+    /**
+     * Show absence details modal with enriched information
+     */
+    showAbsenceDetails(extendedProps) {
+        const { absenceData, absenceTypeLabel, user, startDateFormatted, endDateFormatted } = extendedProps;
+
+        const modalHtml = `
+            <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" id="absenceDetailsModal">
+                <div class="bg-white rounded-lg p-6 w-full mx-4" style="max-width: 600px;">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900">Absence</h2>
+                            <p class="text-sm text-gray-600 mt-1">${user.fullName}</p>
+                        </div>
+                        <button onclick="document.getElementById('absenceDetailsModal').remove()"
+                                class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Type d'absence -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <span class="text-2xl mr-3">🚫</span>
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase">Type d'absence</p>
+                                    <p class="text-lg font-semibold text-gray-900">${absenceTypeLabel}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Période -->
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <span class="text-2xl mr-3">📅</span>
+                                <div class="flex-1">
+                                    <p class="text-xs text-blue-600 uppercase mb-1">Période</p>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-xs text-gray-500">Début</p>
+                                            <p class="text-sm font-semibold text-gray-900">${startDateFormatted}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-gray-500">Fin</p>
+                                            <p class="text-sm font-semibold text-gray-900">${endDateFormatted}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${absenceData.reason ? `
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <p class="text-xs text-gray-500 uppercase mb-2">Motif</p>
+                                <p class="text-sm text-gray-700">${absenceData.reason}</p>
+                            </div>
+                        ` : ''}
+
+                        ${absenceData.workingDaysCount ? `
+                            <div class="text-sm text-gray-600 text-center">
+                                <span class="font-semibold">${absenceData.workingDaysCount}</span> jour(s) ouvré(s)
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="flex justify-end mt-6 pt-4 border-t">
+                        <button onclick="document.getElementById('absenceDetailsModal').remove()"
+                                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    /**
+     * Show RDV details modal
+     */
+    showRdvDetails(extendedProps) {
+        const { rdvData, participants } = extendedProps;
+
+        const startDate = new Date(rdvData.startAt);
+        const endDate = new Date(rdvData.endAt);
+
+        const formatDate = (date) => {
+            return date.toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        };
+
+        const formatTime = (date) => {
+            return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        };
+
+        // Calculate duration
+        const durationMs = endDate - startDate;
+        const durationMinutes = Math.round(durationMs / (1000 * 60));
+        const hours = Math.floor(durationMinutes / 60);
+        const minutes = durationMinutes % 60;
+
+        const durationText = hours > 0
+            ? `${hours}h${minutes > 0 ? minutes.toString().padStart(2, '0') : ''}`
+            : `${minutes} min`;
+
+        const modal = document.getElementById('details-modal');
+        const title = document.getElementById('details-modal-title');
+        const content = document.getElementById('details-modal-content');
+
+        title.textContent = '📅 Détails du rendez-vous';
+
+        content.innerHTML = `
+            <div class="space-y-4">
+                <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <h4 class="font-semibold text-lg text-gray-900 mb-1">${rdvData.title}</h4>
+                    <p class="text-sm text-gray-600">Rendez-vous avec impact sur le planning</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-blue-50 rounded-lg">
+                        <p class="text-xs text-blue-600 font-semibold mb-1">PARTICIPANTS</p>
+                        <p class="text-sm font-medium text-gray-900">${participants.length} personne${participants.length > 1 ? 's' : ''}</p>
+                    </div>
+                    <div class="p-3 bg-purple-50 rounded-lg">
+                        <p class="text-xs text-purple-600 font-semibold mb-1">DURÉE</p>
+                        <p class="text-sm font-medium text-gray-900">${durationText}</p>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4">
+                    <h5 class="font-semibold text-gray-900 mb-3">📅 Horaires</h5>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-600 w-20">Date :</span>
+                            <span class="text-sm font-medium text-gray-900">${formatDate(startDate)}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-600 w-20">Début :</span>
+                            <span class="text-sm font-medium text-gray-900">${formatTime(startDate)}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-600 w-20">Fin :</span>
+                            <span class="text-sm font-medium text-gray-900">${formatTime(endDate)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4">
+                    <h5 class="font-semibold text-gray-900 mb-3">👥 Participants</h5>
+                    <div class="space-y-2">
+                        ${participants.map(p => `
+                            <div class="flex items-center p-2 bg-gray-50 rounded-lg">
+                                <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-bold text-gray-700 mr-3">
+                                    ${p.fullName.charAt(0)}
+                                </div>
+                                <span class="text-sm font-medium text-gray-900">${p.fullName}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p class="text-xs text-yellow-700 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="font-semibold">Ce rendez-vous impacte le planning des participants</span>
+                    </p>
+                </div>
+            </div>
+        `;
+
+        modal.classList.remove('hidden');
+    }
+
+    /**
+     * Close details modal
+     */
+    closeDetailsModal() {
+        const modal = document.getElementById('details-modal');
+        modal.classList.add('hidden');
+    }
+
+    /**
+     * Render astreinte bars as overlays covering each week row
+     */
+    renderAstreinteBars() {
+        // Remove existing astreinte bars
+        const existingBars = this.calendarTarget.querySelectorAll('.astreinte-bar-overlay');
+        existingBars.forEach(bar => bar.remove());
+
+        if (!this.astreintesData || this.astreintesData.length === 0) {
+            console.log('No astreintes to render');
+            return;
+        }
+
+        // Get all week rows in the calendar
+        const weekRows = this.calendarTarget.querySelectorAll('.fc-scrollgrid-section-body tr[role="row"]');
+        if (!weekRows || weekRows.length === 0) {
+            console.warn('Calendar week rows not ready yet');
+            return;
+        }
+
+        console.log(`🎨 Rendering ${this.astreintesData.length} astreinte bars on ${weekRows.length} weeks`);
+
+        // For each astreinte, find the corresponding week row and overlay it
+        this.astreintesData.forEach((astreinte) => {
+            const astreinteStart = new Date(astreinte.startAt);
+
+            // Find the week row that contains this astreinte's start date
+            weekRows.forEach((weekRow) => {
+                const dayCells = weekRow.querySelectorAll('td.fc-daygrid-day');
+                if (dayCells.length === 0) return;
+
+                // Get the first and last day of this week row
+                const firstCell = dayCells[0];
+                const lastCell = dayCells[dayCells.length - 1];
+
+                const firstDate = new Date(firstCell.getAttribute('data-date'));
+                const lastDate = new Date(lastCell.getAttribute('data-date'));
+
+                // Check if astreinte starts in this week
+                if (astreinteStart >= firstDate && astreinteStart <= lastDate) {
+                    const bar = this.createAstreinteBarForWeekRow(astreinte, weekRow);
+                    if (bar) {
+                        weekRow.style.position = 'relative';
+                        weekRow.appendChild(bar);
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * Create a single astreinte bar overlay for a specific week row
+     */
+    createAstreinteBarForWeekRow(astreinte, weekRow) {
+        const educateur = astreinte.educateur;
+        if (!educateur) return null;
+
+        const color = educateur.color || '#cccccc';
+
+        // Format dates for display
+        const startDate = new Date(astreinte.startAt);
+        const endDate = new Date(astreinte.endAt);
+        const startFormatted = startDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        const endFormatted = endDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+
+        // Convert hex to rgba
+        const hexToRgba = (hex, alpha) => {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+
+        // Create bar element that covers the entire week row
+        const bar = document.createElement('div');
+        bar.className = 'astreinte-bar-overlay';
+        bar.style.position = 'absolute';
+        bar.style.top = '0';
+        bar.style.left = '0';
+        bar.style.right = '0';
+        bar.style.bottom = '0';
+        bar.style.border = `3px solid ${hexToRgba(color, 0.1)}`;
+        bar.style.borderRadius = '6px';
+        bar.style.pointerEvents = 'none';
+        bar.style.zIndex = '0';
+
+        // Apply hatched pattern background
+        const gradient = `repeating-linear-gradient(
+            45deg,
+            ${hexToRgba(color, 0.10)},
+            ${hexToRgba(color, 0.10)} 10px,
+            ${hexToRgba(color, 0.05)} 10px,
+            ${hexToRgba(color, 0.05)} 20px
+        )`;
+        bar.style.background = gradient;
+
+        // Create text content positioned at top-left
+        const text = document.createElement('div');
+        text.style.position = 'absolute';
+        text.style.top = '8px';
+        text.style.left = '12px';
+        text.style.color = color;
+        text.style.fontWeight = '700';
+        text.style.fontSize = '13px';
+        text.style.lineHeight = '1.3';
+        text.style.textShadow = '0 0 3px white, 0 0 5px white, 1px 1px 2px white';
+        text.style.whiteSpace = 'nowrap';
+        text.innerHTML = `Astreinte ${astreinte.periodLabel || ''} - ${educateur.fullName}<br><span style="font-size: 11px; font-weight: 600;">${startFormatted} → ${endFormatted}</span>`;
+
+        bar.appendChild(text);
+
+        return bar;
+    }
+
+    /**
+     * Show modal with detailed list of validation conflicts
+     */
+    showValidationErrorsModal(errors, warnings) {
+        const errorsList = errors.map((err, index) => {
+            // Icon based on type
+            let icon = '⚠️';
+            if (err.type === 'absence_conflict') icon = '🚫';
+            if (err.type === 'rdv_conflict') icon = '📅';
+
+            return `
+                <div class="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-start">
+                        <span class="text-2xl mr-3">${icon}</span>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-red-800">${err.message}</p>
+                            ${err.affectationId ? `
+                                <button onclick="window.planningController.highlightAffectation('${err.affectationId}')"
+                                        class="mt-2 text-xs text-red-600 hover:text-red-800 underline">
+                                    Voir dans le planning
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        const warningsList = warnings.length > 0 ? `
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <h4 class="text-sm font-semibold text-yellow-800 mb-2">Avertissements (non bloquants):</h4>
+                ${warnings.map(warn => `
+                    <div class="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                        <p class="text-xs text-yellow-800">${warn.message}</p>
+                    </div>
+                `).join('')}
+            </div>
+        ` : '';
+
+        const modalHtml = `
+            <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" id="validationErrorsModal">
+                <div class="bg-white rounded-lg p-6 w-full mx-4" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-red-900">Validation impossible</h2>
+                            <p class="text-sm text-gray-600 mt-1">${errors.length} conflit(s) détecté(s)</p>
+                        </div>
+                        <button onclick="document.getElementById('validationErrorsModal').remove()"
+                                class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-700">
+                            Les affectations suivantes présentent des conflits d'absence ou de rendez-vous.
+                            Veuillez réaffecter un autre éducateur pour ces gardes avant de valider le planning.
+                        </p>
+                    </div>
+
+                    <div class="space-y-2">
+                        ${errorsList}
+                    </div>
+
+                    ${warningsList}
+
+                    <div class="flex justify-end mt-6 pt-4 border-t">
+                        <button onclick="document.getElementById('validationErrorsModal').remove()"
+                                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    /**
+     * Highlight an affectation in the calendar
+     */
+    highlightAffectation(affectationId) {
+        // Close the modal
+        const modal = document.getElementById('validationErrorsModal');
+        if (modal) modal.remove();
+
+        // Find the event in the calendar
+        const event = this.calendar.getEventById(affectationId);
+        if (event) {
+            // Center the calendar on the event date
+            this.calendar.gotoDate(event.start);
+
+            // Visual effect: flash the event
+            const eventEl = document.querySelector(`[data-event-id="${affectationId}"]`);
+            if (eventEl) {
+                eventEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Flash animation (3x)
+                let flashCount = 0;
+                const flashInterval = setInterval(() => {
+                    eventEl.style.transform = flashCount % 2 === 0 ? 'scale(1.15)' : 'scale(1)';
+                    eventEl.style.boxShadow = flashCount % 2 === 0
+                        ? '0 0 20px rgba(239, 68, 68, 0.8)'
+                        : '';
+                    flashCount++;
+
+                    if (flashCount > 6) {
+                        clearInterval(flashInterval);
+                        eventEl.style.transform = '';
+                        eventEl.style.boxShadow = '';
+                    }
+                }, 300);
+            }
+        }
+    }
+
+    // ========================================================================
+    // JOUR CHÔMÉ (WEEKLY DAY OFF) MANAGEMENT
+    // ========================================================================
+
+    /**
+     * Open the jour chômé modal for an educator
+     * Triggered by clicking on an educator card in the sidebar
+     */
+    openJourChomeModal(event) {
+        // Prevent drag events from triggering the modal
+        if (event.type === 'dragstart' || this.draggedUserId) {
+            return;
+        }
+
+        const card = event.currentTarget;
+        const educateurId = card.dataset.userId;
+        const educateurName = card.dataset.userName;
+        const educateurColor = card.dataset.userColor || '#3B82F6';
+
+        if (!educateurId) {
+            console.error('No educator ID found');
+            return;
+        }
+
+        // Store current educator info
+        this.jourChomeEducateurId = educateurId;
+        this.jourChomeEducateurName = educateurName;
+        this.jourChomeEducateurColor = educateurColor;
+
+        // Initialize month tracking for jour chômé modal
+        this.jourChomeYear = this.currentYear;
+        this.jourChomeMonth = this.currentMonth;
+
+        // Update modal header
+        document.getElementById('jourChomeEducateurName').textContent = educateurName;
+        document.getElementById('jourChomeEducateurColor').style.backgroundColor = educateurColor;
+
+        // Show the modal
+        const modal = document.getElementById('jourChomeModal');
+        modal.classList.remove('hidden');
+
+        // Initialize or refresh the calendar
+        this.initJourChomeCalendar();
+        this.loadJourChomePlanning();
+    }
+
+    /**
+     * Close the jour chômé modal
+     */
+    closeJourChomeModal() {
+        const modal = document.getElementById('jourChomeModal');
+        modal.classList.add('hidden');
+
+        // Destroy calendar to free memory
+        if (this.jourChomeCalendar) {
+            this.jourChomeCalendar.destroy();
+            this.jourChomeCalendar = null;
+        }
+
+        // Clear state
+        this.jourChomeEducateurId = null;
+        this.jourChomeEducateurName = null;
+        this.jourChomePendingDate = null;
+    }
+
+    /**
+     * Initialize the FullCalendar instance for jour chômé modal
+     */
+    initJourChomeCalendar() {
+        const calendarEl = document.getElementById('jourChomeCalendar');
+
+        if (!calendarEl || !window.FullCalendar) {
+            console.error('Calendar element or FullCalendar not found');
+            return;
+        }
+
+        // Destroy existing calendar if any
+        if (this.jourChomeCalendar) {
+            this.jourChomeCalendar.destroy();
+        }
+
+        const { Calendar, dayGridPlugin, interactionPlugin } = window.FullCalendar;
+
+        this.jourChomeCalendar = new Calendar(calendarEl, {
+            plugins: [dayGridPlugin, interactionPlugin],
+            initialView: 'dayGridMonth',
+            initialDate: `${this.jourChomeYear}-${String(this.jourChomeMonth).padStart(2, '0')}-01`,
+            height: 'auto',
+            locale: 'fr',
+            firstDay: 1,
+            displayEventTime: false,
+            editable: false,
+            selectable: false,
+            headerToolbar: false, // We use custom navigation
+            dayMaxEvents: 4,
+
+            dateClick: (info) => this.handleJourChomeDateClick(info),
+            eventClick: (info) => this.handleJourChomeEventClick(info),
+            eventContent: (arg) => this.renderJourChomeEventContent(arg)
+        });
+
+        this.jourChomeCalendar.render();
+    }
+
+    /**
+     * Load planning data for the current educator and month
+     */
+    async loadJourChomePlanning() {
+        if (!this.jourChomeEducateurId) return;
+
+        const calendarEl = document.getElementById('jourChomeCalendar');
+        calendarEl.classList.add('loading');
+
+        try {
+            const response = await fetch(
+                `/api/jours-chomes/educateur/${this.jourChomeEducateurId}/${this.jourChomeYear}/${this.jourChomeMonth}`
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to load planning');
+            }
+
+            const data = await response.json();
+            this.jourChomeData = data; // Store for later use
+            this.updateJourChomeCalendar(data);
+            this.updateJourChomeMonthLabel();
+            this.updateJourChomeStats(data.joursChomes?.length || 0);
+
+        } catch (error) {
+            console.error('Error loading jour chômé planning:', error);
+            alert('Erreur lors du chargement du planning');
+        } finally {
+            calendarEl.classList.remove('loading');
+        }
+    }
+
+    /**
+     * Update the calendar with the loaded data
+     */
+    updateJourChomeCalendar(data) {
+        if (!this.jourChomeCalendar) return;
+
+        // Remove all existing events
+        this.jourChomeCalendar.removeAllEvents();
+
+        const events = [];
+
+        // Add plannings (gardes)
+        if (data.plannings) {
+            data.plannings.forEach(planning => {
+                const villaColor = planning.villa?.color || '#3B82F6';
+                events.push({
+                    id: `planning-${planning.id}`,
+                    title: `${planning.villa?.nom || 'Garde'}`,
+                    start: planning.startAt,
+                    end: planning.endAt,
+                    allDay: true,
+                    backgroundColor: villaColor,
+                    borderColor: villaColor,
+                    textColor: this.getContrastColor(villaColor),
+                    extendedProps: { type: 'planning', data: planning }
+                });
+            });
+        }
+
+        // Add absences
+        if (data.absences) {
+            data.absences.forEach(absence => {
+                const isConge = ['CP', 'RTT', 'CPSS'].includes(absence.absenceType?.code);
+                events.push({
+                    id: `absence-${absence.id}`,
+                    title: `${absence.absenceType?.code || 'Absence'}`,
+                    start: absence.startAt,
+                    end: this.addDays(absence.endAt, 1),
+                    allDay: true,
+                    classNames: ['fc-event-absence', isConge ? 'conge-overlay' : 'absence-overlay'],
+                    extendedProps: { type: 'absence', data: absence }
+                });
+            });
+        }
+
+        // Add rendez-vous
+        if (data.rendezvous) {
+            data.rendezvous.forEach(rdv => {
+                events.push({
+                    id: `rdv-${rdv.id}`,
+                    title: rdv.title || 'RDV',
+                    start: rdv.startAt,
+                    end: rdv.endAt,
+                    allDay: false,
+                    backgroundColor: '#F59E0B',
+                    borderColor: '#D97706',
+                    textColor: '#78350F',
+                    extendedProps: { type: 'rdv', data: rdv }
+                });
+            });
+        }
+
+        // Add jours chômés as regular events (styled to fill the cell via CSS)
+        if (data.joursChomes) {
+            data.joursChomes.forEach(jc => {
+                events.push({
+                    id: `jour-chome-${jc.id}`,
+                    title: '🏠 Repos',
+                    start: jc.date,
+                    allDay: true,
+                    classNames: ['fc-event-jour-chome-modal'],
+                    backgroundColor: 'transparent',
+                    borderColor: 'transparent',
+                    extendedProps: { type: 'jour_chome', data: jc }
+                });
+            });
+        }
+
+        // Add all events
+        events.forEach(event => this.jourChomeCalendar.addEvent(event));
+    }
+
+    /**
+     * Handle click on a date in the jour chômé calendar
+     */
+    handleJourChomeDateClick(info) {
+        // Check if the clicked date already has events
+        const dateStr = info.dateStr;
+        const clickedDate = new Date(dateStr + 'T00:00:00');
+
+        const events = this.jourChomeCalendar.getEvents().filter(e => {
+            const eventStart = new Date(e.start);
+            eventStart.setHours(0, 0, 0, 0);
+
+            // For allDay events, FullCalendar's end is exclusive (next day at midnight)
+            // For timed events, we consider the actual end time
+            let eventEnd;
+            if (e.allDay && e.end) {
+                // Subtract 1 day for allDay events since end is exclusive
+                eventEnd = new Date(e.end);
+                eventEnd.setDate(eventEnd.getDate() - 1);
+                eventEnd.setHours(23, 59, 59, 999);
+            } else if (e.end) {
+                eventEnd = new Date(e.end);
+            } else {
+                // Single day event
+                eventEnd = new Date(eventStart);
+                eventEnd.setHours(23, 59, 59, 999);
+            }
+
+            return clickedDate >= eventStart && clickedDate <= eventEnd;
+        });
+
+        // If there are existing events, don't allow adding jour chômé
+        if (events.length > 0) {
+            // Check if it's a jour chômé - if so, trigger delete
+            const jourChomeEvent = events.find(e => e.extendedProps?.type === 'jour_chome');
+            if (jourChomeEvent) {
+                this.showDeleteJourChomeConfirm(jourChomeEvent.extendedProps.data);
+            } else {
+                // Debug: log which events are blocking
+                console.log('🚫 Events blocking jour chômé on', dateStr, ':', events.map(e => ({
+                    id: e.id,
+                    title: e.title,
+                    type: e.extendedProps?.type,
+                    start: e.start?.toISOString(),
+                    end: e.end?.toISOString(),
+                    allDay: e.allDay
+                })));
+                alert('Ce jour contient déjà des événements (garde, absence ou RDV). Impossible d\'ajouter un jour chômé.');
+            }
+            return;
+        }
+
+        // Create jour chômé for this date
+        this.createJourChome(dateStr);
+    }
+
+    /**
+     * Handle click on an event in the jour chômé calendar
+     */
+    handleJourChomeEventClick(info) {
+        const event = info.event;
+        const type = event.extendedProps?.type;
+
+        if (type === 'jour_chome') {
+            // Show delete confirmation
+            this.showDeleteJourChomeConfirm(event.extendedProps.data);
+        }
+        // Other event types are read-only, no action needed
+    }
+
+    /**
+     * Create a new jour chômé
+     */
+    async createJourChome(dateStr, force = false) {
+        try {
+            const response = await fetch('/api/jours-chomes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    educateurId: parseInt(this.jourChomeEducateurId),
+                    date: dateStr,
+                    force: force
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.warning && data.requiresForce) {
+                // Show warning modal
+                this.showJourChomeWarning(dateStr, data.existingDates);
+                return;
+            }
+
+            if (data.success) {
+                // Reload the calendar
+                this.loadJourChomePlanning();
+            } else if (data.error) {
+                alert(data.error);
+            }
+
+        } catch (error) {
+            console.error('Error creating jour chômé:', error);
+            alert('Erreur lors de la création du jour chômé');
+        }
+    }
+
+    /**
+     * Show warning modal when trying to add a second jour chômé in the same week
+     */
+    showJourChomeWarning(newDate, existingDates) {
+        this.jourChomePendingDate = newDate;
+
+        const formattedDate = new Date(newDate).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        const existingFormatted = existingDates.map(d =>
+            new Date(d).toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long'
+            })
+        ).join(', ');
+
+        document.getElementById('jourChomeNewDate').textContent = formattedDate;
+        document.getElementById('jourChomeExistingDates').textContent = existingFormatted;
+
+        document.getElementById('jourChomeWarningModal').classList.remove('hidden');
+    }
+
+    /**
+     * Cancel the force create action
+     */
+    cancelForceJourChome() {
+        document.getElementById('jourChomeWarningModal').classList.add('hidden');
+        this.jourChomePendingDate = null;
+    }
+
+    /**
+     * Force create the jour chômé despite warning
+     */
+    forceCreateJourChome() {
+        document.getElementById('jourChomeWarningModal').classList.add('hidden');
+
+        if (this.jourChomePendingDate) {
+            this.createJourChome(this.jourChomePendingDate, true);
+            this.jourChomePendingDate = null;
+        }
+    }
+
+    /**
+     * Show delete confirmation modal
+     */
+    showDeleteJourChomeConfirm(jourChome) {
+        this.jourChomePendingDeleteId = jourChome.id;
+
+        const formattedDate = new Date(jourChome.date).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        document.getElementById('jourChomeDeleteDate').textContent = formattedDate;
+        document.getElementById('jourChomeDeleteConfirmModal').classList.remove('hidden');
+    }
+
+    /**
+     * Cancel delete action
+     */
+    cancelDeleteJourChome() {
+        document.getElementById('jourChomeDeleteConfirmModal').classList.add('hidden');
+        this.jourChomePendingDeleteId = null;
+    }
+
+    /**
+     * Confirm and execute delete
+     */
+    async confirmDeleteJourChome() {
+        document.getElementById('jourChomeDeleteConfirmModal').classList.add('hidden');
+
+        if (!this.jourChomePendingDeleteId) return;
+
+        try {
+            const response = await fetch(`/api/jours-chomes/${this.jourChomePendingDeleteId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Reload the calendar
+                this.loadJourChomePlanning();
+            } else if (data.error) {
+                alert(data.error);
+            }
+
+        } catch (error) {
+            console.error('Error deleting jour chômé:', error);
+            alert('Erreur lors de la suppression du jour chômé');
+        } finally {
+            this.jourChomePendingDeleteId = null;
+        }
+    }
+
+    /**
+     * Navigate to previous month in jour chômé modal
+     */
+    jourChomePrevMonth() {
+        this.jourChomeMonth--;
+        if (this.jourChomeMonth < 1) {
+            this.jourChomeMonth = 12;
+            this.jourChomeYear--;
+        }
+
+        if (this.jourChomeCalendar) {
+            this.jourChomeCalendar.gotoDate(`${this.jourChomeYear}-${String(this.jourChomeMonth).padStart(2, '0')}-01`);
+        }
+        this.loadJourChomePlanning();
+    }
+
+    /**
+     * Navigate to next month in jour chômé modal
+     */
+    jourChomeNextMonth() {
+        this.jourChomeMonth++;
+        if (this.jourChomeMonth > 12) {
+            this.jourChomeMonth = 1;
+            this.jourChomeYear++;
+        }
+
+        if (this.jourChomeCalendar) {
+            this.jourChomeCalendar.gotoDate(`${this.jourChomeYear}-${String(this.jourChomeMonth).padStart(2, '0')}-01`);
+        }
+        this.loadJourChomePlanning();
+    }
+
+    /**
+     * Update the month label in the modal
+     */
+    updateJourChomeMonthLabel() {
+        const monthNames = [
+            'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        ];
+        const label = `${monthNames[this.jourChomeMonth - 1]} ${this.jourChomeYear}`;
+        document.getElementById('jourChomeMonthLabel').textContent = label;
+    }
+
+    /**
+     * Update the stats counter in the modal
+     */
+    updateJourChomeStats(count) {
+        document.getElementById('jourChomeCount').textContent = count;
+    }
+
+    /**
+     * Render custom event content for jour chômé calendar
+     */
+    renderJourChomeEventContent(arg) {
+        const event = arg.event;
+        const type = event.extendedProps?.type;
+        const data = event.extendedProps?.data;
+
+        const container = document.createElement('div');
+        container.className = 'fc-event-main-custom p-1';
+        container.style.cssText = 'height: 100%; display: flex; flex-direction: column; font-size: 0.7rem; line-height: 1.2; overflow: hidden;';
+
+        if (type === 'jour_chome') {
+            // Style jour chômé - fond gris en pointillés, prend toute la cellule
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 4px; height: 100%;">
+                    <span style="font-size: 1rem;">🏠</span>
+                    <span style="font-weight: 600; color: #374151;">Repos</span>
+                </div>
+            `;
+            return { domNodes: [container] };
+        }
+
+        if (type === 'planning' && data) {
+            // Style planning - similaire au planning principal
+            const villa = data.villa;
+            const villaColor = villa?.color || '#3B82F6';
+            const textColor = this.getContrastColor(villaColor);
+            const isRenfort = data.type === 'renfort' || data.type === 'TYPE_RENFORT';
+            const isMainShift = data.type === 'garde_24h' || data.type === 'garde_48h';
+
+            // Parse dates pour afficher les horaires
+            const start = new Date(data.startAt);
+            const end = new Date(data.endAt);
+            const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+            const startDay = dayNames[start.getDay()];
+            const endDay = dayNames[end.getDay()];
+            const startHour = start.getHours();
+            const endHour = end.getHours();
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                    <div style="font-weight: 600; color: ${textColor}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+                        ${villa?.nom || 'Garde'}
+                    </div>
+                    ${isRenfort ? '<span style="font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; background: #F59E0B; color: white;">🔧 RENFORT</span>' : ''}
+                    ${isMainShift ? '<span style="font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; background: #3B82F6; color: white;">🏠 GARDE</span>' : ''}
+                </div>
+                <div style="opacity: 0.85; font-size: 0.65rem; color: ${textColor}; margin-top: 2px;">
+                    ${startDay} ${startHour}h - ${endDay} ${endHour}h
+                </div>
+                ${data.joursTravailes ? `<div style="font-size: 0.6rem; color: ${textColor}; opacity: 0.8;">${data.joursTravailes}j</div>` : ''}
+            `;
+            return { domNodes: [container] };
+        }
+
+        if (type === 'absence' && data) {
+            // Style absence - rouge/orange avec motif
+            const isConge = ['CP', 'RTT', 'CPSS'].includes(data.absenceType?.code);
+            const bgColor = isConge ? '#EF4444' : '#FB923C';
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="font-size: 0.85rem;">${isConge ? '🏖️' : '🤒'}</span>
+                    <span style="font-weight: 600; color: white;">${data.absenceType?.code || 'Absence'}</span>
+                </div>
+                <div style="opacity: 0.9; font-size: 0.6rem; color: white; margin-top: 2px;">
+                    ${data.absenceType?.label || ''}
+                </div>
+            `;
+            container.style.backgroundColor = bgColor;
+            container.style.borderRadius = '4px';
+            return { domNodes: [container] };
+        }
+
+        if (type === 'rdv' && data) {
+            // Style RDV - similaire au planning principal
+            const start = new Date(data.startAt);
+            const end = new Date(data.endAt);
+            const startTime = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            const endTime = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                    <div style="font-weight: 600; color: #78350F; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+                        📅 ${data.title || 'RDV'}
+                    </div>
+                </div>
+                <div style="opacity: 0.85; font-size: 0.6rem; color: #92400E; margin-top: 2px;">
+                    ${startTime} - ${endTime}
+                </div>
+                ${data.typeLabel ? `<div style="font-size: 0.55rem; color: #B45309; margin-top: 1px;">${data.typeLabel}</div>` : ''}
+            `;
+            return { domNodes: [container] };
+        }
+
+        // Default rendering for other events
+        container.innerHTML = `<div class="text-xs truncate">${event.title}</div>`;
+        return { domNodes: [container] };
+    }
+
+    /**
+     * Helper: Add days to a date string
+     */
+    addDays(dateStr, days) {
+        const date = new Date(dateStr);
+        date.setDate(date.getDate() + days);
+        return date.toISOString().split('T')[0];
+    }
+
+    /**
+     * Helper: Get contrast color (black or white) for a given background color
+     */
+    getContrastColor(hexColor) {
+        if (!hexColor || hexColor === 'undefined') return '#1F2937';
+
+        const hex = hexColor.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness > 128 ? '#1F2937' : '#FFFFFF';
+    }
+}

@@ -16,7 +16,6 @@ class AppointmentService
         private EntityManagerInterface $em,
         private RendezVousRepository $appointmentRepository,
         private AppointmentParticipantRepository $participantRepository,
-        private AppointmentAbsenceService $absenceService,
         private AppointmentConflictService $conflictService,
         private AppointmentNotificationService $notificationService,
         private LoggerInterface $logger
@@ -32,7 +31,6 @@ class AppointmentService
      * @param array $participants Liste des utilisateurs participants
      * @param string|null $description Description complémentaire
      * @param string|null $location Lieu du rendez-vous
-     * @param bool $createsAbsence Génère une absence automatique
      * @return RendezVous
      * @throws \InvalidArgumentException
      */
@@ -43,8 +41,7 @@ class AppointmentService
         int $durationMinutes,
         array $participants,
         ?string $description = null,
-        ?string $location = null,
-        bool $createsAbsence = false
+        ?string $location = null
     ): RendezVous {
         // Règle RM-01: Min 1 participant
         if (empty($participants)) {
@@ -65,7 +62,6 @@ class AppointmentService
         $appointment->setDurationMinutes($durationMinutes);
         $appointment->setLocation($location);
         $appointment->setDescription($description);
-        $appointment->setCreatesAbsence($createsAbsence);
 
         // Calculer endAt
         $endAt = clone $scheduledAt;
@@ -91,20 +87,6 @@ class AppointmentService
 
             $this->em->persist($appointmentParticipant);
             $appointment->addAppointmentParticipant($appointmentParticipant);
-
-            // Créer l'absence si nécessaire
-            if ($createsAbsence) {
-                try {
-                    $absence = $this->absenceService->createAbsenceForParticipant($appointmentParticipant, $appointment);
-                    $appointmentParticipant->setLinkedAbsence($absence);
-                } catch (\Exception $e) {
-                    $this->logger->error('Erreur création absence pour participant', [
-                        'participant' => $participant->getId(),
-                        'appointment' => $appointment->getId(),
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
         }
 
         $this->em->flush();
@@ -216,7 +198,6 @@ class AppointmentService
      * @param \DateTimeInterface $scheduledAt Date/heure confirmée
      * @param int $durationMinutes Durée confirmée
      * @param string|null $location Lieu
-     * @param bool $createsAbsence Génère une absence
      * @throws \InvalidArgumentException
      */
     public function validateRequest(
@@ -224,8 +205,7 @@ class AppointmentService
         User $validator,
         \DateTimeInterface $scheduledAt,
         int $durationMinutes,
-        ?string $location = null,
-        bool $createsAbsence = false
+        ?string $location = null
     ): void {
         if (!$appointment->canBeValidated()) {
             throw new \InvalidArgumentException('Cette demande ne peut pas être validée');
@@ -236,7 +216,6 @@ class AppointmentService
         $appointment->setStartAt($scheduledAt);
         $appointment->setDurationMinutes($durationMinutes);
         $appointment->setLocation($location);
-        $appointment->setCreatesAbsence($createsAbsence);
 
         // Calculer endAt
         $endAt = clone $scheduledAt;
@@ -252,21 +231,6 @@ class AppointmentService
                 'appointment_id' => $appointment->getId(),
                 'validator_id' => $validator->getId()
             ]);
-        }
-
-        // Créer l'absence si nécessaire
-        if ($createsAbsence) {
-            foreach ($appointment->getAppointmentParticipants() as $participant) {
-                try {
-                    $absence = $this->absenceService->createAbsenceForParticipant($participant, $appointment);
-                    $participant->setLinkedAbsence($absence);
-                } catch (\Exception $e) {
-                    $this->logger->error('Erreur création absence lors validation', [
-                        'participant' => $participant->getId(),
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
         }
 
         $this->em->flush();
@@ -449,9 +413,6 @@ class AppointmentService
         if ($reason) {
             $appointment->setDescription(($appointment->getDescription() ?? '') . "\n\nAnnulé: " . $reason);
         }
-
-        // Supprimer les absences liées
-        $this->absenceService->removeLinkedAbsences($appointment);
 
         $this->em->flush();
 

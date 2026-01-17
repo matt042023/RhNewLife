@@ -13,7 +13,6 @@ class TypeAbsenceFixtures extends Fixture
     public const TYPE_MAL = 'MAL';
     public const TYPE_AT = 'AT';
     public const TYPE_CPSS = 'CPSS';
-    public const TYPE_REUNION = 'REUNION';
 
     public function load(ObjectManager $manager): void
     {
@@ -57,16 +56,6 @@ class TypeAbsenceFixtures extends Fixture
                 'justificationDeadlineDays' => null,
                 'documentType' => null,
                 'active' => true,
-            ],
-            [
-                'code' => self::TYPE_REUNION,
-                'label' => 'Réunion',
-                'affectsPlanning' => true,
-                'deductFromCounter' => false,
-                'requiresJustification' => false,
-                'justificationDeadlineDays' => null,
-                'documentType' => null,
-                'active' => false, // Non sélectionnable dans les formulaires, créé automatiquement
             ],
         ];
 

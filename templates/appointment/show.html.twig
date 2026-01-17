@@ -187,14 +187,6 @@
                             </button>
                         </form>
                     {% endif %}
-
-                    {# Lien vers absence liée #}
-                    {% if currentParticipant and currentParticipant.linkedAbsence %}
-                        <a href="{{ path('app_absence_show', {id: currentParticipant.linkedAbsence.id}) }}"
-                           class="block w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition text-center">
-                            📄 Voir l'absence liée
-                        </a>
-                    {% endif %}
                 </div>
 
                 {# Informations complémentaires #}
@@ -204,13 +196,6 @@
                             <dt class="text-gray-500 dark:text-gray-400">Créé le</dt>
                             <dd class="text-gray-900 dark:text-white">{{ appointment.createdAt|date('d/m/Y à H:i') }}</dd>
                         </div>
-                        {% if appointment.createsAbsence %}
-                        <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
-                            <p class="text-xs text-blue-700 dark:text-blue-300">
-                                ℹ️ Une absence automatique a été créée pour ce rendez-vous
-                            </p>
-                        </div>
-                        {% endif %}
                     </dl>
                 </div>
             </div>

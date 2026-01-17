@@ -136,14 +136,6 @@
                             {{ appointment.createdAt|date('d/m/Y à H:i') }}
                         </dd>
                     </div>
-
-                    {% if appointment.createsAbsence %}
-                    <div class="col-span-2">
-                        <span class="px-3 py-1 text-sm font-semibold rounded bg-purple-100 text-purple-800">
-                            ✅ Absence automatique activée
-                        </span>
-                    </div>
-                    {% endif %}
                 </dl>
 
                 {% if appointment.description %}
@@ -203,14 +195,6 @@
                                     <span class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">
                                         ❌ Absent
                                     </span>
-                                {% endif %}
-
-                                {# Lien vers absence #}
-                                {% if participant.linkedAbsence %}
-                                    <a href="{{ path('app_absence_show', {id: participant.linkedAbsence.id}) }}"
-                                       class="text-xs text-blue-600 hover:text-blue-800">
-                                        Voir l'absence
-                                    </a>
                                 {% endif %}
                             </div>
                         </div>

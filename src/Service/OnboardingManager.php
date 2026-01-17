@@ -58,6 +58,7 @@ class OnboardingManager
                 ->setLastName($invitation->getLastName())
                 ->setPosition($invitation->getPosition())
                 ->setVilla($invitation->getVilla())
+                ->setColor($invitation->getColor())
                 ->setRoles(['ROLE_USER']);
 
             $this->entityManager->persist($user);
@@ -117,6 +118,7 @@ class OnboardingManager
             ->setLastName($invitation->getLastName())
             ->setPosition($invitation->getPosition())
             ->setVilla($invitation->getVilla())
+            ->setColor($invitation->getColor())
             ->setStatus(User::STATUS_ACTIVE) // Directement actif
             ->setRoles(['ROLE_USER'])
             ->setCguAcceptedAt(new \DateTime());

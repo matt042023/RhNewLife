@@ -43,10 +43,10 @@ class Absence
     #[ORM\JoinColumn(nullable: true)]
     private ?TypeAbsence $absenceType = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[ORM\Column(type: Types::DATE_MUTABLE)]
     private ?\DateTimeInterface $startAt = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[ORM\Column(type: Types::DATE_MUTABLE)]
     private ?\DateTimeInterface $endAt = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -55,7 +55,7 @@ class Absence
     #[ORM\Column(length: 30)]
     private string $status = self::STATUS_PENDING;
 
-    #[ORM\OneToMany(mappedBy: 'absence', targetEntity: Document::class)]
+    #[ORM\OneToMany(mappedBy: 'absence', targetEntity: Document::class, cascade: ['persist'])]
     private Collection $documents;
 
     #[ORM\Column(length: 30, nullable: true)]

@@ -90,7 +90,7 @@ class Contract
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $workingDays = null;
 
-    #[ORM\ManyToOne(targetEntity: Villa::class)]
+    #[ORM\ManyToOne(targetEntity: Villa::class, inversedBy: 'contracts')]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Villa $villa = null;
 

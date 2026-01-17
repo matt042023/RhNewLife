@@ -10,7 +10,6 @@ class VillaFixtures extends Fixture
 {
     public const VILLA_LILAS = 'villa_lilas';
     public const VILLA_ROSES = 'villa_roses';
-    public const VILLA_MARGUERITES = 'villa_marguerites';
 
     public function load(ObjectManager $manager): void
     {
@@ -30,16 +29,9 @@ class VillaFixtures extends Fixture
         $manager->persist($villaRoses);
         $this->addReference(self::VILLA_ROSES, $villaRoses);
 
-        $villaMarguerites = new Villa();
-        $villaMarguerites
-            ->setNom('Villa des Marguerites')
-            ->setColor('#F59E0B'); // Amber
-
-        $manager->persist($villaMarguerites);
-        $this->addReference(self::VILLA_MARGUERITES, $villaMarguerites);
 
         $manager->flush();
 
-        echo "\n✅ Villas créées : Lilas, Roses, Marguerites\n\n";
+        echo "\n✅ Villas créées : Lilas, Roses\n\n";
     }
 }

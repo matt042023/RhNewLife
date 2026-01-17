@@ -25,213 +25,63 @@ class EducatorAbsenceFixtures extends Fixture implements DependentFixtureInterfa
         $typeCP = $this->typeAbsenceRepository->findOneBy(['code' => 'CP']);
         $typeMAL = $this->typeAbsenceRepository->findOneBy(['code' => 'MAL']);
         $typeCPSS = $this->typeAbsenceRepository->findOneBy(['code' => 'CPSS']);
+        $typeRTT = $this->typeAbsenceRepository->findOneBy(['code' => 'RTT']);
 
         // Récupérer l'admin pour validation
         /** @var User $admin */
         $admin = $this->getReference('admin', User::class);
 
+        // Tous les types d'absence disponibles
+        $absenceTypes = array_filter([$typeCP, $typeMAL, $typeCPSS, $typeRTT]);
+
         $totalAbsences = 0;
 
-        // Générer les absences pour chaque éducateur
-        for ($i = 1; $i <= 6; $i++) {
+        // Générer 1 absence par mois (Novembre 2025, Décembre 2025, Janvier 2026, Février 2026)
+        $months = [
+            ['year' => 2025, 'month' => 11, 'label' => 'Novembre 2025'],
+            ['year' => 2025, 'month' => 12, 'label' => 'Décembre 2025'],
+            ['year' => 2026, 'month' => 1, 'label' => 'Janvier 2026'],
+            ['year' => 2026, 'month' => 2, 'label' => 'Février 2026'],
+        ];
+
+        foreach ($months as $monthData) {
+            // Choisir un éducateur aléatoire (1 à 6)
+            $educatorNum = mt_rand(1, 6);
             /** @var User $educator */
-            $educator = $this->getReference("educator-{$i}", User::class);
+            $educator = $this->getReference("educator-{$educatorNum}", User::class);
 
-            echo "Génération absences pour {$educator->getFullName()}...\n";
+            // Choisir un type d'absence aléatoire
+            $absenceType = $absenceTypes[array_rand($absenceTypes)];
 
-            // A. Congés Payés (5 semaines = 25 jours)
-            $totalAbsences += $this->generateVacations($manager, $educator, $i, $typeCP, $admin);
+            // Générer une durée aléatoire (1 à 10 jours)
+            $durationDays = mt_rand(1, 10);
 
-            // B. Arrêts Maladie (3 par éducateur)
-            $totalAbsences += $this->generateSickLeaves($manager, $educator, $typeMAL, $admin);
+            // Générer une date de début aléatoire dans le mois
+            $monthStart = new \DateTime("{$monthData['year']}-{$monthData['month']}-01");
+            $monthEnd = (clone $monthStart)->modify('last day of this month');
+            $startDate = $this->randomWorkingDateInPeriod($monthStart, $monthEnd);
 
-            // C. Quelques congés sans solde (1-2 par éducateur)
-            if (mt_rand(0, 1) === 1) {
-                $totalAbsences += $this->generateUnpaidLeaves($manager, $educator, $typeCPSS, $admin);
-            }
+            // Calculer la date de fin
+            $endDate = clone $startDate;
+            $endDate->modify("+{$durationDays} days");
+
+            // Créer l'absence
+            $totalAbsences += $this->createAbsence(
+                $manager,
+                $educator,
+                $absenceType,
+                $startDate,
+                $endDate,
+                "Absence {$monthData['label']}",
+                $admin
+            );
+
+            echo "✓ Absence créée pour {$educator->getFullName()} en {$monthData['label']} ({$absenceType->getLabel()}, {$durationDays} jours)\n";
         }
 
         $manager->flush();
 
         echo "\n✅ {$totalAbsences} absences créées avec succès !\n\n";
-    }
-
-    /**
-     * Génère les congés payés pour un éducateur
-     */
-    private function generateVacations(
-        ObjectManager $manager,
-        User $educator,
-        int $educatorNum,
-        TypeAbsence $typeCP,
-        User $admin
-    ): int {
-        $count = 0;
-
-        // Stratégies différentes par éducateur pour plus de variété
-        switch ($educatorNum) {
-            case 1: // Éducateur 1 : 3 semaines en août
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-08-05'), new \DateTime('2024-08-25'),
-                    'Congés d\'été', $admin);
-                break;
-
-            case 2: // Éducateur 2 : 2 semaines en juillet + 1 semaine en décembre
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-07-08'), new \DateTime('2024-07-21'),
-                    'Congés d\'été', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-12-23'), new \DateTime('2024-12-29'),
-                    'Congés de fin d\'année', $admin);
-                break;
-
-            case 3: // Éducateur 3 : 1 semaine Pâques + 2 semaines été + 1 jour novembre
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-04-08'), new \DateTime('2024-04-14'),
-                    'Congés de printemps', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-07-22'), new \DateTime('2024-08-11'),
-                    'Congés d\'été', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-11-01'), new \DateTime('2024-11-01'),
-                    'Pont de la Toussaint', $admin);
-                break;
-
-            case 4: // Éducateur 4 : 2 semaines février + 2 semaines août
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-02-12'), new \DateTime('2024-02-25'),
-                    'Congés d\'hiver', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-08-12'), new \DateTime('2024-08-25'),
-                    'Congés d\'été', $admin);
-                break;
-
-            case 5: // Éducateur 5 : Répartition régulière (4 x 1 semaine)
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-03-11'), new \DateTime('2024-03-15'),
-                    'Congés mars', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-06-10'), new \DateTime('2024-06-16'),
-                    'Congés juin', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-09-02'), new \DateTime('2024-09-08'),
-                    'Congés septembre', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-10-28'), new \DateTime('2024-11-03'),
-                    'Congés octobre-novembre', $admin);
-                break;
-
-            case 6: // Éducateur 6 : 3 semaines été + ponts
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-07-29'), new \DateTime('2024-08-18'),
-                    'Congés d\'été', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-05-09'), new \DateTime('2024-05-10'),
-                    'Pont de l\'Ascension', $admin);
-                $count += $this->createAbsence($manager, $educator, $typeCP,
-                    new \DateTime('2024-11-11'), new \DateTime('2024-11-11'),
-                    '11 novembre', $admin);
-                break;
-        }
-
-        return $count;
-    }
-
-    /**
-     * Génère 3 arrêts maladie avec durées aléatoires 1-7 jours
-     */
-    private function generateSickLeaves(
-        ObjectManager $manager,
-        User $educator,
-        TypeAbsence $typeMAL,
-        User $admin
-    ): int {
-        $count = 0;
-        $reasons = [
-            'Grippe saisonnière',
-            'Gastro-entérite',
-            'Migraine sévère',
-            'Angine',
-            'Bronchite',
-            'Lombalgie aiguë',
-            'Syndrome grippal',
-        ];
-
-        for ($i = 0; $i < 3; $i++) {
-            // Durée aléatoire 1-7 jours
-            $durationDays = mt_rand(1, 7);
-
-            // Date aléatoire dans l'année (éviter les périodes de congés)
-            $startDate = $this->randomWorkingDate(2024);
-            $endDate = clone $startDate;
-            $endDate->modify("+{$durationDays} days");
-
-            // 80% validés, 20% en attente
-            $isApproved = mt_rand(1, 100) <= 80;
-            $status = $isApproved ? Absence::STATUS_APPROVED : Absence::STATUS_PENDING;
-            $justifStatus = $isApproved ? Absence::JUSTIF_VALIDATED : Absence::JUSTIF_PENDING;
-
-            $absence = new Absence();
-            $absence->setUser($educator);
-            $absence->setAbsenceType($typeMAL);
-            $absence->setStartAt($startDate);
-            $absence->setEndAt($endDate);
-            $absence->setReason($reasons[array_rand($reasons)]);
-            $absence->setStatus($status);
-            $absence->setJustificationStatus($justifStatus);
-            $absence->setAffectsPlanning(true);
-
-            // Calcul des jours ouvrés
-            $workingDays = $this->calculateWorkingDays($startDate, $endDate);
-            $absence->setWorkingDaysCount($workingDays);
-
-            if ($isApproved) {
-                $absence->setValidatedBy($admin);
-            } else {
-                // Deadline 48h après le début
-                $deadline = clone $startDate;
-                $deadline->modify('+2 days');
-                $absence->setJustificationDeadline($deadline);
-            }
-
-            $manager->persist($absence);
-            $count++;
-        }
-
-        return $count;
-    }
-
-    /**
-     * Génère 1-2 congés sans solde
-     */
-    private function generateUnpaidLeaves(
-        ObjectManager $manager,
-        User $educator,
-        TypeAbsence $typeCPSS,
-        User $admin
-    ): int {
-        $count = 0;
-        $absences = [
-            ['Raisons personnelles', 1],
-            ['Convenance personnelle', 2],
-            ['Projet personnel', 3],
-        ];
-
-        $numAbsences = mt_rand(1, 2);
-        for ($i = 0; $i < $numAbsences; $i++) {
-            $absenceData = $absences[array_rand($absences)];
-            $reason = $absenceData[0];
-            $durationDays = $absenceData[1];
-
-            $startDate = $this->randomWorkingDate(2024);
-            $endDate = clone $startDate;
-            $endDate->modify("+{$durationDays} days");
-
-            $count += $this->createAbsence($manager, $educator, $typeCPSS,
-                $startDate, $endDate, $reason, $admin);
-        }
-
-        return $count;
     }
 
     /**
@@ -287,18 +137,23 @@ class EducatorAbsenceFixtures extends Fixture implements DependentFixtureInterfa
     }
 
     /**
-     * Génère une date aléatoire de jour ouvré dans l'année
+     * Génère une date aléatoire de jour ouvré entre deux dates
      */
-    private function randomWorkingDate(int $year): \DateTime
+    private function randomWorkingDateInPeriod(\DateTime $startPeriod, \DateTime $endPeriod): \DateTime
     {
         $attempts = 0;
         do {
-            $month = mt_rand(1, 12);
-            $day = mt_rand(1, 28); // Éviter les problèmes de fin de mois
-            $date = new \DateTime("{$year}-{$month}-{$day}");
+            // Calculer un timestamp aléatoire entre les deux dates
+            $startTimestamp = $startPeriod->getTimestamp();
+            $endTimestamp = $endPeriod->getTimestamp();
+            $randomTimestamp = mt_rand($startTimestamp, $endTimestamp);
+
+            $date = new \DateTime();
+            $date->setTimestamp($randomTimestamp);
+
             $dayOfWeek = (int) $date->format('N');
             $attempts++;
-        } while ($dayOfWeek >= 6 && $attempts < 50); // Éviter les weekends
+        } while ($dayOfWeek >= 6 && $attempts < 100); // Éviter les weekends
 
         return $date;
     }

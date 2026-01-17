@@ -1,0 +1,204 @@
+{# Modal for managing jours chômés (weekly day off) for an educator #}
+<div id="jourChomeModal"
+     class="hidden fixed inset-0 z-50 overflow-y-auto"
+     aria-labelledby="jour-chome-modal-title"
+     role="dialog"
+     aria-modal="true">
+
+    {# Backdrop #}
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity"
+         data-action="click->planning-assignment#closeJourChomeModal"></div>
+
+    {# Modal content #}
+    <div class="flex min-h-screen items-center justify-center p-4">
+        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-5xl p-6">
+
+            {# Header #}
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <div id="jourChomeEducateurColor"
+                         class="w-4 h-4 rounded-full mr-3"></div>
+                    <h2 class="text-2xl font-bold text-gray-900" id="jour-chome-modal-title">
+                        Jours chômés - <span id="jourChomeEducateurName">Éducateur</span>
+                    </h2>
+                </div>
+                <button type="button"
+                        data-action="click->planning-assignment#closeJourChomeModal"
+                        class="text-gray-400 hover:text-gray-500 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            {# Instructions #}
+            <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="text-sm text-blue-800">
+                        <p class="font-medium">Gestion des jours chômés hebdomadaires</p>
+                        <p class="mt-1">Cliquez sur un jour vierge pour ajouter un jour chômé. Cliquez sur un jour chômé existant pour le supprimer. Chaque éducateur a droit à 1 jour chômé par semaine.</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Legend #}
+            <div class="mb-4 flex flex-wrap items-center gap-4 text-sm">
+                <span class="font-medium text-gray-700">Légende :</span>
+                <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100">
+                    <span class="w-3 h-3 rounded mr-2 bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-dashed border-gray-500"></span>
+                    Jour chômé
+                </span>
+                <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100">
+                    <span class="w-3 h-3 rounded mr-2 bg-blue-500"></span>
+                    Garde
+                </span>
+                <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100">
+                    <span class="w-3 h-3 rounded mr-2" style="background: repeating-linear-gradient(45deg, #EF4444, #EF4444 2px, #DC2626 2px, #DC2626 4px);"></span>
+                    Congé
+                </span>
+                <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100">
+                    <span class="w-3 h-3 rounded mr-2" style="background: repeating-linear-gradient(45deg, #FB923C, #FB923C 2px, #EA580C 2px, #EA580C 4px);"></span>
+                    Absence
+                </span>
+                <span class="inline-flex items-center px-2 py-1 rounded bg-gray-100">
+                    <span class="w-3 h-3 rounded mr-2 bg-amber-500"></span>
+                    RDV
+                </span>
+            </div>
+
+            {# Month selector #}
+            <div class="mb-4 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <button type="button"
+                            id="jourChomePrevMonth"
+                            data-action="click->planning-assignment#jourChomePrevMonth"
+                            class="p-2 rounded-lg hover:bg-gray-100 transition">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <span id="jourChomeMonthLabel" class="text-lg font-semibold text-gray-800 min-w-[180px] text-center">
+                        Janvier 2025
+                    </span>
+                    <button type="button"
+                            id="jourChomeNextMonth"
+                            data-action="click->planning-assignment#jourChomeNextMonth"
+                            class="p-2 rounded-lg hover:bg-gray-100 transition">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="jourChomeStats" class="text-sm text-gray-600">
+                    <span id="jourChomeCount">0</span> jour(s) chômé(s) ce mois
+                </div>
+            </div>
+
+            {# Calendar container #}
+            <div id="jourChomeCalendar" class="border rounded-lg overflow-hidden" style="min-height: 500px;">
+                {# FullCalendar will be rendered here #}
+            </div>
+
+            {# Footer actions #}
+            <div class="flex justify-end mt-6 pt-4 border-t">
+                <button type="button"
+                        data-action="click->planning-assignment#closeJourChomeModal"
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Confirmation modal for delete #}
+<div id="jourChomeDeleteConfirmModal"
+     class="hidden fixed inset-0 z-[60] overflow-y-auto"
+     aria-labelledby="delete-confirm-title"
+     role="dialog"
+     aria-modal="true">
+
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity"></div>
+
+    <div class="flex min-h-screen items-center justify-center p-4">
+        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center mb-4">
+                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-4">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h3 id="delete-confirm-title" class="text-lg font-semibold text-gray-900">
+                    Supprimer ce jour chômé ?
+                </h3>
+            </div>
+
+            <p class="text-gray-600 mb-6">
+                Voulez-vous supprimer le jour chômé du <span id="jourChomeDeleteDate" class="font-semibold"></span> ?
+            </p>
+
+            <div class="flex justify-end space-x-3">
+                <button type="button"
+                        data-action="click->planning-assignment#cancelDeleteJourChome"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 font-medium transition">
+                    Annuler
+                </button>
+                <button type="button"
+                        data-action="click->planning-assignment#confirmDeleteJourChome"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition">
+                    Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Warning modal for multiple jours chômés in same week #}
+<div id="jourChomeWarningModal"
+     class="hidden fixed inset-0 z-[60] overflow-y-auto"
+     aria-labelledby="warning-title"
+     role="dialog"
+     aria-modal="true">
+
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity"></div>
+
+    <div class="flex min-h-screen items-center justify-center p-4">
+        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center mb-4">
+                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center mr-4">
+                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h3 id="warning-title" class="text-lg font-semibold text-gray-900">
+                    Attention
+                </h3>
+            </div>
+
+            <p class="text-gray-600 mb-2">
+                Un jour chômé existe déjà cette semaine :
+            </p>
+            <p id="jourChomeExistingDates" class="text-gray-800 font-medium mb-4"></p>
+            <p class="text-gray-600 mb-6">
+                Voulez-vous quand même ajouter un jour chômé le <span id="jourChomeNewDate" class="font-semibold"></span> ?
+            </p>
+
+            <div class="flex justify-end space-x-3">
+                <button type="button"
+                        data-action="click->planning-assignment#cancelForceJourChome"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 font-medium transition">
+                    Annuler
+                </button>
+                <button type="button"
+                        data-action="click->planning-assignment#forceCreateJourChome"
+                        class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition">
+                    Ajouter quand même
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
