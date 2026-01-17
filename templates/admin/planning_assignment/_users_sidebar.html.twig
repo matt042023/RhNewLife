@@ -1,11 +1,12 @@
 {% for user in users %}
-<div class="p-3 border rounded-lg cursor-move transition hover:shadow-md
+<div class="educateur-card p-3 border rounded-lg cursor-move transition hover:shadow-md
             {{ user.unavailable|default(false) ? 'bg-gray-100 opacity-50' : 'bg-white hover:bg-blue-50' }}"
      draggable="true"
      data-user-id="{{ user.id }}"
      data-user-color="{{ user.color|default('#3B82F6') }}"
+     data-user-name="{{ user.fullName|default(user.email) }}"
      data-villa-id="{{ user.villa ? user.villa.id : '' }}"
-     data-action="dragstart->planning-assignment#handleDragStart dragend->planning-assignment#handleDragEnd">
+     data-action="dragstart->planning-assignment#handleDragStart dragend->planning-assignment#handleDragEnd click->planning-assignment#openJourChomeModal">
 
     <div class="flex items-center justify-between">
         <div class="flex-1">

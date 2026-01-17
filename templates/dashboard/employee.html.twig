@@ -161,6 +161,25 @@
 		.astreinte-bar-overlay {
 			pointer-events: none;
 		}
+
+		/* Jour chômé (repos hebdomadaire) styling */
+		.fc-event-jour-chome {
+			background: linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%) !important;
+			border: 2px dashed #6B7280 !important;
+			color: #374151 !important;
+			opacity: 0.95 !important;
+			cursor: default !important;
+			z-index: 2 !important;
+		}
+
+		.fc-event-jour-chome:hover {
+			opacity: 1 !important;
+			background: linear-gradient(135deg, #D1D5DB 0%, #9CA3AF 100%) !important;
+		}
+
+		.fc-event-jour-chome .fc-event-main {
+			font-weight: 600 !important;
+		}
 	</style>
 {% endblock %}
 

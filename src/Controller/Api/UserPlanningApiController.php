@@ -11,6 +11,7 @@ use App\Repository\AbsenceRepository;
 use App\Repository\AffectationRepository;
 use App\Repository\AppointmentParticipantRepository;
 use App\Repository\AstreinteRepository;
+use App\Repository\JourChomeRepository;
 use App\Repository\RendezVousRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -33,6 +34,7 @@ class UserPlanningApiController extends AbstractController
         private RendezVousRepository $rendezVousRepository,
         private AstreinteRepository $astreinteRepository,
         private AppointmentParticipantRepository $appointmentParticipantRepository,
+        private JourChomeRepository $jourChomeRepository,
         private EntityManagerInterface $entityManager
     ) {
     }
@@ -220,11 +222,24 @@ class UserPlanningApiController extends AbstractController
             ];
         }
 
+        // 5. Get user's jours chômés (weekly day off) for this month
+        $joursChomes = $this->jourChomeRepository->findByEducateurAndMonth($user, $year, $month);
+
+        $joursChomesData = [];
+        foreach ($joursChomes as $jourChome) {
+            $joursChomesData[] = [
+                'id' => $jourChome->getId(),
+                'date' => $jourChome->getDate()->format('Y-m-d'),
+                'notes' => $jourChome->getNotes()
+            ];
+        }
+
         return $this->json([
             'plannings' => $planningsData,
             'absences' => $absencesData,
             'rendezvous' => $rdvsData,
-            'astreintes' => $astreintesData
+            'astreintes' => $astreintesData,
+            'joursChomes' => $joursChomesData
         ]);
     }
 

@@ -130,6 +130,9 @@
     {# Generate Modal #}
     {% include 'admin/planning_assignment/_generate_modal.html.twig' %}
 
+    {# Jour Chômé Modal #}
+    {% include 'admin/planning_assignment/_jour_chome_modal.html.twig' %}
+
     {# Details Modal for Absence/RDV #}
     <div id="details-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
@@ -316,6 +319,141 @@
             font-weight: 600;
             color: #3B82F6;
             z-index: 1000;
+        }
+
+        /* Jour chômé (weekly day off) styling */
+        .fc-event-jour-chome {
+            background: linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%) !important;
+            border: 2px dashed #6B7280 !important;
+            color: #374151 !important;
+            opacity: 0.9 !important;
+            cursor: pointer !important;
+            z-index: 2 !important;
+        }
+
+        .fc-event-jour-chome:hover {
+            opacity: 1 !important;
+            background: linear-gradient(135deg, #D1D5DB 0%, #9CA3AF 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+            z-index: 10 !important;
+        }
+
+        .fc-event-jour-chome .fc-event-main {
+            font-weight: 600 !important;
+        }
+
+        /* ==========================================
+           JOUR CHÔMÉ MODAL CALENDAR STYLES
+           ========================================== */
+
+        #jourChomeCalendar {
+            background: white;
+        }
+
+        #jourChomeCalendar .fc-daygrid-day:not(.fc-day-other) {
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        #jourChomeCalendar .fc-daygrid-day:not(.fc-day-other):hover {
+            background-color: rgba(59, 130, 246, 0.08);
+        }
+
+        /* Jour chômé dans la modale - événement qui prend toute la cellule */
+        #jourChomeCalendar .fc-event-jour-chome-modal {
+            background: linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%) !important;
+            border: 3px dashed #6B7280 !important;
+            cursor: pointer !important;
+            border-radius: 8px !important;
+            margin: 2px !important;
+            min-height: 70px !important;
+        }
+
+        #jourChomeCalendar .fc-event-jour-chome-modal:hover {
+            background: linear-gradient(135deg, #D1D5DB 0%, #9CA3AF 100%) !important;
+            border-color: #4B5563 !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        #jourChomeCalendar .fc-event-jour-chome-modal .fc-event-main {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 100% !important;
+            font-size: 0.95rem !important;
+            font-weight: 600 !important;
+            color: #374151 !important;
+        }
+
+        /* Force les cellules à avoir une position relative */
+        #jourChomeCalendar .fc-daygrid-day-frame {
+            position: relative !important;
+            min-height: 85px !important;
+        }
+
+        /* Style des événements planning (gardes) dans la modale */
+        #jourChomeCalendar .fc-event:not(.fc-event-jour-chome-modal):not(.fc-event-absence) {
+            border-radius: 4px !important;
+            padding: 2px !important;
+            margin: 1px 2px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        /* Style des absences dans la modale */
+        #jourChomeCalendar .fc-event-absence {
+            border-radius: 4px !important;
+            margin: 1px 2px !important;
+        }
+
+        #jourChomeCalendar .fc-event-absence.conge-overlay {
+            background: repeating-linear-gradient(
+                45deg,
+                #EF4444,
+                #EF4444 3px,
+                #DC2626 3px,
+                #DC2626 6px
+            ) !important;
+            border: none !important;
+        }
+
+        #jourChomeCalendar .fc-event-absence.absence-overlay {
+            background: repeating-linear-gradient(
+                45deg,
+                #FB923C,
+                #FB923C 3px,
+                #EA580C 3px,
+                #EA580C 6px
+            ) !important;
+            border: none !important;
+        }
+
+        /* Améliorer la lisibilité des jours avec plusieurs événements */
+        #jourChomeCalendar .fc-daygrid-day-events {
+            min-height: 2em !important;
+        }
+
+        #jourChomeCalendar .fc-daygrid-more-link {
+            font-size: 0.7rem !important;
+            font-weight: 600 !important;
+            color: #6366F1 !important;
+        }
+
+        /* Style du header du calendrier */
+        #jourChomeCalendar .fc-col-header-cell {
+            background: #F3F4F6 !important;
+            font-weight: 600 !important;
+            color: #374151 !important;
+            padding: 8px 4px !important;
+        }
+
+        /* Jours du mois précédent/suivant plus discrets */
+        #jourChomeCalendar .fc-day-other {
+            background: #FAFAFA !important;
+        }
+
+        #jourChomeCalendar .fc-day-other .fc-daygrid-day-number {
+            opacity: 0.4 !important;
         }
     </style>
 {% endblock %}

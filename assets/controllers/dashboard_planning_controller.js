@@ -152,13 +152,15 @@ export default class extends Controller {
             plannings: [],
             absences: [],
             rendezvous: [],
-            astreintes: []
+            astreintes: [],
+            joursChomes: []
         };
 
         const seenPlanningIds = new Set();
         const seenAbsenceIds = new Set();
         const seenRdvIds = new Set();
         const seenAstreinteIds = new Set();
+        const seenJourChomeIds = new Set();
 
         for (const data of dataArray) {
             // Fusionner les plannings (éviter les doublons)
@@ -209,6 +211,16 @@ export default class extends Controller {
                     }
                 }
             }
+
+            // Fusionner les jours chômés
+            if (data.joursChomes) {
+                for (const jourChome of data.joursChomes) {
+                    if (!seenJourChomeIds.has(jourChome.id)) {
+                        seenJourChomeIds.add(jourChome.id);
+                        merged.joursChomes.push(jourChome);
+                    }
+                }
+            }
         }
 
         return merged;
@@ -219,7 +231,7 @@ export default class extends Controller {
      */
     transformDataToEvents(data) {
         const events = [];
-        const { plannings = [], absences = [], rendezvous = [] } = data;
+        const { plannings = [], absences = [], rendezvous = [], joursChomes = [] } = data;
 
         // Extraire toutes les affectations des plannings
         let allAffectations = [];
@@ -339,6 +351,21 @@ export default class extends Controller {
             });
         }
 
+        // Ajouter les jours chômés (repos hebdomadaire)
+        for (const jourChome of joursChomes) {
+            events.push({
+                id: `jour-chome-${jourChome.id}`,
+                title: 'Repos hebdomadaire',
+                start: jourChome.date,
+                allDay: true,
+                classNames: ['fc-event-jour-chome'],
+                extendedProps: {
+                    type: 'jour_chome',
+                    notes: jourChome.notes
+                }
+            });
+        }
+
         return events;
     }
 
@@ -362,6 +389,11 @@ export default class extends Controller {
         // Rendu des plannings/gardes
         if (type === 'planning') {
             return this.renderPlanningContent(arg, props.user, props.villa, props.affectationType, props.statut, props.workingDays, props.realStart, props.realEnd);
+        }
+
+        // Rendu des jours chômés
+        if (type === 'jour_chome') {
+            return this.renderJourChomeContent(arg, props);
         }
 
         return null;
@@ -570,6 +602,27 @@ export default class extends Controller {
                 </div>
             `;
         }
+
+        return { domNodes: [container] };
+    }
+
+    /**
+     * Rendu du contenu d'un jour chômé (repos hebdomadaire)
+     */
+    renderJourChomeContent(arg, props) {
+        const container = document.createElement('div');
+        container.className = 'fc-event-main-custom p-1';
+        container.style.cssText = 'height: 100%; display: flex; flex-direction: column; font-size: 0.75rem; line-height: 1.2;';
+
+        container.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 4px;">
+                <span style="font-size: 1rem;">🏠</span>
+                <span style="font-weight: 600; color: #374151;">
+                    Repos hebdomadaire
+                </span>
+            </div>
+            ${props.notes ? `<div style="font-size: 0.65rem; color: #6B7280; margin-top: 2px;">${props.notes}</div>` : ''}
+        `;
 
         return { domNodes: [container] };
     }

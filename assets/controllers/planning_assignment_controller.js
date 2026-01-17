@@ -2866,4 +2866,608 @@ export default class extends Controller {
             }
         }
     }
+
+    // ========================================================================
+    // JOUR CHÔMÉ (WEEKLY DAY OFF) MANAGEMENT
+    // ========================================================================
+
+    /**
+     * Open the jour chômé modal for an educator
+     * Triggered by clicking on an educator card in the sidebar
+     */
+    openJourChomeModal(event) {
+        // Prevent drag events from triggering the modal
+        if (event.type === 'dragstart' || this.draggedUserId) {
+            return;
+        }
+
+        const card = event.currentTarget;
+        const educateurId = card.dataset.userId;
+        const educateurName = card.dataset.userName;
+        const educateurColor = card.dataset.userColor || '#3B82F6';
+
+        if (!educateurId) {
+            console.error('No educator ID found');
+            return;
+        }
+
+        // Store current educator info
+        this.jourChomeEducateurId = educateurId;
+        this.jourChomeEducateurName = educateurName;
+        this.jourChomeEducateurColor = educateurColor;
+
+        // Initialize month tracking for jour chômé modal
+        this.jourChomeYear = this.currentYear;
+        this.jourChomeMonth = this.currentMonth;
+
+        // Update modal header
+        document.getElementById('jourChomeEducateurName').textContent = educateurName;
+        document.getElementById('jourChomeEducateurColor').style.backgroundColor = educateurColor;
+
+        // Show the modal
+        const modal = document.getElementById('jourChomeModal');
+        modal.classList.remove('hidden');
+
+        // Initialize or refresh the calendar
+        this.initJourChomeCalendar();
+        this.loadJourChomePlanning();
+    }
+
+    /**
+     * Close the jour chômé modal
+     */
+    closeJourChomeModal() {
+        const modal = document.getElementById('jourChomeModal');
+        modal.classList.add('hidden');
+
+        // Destroy calendar to free memory
+        if (this.jourChomeCalendar) {
+            this.jourChomeCalendar.destroy();
+            this.jourChomeCalendar = null;
+        }
+
+        // Clear state
+        this.jourChomeEducateurId = null;
+        this.jourChomeEducateurName = null;
+        this.jourChomePendingDate = null;
+    }
+
+    /**
+     * Initialize the FullCalendar instance for jour chômé modal
+     */
+    initJourChomeCalendar() {
+        const calendarEl = document.getElementById('jourChomeCalendar');
+
+        if (!calendarEl || !window.FullCalendar) {
+            console.error('Calendar element or FullCalendar not found');
+            return;
+        }
+
+        // Destroy existing calendar if any
+        if (this.jourChomeCalendar) {
+            this.jourChomeCalendar.destroy();
+        }
+
+        const { Calendar, dayGridPlugin, interactionPlugin } = window.FullCalendar;
+
+        this.jourChomeCalendar = new Calendar(calendarEl, {
+            plugins: [dayGridPlugin, interactionPlugin],
+            initialView: 'dayGridMonth',
+            initialDate: `${this.jourChomeYear}-${String(this.jourChomeMonth).padStart(2, '0')}-01`,
+            height: 'auto',
+            locale: 'fr',
+            firstDay: 1,
+            displayEventTime: false,
+            editable: false,
+            selectable: false,
+            headerToolbar: false, // We use custom navigation
+            dayMaxEvents: 4,
+
+            dateClick: (info) => this.handleJourChomeDateClick(info),
+            eventClick: (info) => this.handleJourChomeEventClick(info),
+            eventContent: (arg) => this.renderJourChomeEventContent(arg)
+        });
+
+        this.jourChomeCalendar.render();
+    }
+
+    /**
+     * Load planning data for the current educator and month
+     */
+    async loadJourChomePlanning() {
+        if (!this.jourChomeEducateurId) return;
+
+        const calendarEl = document.getElementById('jourChomeCalendar');
+        calendarEl.classList.add('loading');
+
+        try {
+            const response = await fetch(
+                `/api/jours-chomes/educateur/${this.jourChomeEducateurId}/${this.jourChomeYear}/${this.jourChomeMonth}`
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to load planning');
+            }
+
+            const data = await response.json();
+            this.jourChomeData = data; // Store for later use
+            this.updateJourChomeCalendar(data);
+            this.updateJourChomeMonthLabel();
+            this.updateJourChomeStats(data.joursChomes?.length || 0);
+
+        } catch (error) {
+            console.error('Error loading jour chômé planning:', error);
+            alert('Erreur lors du chargement du planning');
+        } finally {
+            calendarEl.classList.remove('loading');
+        }
+    }
+
+    /**
+     * Update the calendar with the loaded data
+     */
+    updateJourChomeCalendar(data) {
+        if (!this.jourChomeCalendar) return;
+
+        // Remove all existing events
+        this.jourChomeCalendar.removeAllEvents();
+
+        const events = [];
+
+        // Add plannings (gardes)
+        if (data.plannings) {
+            data.plannings.forEach(planning => {
+                const villaColor = planning.villa?.color || '#3B82F6';
+                events.push({
+                    id: `planning-${planning.id}`,
+                    title: `${planning.villa?.nom || 'Garde'}`,
+                    start: planning.startAt,
+                    end: planning.endAt,
+                    allDay: true,
+                    backgroundColor: villaColor,
+                    borderColor: villaColor,
+                    textColor: this.getContrastColor(villaColor),
+                    extendedProps: { type: 'planning', data: planning }
+                });
+            });
+        }
+
+        // Add absences
+        if (data.absences) {
+            data.absences.forEach(absence => {
+                const isConge = ['CP', 'RTT', 'CPSS'].includes(absence.absenceType?.code);
+                events.push({
+                    id: `absence-${absence.id}`,
+                    title: `${absence.absenceType?.code || 'Absence'}`,
+                    start: absence.startAt,
+                    end: this.addDays(absence.endAt, 1),
+                    allDay: true,
+                    classNames: ['fc-event-absence', isConge ? 'conge-overlay' : 'absence-overlay'],
+                    extendedProps: { type: 'absence', data: absence }
+                });
+            });
+        }
+
+        // Add rendez-vous
+        if (data.rendezvous) {
+            data.rendezvous.forEach(rdv => {
+                events.push({
+                    id: `rdv-${rdv.id}`,
+                    title: rdv.title || 'RDV',
+                    start: rdv.startAt,
+                    end: rdv.endAt,
+                    allDay: false,
+                    backgroundColor: '#F59E0B',
+                    borderColor: '#D97706',
+                    textColor: '#78350F',
+                    extendedProps: { type: 'rdv', data: rdv }
+                });
+            });
+        }
+
+        // Add jours chômés as regular events (styled to fill the cell via CSS)
+        if (data.joursChomes) {
+            data.joursChomes.forEach(jc => {
+                events.push({
+                    id: `jour-chome-${jc.id}`,
+                    title: '🏠 Repos',
+                    start: jc.date,
+                    allDay: true,
+                    classNames: ['fc-event-jour-chome-modal'],
+                    backgroundColor: 'transparent',
+                    borderColor: 'transparent',
+                    extendedProps: { type: 'jour_chome', data: jc }
+                });
+            });
+        }
+
+        // Add all events
+        events.forEach(event => this.jourChomeCalendar.addEvent(event));
+    }
+
+    /**
+     * Handle click on a date in the jour chômé calendar
+     */
+    handleJourChomeDateClick(info) {
+        // Check if the clicked date already has events
+        const dateStr = info.dateStr;
+        const clickedDate = new Date(dateStr + 'T00:00:00');
+
+        const events = this.jourChomeCalendar.getEvents().filter(e => {
+            const eventStart = new Date(e.start);
+            eventStart.setHours(0, 0, 0, 0);
+
+            // For allDay events, FullCalendar's end is exclusive (next day at midnight)
+            // For timed events, we consider the actual end time
+            let eventEnd;
+            if (e.allDay && e.end) {
+                // Subtract 1 day for allDay events since end is exclusive
+                eventEnd = new Date(e.end);
+                eventEnd.setDate(eventEnd.getDate() - 1);
+                eventEnd.setHours(23, 59, 59, 999);
+            } else if (e.end) {
+                eventEnd = new Date(e.end);
+            } else {
+                // Single day event
+                eventEnd = new Date(eventStart);
+                eventEnd.setHours(23, 59, 59, 999);
+            }
+
+            return clickedDate >= eventStart && clickedDate <= eventEnd;
+        });
+
+        // If there are existing events, don't allow adding jour chômé
+        if (events.length > 0) {
+            // Check if it's a jour chômé - if so, trigger delete
+            const jourChomeEvent = events.find(e => e.extendedProps?.type === 'jour_chome');
+            if (jourChomeEvent) {
+                this.showDeleteJourChomeConfirm(jourChomeEvent.extendedProps.data);
+            } else {
+                // Debug: log which events are blocking
+                console.log('🚫 Events blocking jour chômé on', dateStr, ':', events.map(e => ({
+                    id: e.id,
+                    title: e.title,
+                    type: e.extendedProps?.type,
+                    start: e.start?.toISOString(),
+                    end: e.end?.toISOString(),
+                    allDay: e.allDay
+                })));
+                alert('Ce jour contient déjà des événements (garde, absence ou RDV). Impossible d\'ajouter un jour chômé.');
+            }
+            return;
+        }
+
+        // Create jour chômé for this date
+        this.createJourChome(dateStr);
+    }
+
+    /**
+     * Handle click on an event in the jour chômé calendar
+     */
+    handleJourChomeEventClick(info) {
+        const event = info.event;
+        const type = event.extendedProps?.type;
+
+        if (type === 'jour_chome') {
+            // Show delete confirmation
+            this.showDeleteJourChomeConfirm(event.extendedProps.data);
+        }
+        // Other event types are read-only, no action needed
+    }
+
+    /**
+     * Create a new jour chômé
+     */
+    async createJourChome(dateStr, force = false) {
+        try {
+            const response = await fetch('/api/jours-chomes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    educateurId: parseInt(this.jourChomeEducateurId),
+                    date: dateStr,
+                    force: force
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.warning && data.requiresForce) {
+                // Show warning modal
+                this.showJourChomeWarning(dateStr, data.existingDates);
+                return;
+            }
+
+            if (data.success) {
+                // Reload the calendar
+                this.loadJourChomePlanning();
+            } else if (data.error) {
+                alert(data.error);
+            }
+
+        } catch (error) {
+            console.error('Error creating jour chômé:', error);
+            alert('Erreur lors de la création du jour chômé');
+        }
+    }
+
+    /**
+     * Show warning modal when trying to add a second jour chômé in the same week
+     */
+    showJourChomeWarning(newDate, existingDates) {
+        this.jourChomePendingDate = newDate;
+
+        const formattedDate = new Date(newDate).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        const existingFormatted = existingDates.map(d =>
+            new Date(d).toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long'
+            })
+        ).join(', ');
+
+        document.getElementById('jourChomeNewDate').textContent = formattedDate;
+        document.getElementById('jourChomeExistingDates').textContent = existingFormatted;
+
+        document.getElementById('jourChomeWarningModal').classList.remove('hidden');
+    }
+
+    /**
+     * Cancel the force create action
+     */
+    cancelForceJourChome() {
+        document.getElementById('jourChomeWarningModal').classList.add('hidden');
+        this.jourChomePendingDate = null;
+    }
+
+    /**
+     * Force create the jour chômé despite warning
+     */
+    forceCreateJourChome() {
+        document.getElementById('jourChomeWarningModal').classList.add('hidden');
+
+        if (this.jourChomePendingDate) {
+            this.createJourChome(this.jourChomePendingDate, true);
+            this.jourChomePendingDate = null;
+        }
+    }
+
+    /**
+     * Show delete confirmation modal
+     */
+    showDeleteJourChomeConfirm(jourChome) {
+        this.jourChomePendingDeleteId = jourChome.id;
+
+        const formattedDate = new Date(jourChome.date).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        document.getElementById('jourChomeDeleteDate').textContent = formattedDate;
+        document.getElementById('jourChomeDeleteConfirmModal').classList.remove('hidden');
+    }
+
+    /**
+     * Cancel delete action
+     */
+    cancelDeleteJourChome() {
+        document.getElementById('jourChomeDeleteConfirmModal').classList.add('hidden');
+        this.jourChomePendingDeleteId = null;
+    }
+
+    /**
+     * Confirm and execute delete
+     */
+    async confirmDeleteJourChome() {
+        document.getElementById('jourChomeDeleteConfirmModal').classList.add('hidden');
+
+        if (!this.jourChomePendingDeleteId) return;
+
+        try {
+            const response = await fetch(`/api/jours-chomes/${this.jourChomePendingDeleteId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Reload the calendar
+                this.loadJourChomePlanning();
+            } else if (data.error) {
+                alert(data.error);
+            }
+
+        } catch (error) {
+            console.error('Error deleting jour chômé:', error);
+            alert('Erreur lors de la suppression du jour chômé');
+        } finally {
+            this.jourChomePendingDeleteId = null;
+        }
+    }
+
+    /**
+     * Navigate to previous month in jour chômé modal
+     */
+    jourChomePrevMonth() {
+        this.jourChomeMonth--;
+        if (this.jourChomeMonth < 1) {
+            this.jourChomeMonth = 12;
+            this.jourChomeYear--;
+        }
+
+        if (this.jourChomeCalendar) {
+            this.jourChomeCalendar.gotoDate(`${this.jourChomeYear}-${String(this.jourChomeMonth).padStart(2, '0')}-01`);
+        }
+        this.loadJourChomePlanning();
+    }
+
+    /**
+     * Navigate to next month in jour chômé modal
+     */
+    jourChomeNextMonth() {
+        this.jourChomeMonth++;
+        if (this.jourChomeMonth > 12) {
+            this.jourChomeMonth = 1;
+            this.jourChomeYear++;
+        }
+
+        if (this.jourChomeCalendar) {
+            this.jourChomeCalendar.gotoDate(`${this.jourChomeYear}-${String(this.jourChomeMonth).padStart(2, '0')}-01`);
+        }
+        this.loadJourChomePlanning();
+    }
+
+    /**
+     * Update the month label in the modal
+     */
+    updateJourChomeMonthLabel() {
+        const monthNames = [
+            'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        ];
+        const label = `${monthNames[this.jourChomeMonth - 1]} ${this.jourChomeYear}`;
+        document.getElementById('jourChomeMonthLabel').textContent = label;
+    }
+
+    /**
+     * Update the stats counter in the modal
+     */
+    updateJourChomeStats(count) {
+        document.getElementById('jourChomeCount').textContent = count;
+    }
+
+    /**
+     * Render custom event content for jour chômé calendar
+     */
+    renderJourChomeEventContent(arg) {
+        const event = arg.event;
+        const type = event.extendedProps?.type;
+        const data = event.extendedProps?.data;
+
+        const container = document.createElement('div');
+        container.className = 'fc-event-main-custom p-1';
+        container.style.cssText = 'height: 100%; display: flex; flex-direction: column; font-size: 0.7rem; line-height: 1.2; overflow: hidden;';
+
+        if (type === 'jour_chome') {
+            // Style jour chômé - fond gris en pointillés, prend toute la cellule
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 4px; height: 100%;">
+                    <span style="font-size: 1rem;">🏠</span>
+                    <span style="font-weight: 600; color: #374151;">Repos</span>
+                </div>
+            `;
+            return { domNodes: [container] };
+        }
+
+        if (type === 'planning' && data) {
+            // Style planning - similaire au planning principal
+            const villa = data.villa;
+            const villaColor = villa?.color || '#3B82F6';
+            const textColor = this.getContrastColor(villaColor);
+            const isRenfort = data.type === 'renfort' || data.type === 'TYPE_RENFORT';
+            const isMainShift = data.type === 'garde_24h' || data.type === 'garde_48h';
+
+            // Parse dates pour afficher les horaires
+            const start = new Date(data.startAt);
+            const end = new Date(data.endAt);
+            const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+            const startDay = dayNames[start.getDay()];
+            const endDay = dayNames[end.getDay()];
+            const startHour = start.getHours();
+            const endHour = end.getHours();
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                    <div style="font-weight: 600; color: ${textColor}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+                        ${villa?.nom || 'Garde'}
+                    </div>
+                    ${isRenfort ? '<span style="font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; background: #F59E0B; color: white;">🔧 RENFORT</span>' : ''}
+                    ${isMainShift ? '<span style="font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; background: #3B82F6; color: white;">🏠 GARDE</span>' : ''}
+                </div>
+                <div style="opacity: 0.85; font-size: 0.65rem; color: ${textColor}; margin-top: 2px;">
+                    ${startDay} ${startHour}h - ${endDay} ${endHour}h
+                </div>
+                ${data.joursTravailes ? `<div style="font-size: 0.6rem; color: ${textColor}; opacity: 0.8;">${data.joursTravailes}j</div>` : ''}
+            `;
+            return { domNodes: [container] };
+        }
+
+        if (type === 'absence' && data) {
+            // Style absence - rouge/orange avec motif
+            const isConge = ['CP', 'RTT', 'CPSS'].includes(data.absenceType?.code);
+            const bgColor = isConge ? '#EF4444' : '#FB923C';
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="font-size: 0.85rem;">${isConge ? '🏖️' : '🤒'}</span>
+                    <span style="font-weight: 600; color: white;">${data.absenceType?.code || 'Absence'}</span>
+                </div>
+                <div style="opacity: 0.9; font-size: 0.6rem; color: white; margin-top: 2px;">
+                    ${data.absenceType?.label || ''}
+                </div>
+            `;
+            container.style.backgroundColor = bgColor;
+            container.style.borderRadius = '4px';
+            return { domNodes: [container] };
+        }
+
+        if (type === 'rdv' && data) {
+            // Style RDV - similaire au planning principal
+            const start = new Date(data.startAt);
+            const end = new Date(data.endAt);
+            const startTime = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            const endTime = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                    <div style="font-weight: 600; color: #78350F; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+                        📅 ${data.title || 'RDV'}
+                    </div>
+                </div>
+                <div style="opacity: 0.85; font-size: 0.6rem; color: #92400E; margin-top: 2px;">
+                    ${startTime} - ${endTime}
+                </div>
+                ${data.typeLabel ? `<div style="font-size: 0.55rem; color: #B45309; margin-top: 1px;">${data.typeLabel}</div>` : ''}
+            `;
+            return { domNodes: [container] };
+        }
+
+        // Default rendering for other events
+        container.innerHTML = `<div class="text-xs truncate">${event.title}</div>`;
+        return { domNodes: [container] };
+    }
+
+    /**
+     * Helper: Add days to a date string
+     */
+    addDays(dateStr, days) {
+        const date = new Date(dateStr);
+        date.setDate(date.getDate() + days);
+        return date.toISOString().split('T')[0];
+    }
+
+    /**
+     * Helper: Get contrast color (black or white) for a given background color
+     */
+    getContrastColor(hexColor) {
+        if (!hexColor || hexColor === 'undefined') return '#1F2937';
+
+        const hex = hexColor.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness > 128 ? '#1F2937' : '#FFFFFF';
+    }
 }
