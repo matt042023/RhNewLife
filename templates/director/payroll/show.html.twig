@@ -1,0 +1,199 @@
+{% extends 'director.html.twig' %}
+
+{% block title %}Rapport paie - {{ user.fullName }} - {{ consolidation.periodLabel }}{% endblock %}
+
+{% block director_title %}Rapport de paie{% endblock %}
+{% block director_subtitle %}{{ user.fullName }} - {{ consolidation.periodLabel }}{% endblock %}
+
+{% block director_content %}
+<div class="space-y-6">
+    {# Navigation #}
+    <div class="flex justify-between items-center">
+        <a href="{{ path('director_payroll_index', {year: consolidation.year, month: consolidation.month}) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Retour à la liste
+        </a>
+        <span class="{% if consolidation.isDraft %}bg-yellow-100 text-yellow-800{% elseif consolidation.isExported %}bg-purple-100 text-purple-800{% else %}bg-green-100 text-green-800{% endif %} px-3 py-1 rounded-full text-sm font-medium">
+            {{ consolidation.statusLabel }}
+        </span>
+    </div>
+
+    {# Informations utilisateur #}
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center">
+            <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl mr-4">
+                {{ user.firstName|first }}{{ user.lastName|first }}
+            </div>
+            <div>
+                <h3 class="text-lg font-medium text-gray-900">{{ user.fullName }}</h3>
+                <p class="text-sm text-gray-500">{{ user.matricule ?? 'Sans matricule' }} • {{ user.email }}</p>
+                <a href="{{ path('director_payroll_user', {id: user.id}) }}" class="text-blue-600 hover:text-blue-800 text-sm">
+                    Voir l'historique complet →
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {# Colonne principale #}
+        <div class="lg:col-span-2 space-y-6">
+            {# Jours travaillés #}
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b bg-blue-50">
+                    <h2 class="text-lg font-medium text-blue-900">Jours travaillés</h2>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <p class="text-sm text-gray-500">Gardes</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ consolidation.joursTravailes|number_format(2, ',', ' ') }}</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <p class="text-sm text-gray-500">Événements</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ consolidation.joursEvenements|number_format(2, ',', ' ') }}</p>
+                        </div>
+                        <div class="bg-blue-100 rounded-lg p-4">
+                            <p class="text-sm text-blue-700">Total</p>
+                            <p class="text-2xl font-bold text-blue-900">{{ consolidation.totalJoursTravailes|number_format(2, ',', ' ') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Absences #}
+            {% if absences|length > 0 %}
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b bg-orange-50">
+                    <h2 class="text-lg font-medium text-orange-900">Absences</h2>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3">
+                        {% set absenceLabels = {
+                            'CP': 'Congés payés',
+                            'MAL': 'Maladie',
+                            'MALADIE': 'Maladie',
+                            'AT': 'Accident du travail',
+                            'MATERNITE': 'Maternité',
+                            'PATERNITE': 'Paternité',
+                            'FORMATION': 'Formation',
+                            'SANS_SOLDE': 'Sans solde',
+                            'OTHER': 'Autres'
+                        } %}
+                        {% for code, days in absences %}
+                            {% if days > 0 %}
+                            <div class="flex items-center justify-between py-2 border-b last:border-0">
+                                <span class="text-gray-700">{{ absenceLabels[code] ?? code }}</span>
+                                <span class="font-medium text-gray-900">{{ days|number_format(2, ',', ' ') }} j</span>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4 pt-4 border-t flex justify-between items-center">
+                        <span class="font-medium text-gray-900">Total absences</span>
+                        <span class="text-xl font-bold text-orange-600">{{ consolidation.totalJoursAbsence|number_format(2, ',', ' ') }} j</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {# Éléments variables #}
+            {% if variables_by_category|length > 0 %}
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b bg-purple-50">
+                    <h2 class="text-lg font-medium text-purple-900">Éléments variables</h2>
+                </div>
+                <div class="divide-y divide-gray-200">
+                    {% for category, data in variables_by_category %}
+                    <div class="p-6">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">{{ data.label }}</h3>
+                        <div class="space-y-2">
+                            {% for item in data.items %}
+                            <div class="flex items-center justify-between py-1">
+                                <span class="text-gray-900">{{ item.label }}</span>
+                                <span class="font-medium {% if item.amount < 0 %}text-red-600{% else %}text-gray-900{% endif %}">
+                                    {{ item.amount|number_format(2, ',', ' ') }} €
+                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="px-6 py-4 bg-purple-50 flex justify-between items-center">
+                    <span class="font-medium text-purple-900">Total</span>
+                    <span class="text-xl font-bold text-purple-600">{{ consolidation.totalVariables|number_format(2, ',', ' ') }} €</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Colonne latérale #}
+        <div class="space-y-6">
+            {# Congés payés #}
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b bg-green-50">
+                    <h2 class="text-lg font-medium text-green-900">Congés payés</h2>
+                </div>
+                <div class="p-6 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500">Solde début</span>
+                        <span class="font-medium">{{ consolidation.cpSoldeDebut|number_format(2, ',', ' ') }} j</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-green-600">+ Acquis</span>
+                        <span class="font-medium text-green-600">{{ consolidation.cpAcquis|number_format(2, ',', ' ') }} j</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-red-600">- Pris</span>
+                        <span class="font-medium text-red-600">{{ consolidation.cpPris|number_format(2, ',', ' ') }} j</span>
+                    </div>
+                    <div class="pt-3 border-t flex justify-between items-center">
+                        <span class="font-medium">Solde fin</span>
+                        <span class="text-xl font-bold {% if consolidation.cpSoldeFin >= 10 %}text-green-600{% elseif consolidation.cpSoldeFin >= 5 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                            {{ consolidation.cpSoldeFin|number_format(2, ',', ' ') }} j
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {# Récapitulatif #}
+            <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg shadow-sm p-6 text-white">
+                <h2 class="text-lg font-medium mb-4">Récapitulatif</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Jours travaillés</span>
+                        <span class="font-medium">{{ consolidation.totalJoursTravailes|number_format(2, ',', ' ') }} j</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Jours d'absence</span>
+                        <span class="font-medium">{{ consolidation.totalJoursAbsence|number_format(2, ',', ' ') }} j</span>
+                    </div>
+                    {% if consolidation.totalVariables != 0 %}
+                    <div class="flex justify-between pt-3 border-t border-gray-700">
+                        <span class="text-gray-300">Variables</span>
+                        <span class="font-medium {% if consolidation.totalVariables < 0 %}text-red-400{% else %}text-green-400{% endif %}">
+                            {{ consolidation.totalVariables|number_format(2, ',', ' ') }} €
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Validation info #}
+            {% if consolidation.validatedAt %}
+            <div class="bg-green-50 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-green-800 mb-2">Validation</h3>
+                <p class="text-sm text-green-700">
+                    Validé le {{ consolidation.validatedAt|date('d/m/Y à H:i') }}
+                    {% if consolidation.validatedBy %}
+                        par {{ consolidation.validatedBy.fullName }}
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

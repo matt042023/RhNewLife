@@ -1,0 +1,171 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Déposer une fiche de paie{% endblock %}
+
+{% block admin_title %}Déposer une fiche de paie{% endblock %}
+{% block admin_subtitle %}Associer une fiche de paie à un éducateur{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        {{ form_start(form, {'attr': {'class': 'space-y-6', 'novalidate': 'novalidate'}}) }}
+
+        {# Sélection de l'éducateur #}
+        <div>
+            {{ form_label(form.user, 'Éducateur', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+            {{ form_widget(form.user, {'attr': {'class': 'w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'}}) }}
+            {{ form_errors(form.user) }}
+        </div>
+
+        {# Période #}
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                {{ form_label(form.year, 'Année', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                {{ form_widget(form.year, {'attr': {'class': 'w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'}}) }}
+                {{ form_errors(form.year) }}
+            </div>
+            <div>
+                {{ form_label(form.month, 'Mois', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+                {{ form_widget(form.month, {'attr': {'class': 'w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'}}) }}
+                {{ form_errors(form.month) }}
+            </div>
+        </div>
+
+        {# Upload du fichier #}
+        <div>
+            {{ form_label(form.file, 'Fichier PDF', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 mb-1'}}) }}
+            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-blue-400 transition" id="drop-zone">
+                <div class="space-y-1 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <div class="flex text-sm text-gray-600">
+                        <label for="{{ form.file.vars.id }}" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                            <span>Sélectionner un fichier</span>
+                        </label>
+                        <p class="pl-1">ou glisser-déposer</p>
+                    </div>
+                    <p class="text-xs text-gray-500">PDF uniquement, max 10 Mo</p>
+                    <p class="text-sm text-gray-700 font-medium" id="file-name"></p>
+                </div>
+            </div>
+            <div class="hidden">
+                {{ form_widget(form.file, {'attr': {'accept': 'application/pdf', 'class': 'sr-only'}}) }}
+            </div>
+            {{ form_errors(form.file) }}
+        </div>
+
+        {# Notification #}
+        <div class="flex items-center">
+            {{ form_widget(form.notify, {'attr': {'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'}}) }}
+            <label for="{{ form.notify.vars.id }}" class="ml-2 block text-sm text-gray-700">
+                Notifier l'éducateur par email
+            </label>
+        </div>
+
+        {# Actions #}
+        <div class="flex justify-end space-x-3 pt-4 border-t">
+            <a href="{{ path('admin_payslip_index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                Annuler
+            </a>
+            <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">
+                <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Déposer la fiche
+            </button>
+        </div>
+
+        {{ form_end(form) }}
+    </div>
+
+    {# Aide #}
+    <div class="mt-6 bg-blue-50 rounded-lg p-4">
+        <div class="flex">
+            <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">Information</h3>
+                <p class="mt-1 text-sm text-blue-700">
+                    Les fiches de paie sont accessibles uniquement par l'éducateur concerné et les administrateurs.
+                    Le fichier sera stocké de manière sécurisée.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('{{ form.file.vars.id }}');
+    const fileName = document.getElementById('file-name');
+
+    // Gestion du drag & drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+        dropZone.classList.add('border-blue-400', 'bg-blue-50');
+    }
+
+    function unhighlight() {
+        dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+    }
+
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            updateFileName(files[0]);
+        }
+    }
+
+    // Afficher le nom du fichier sélectionné
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            updateFileName(this.files[0]);
+        }
+    });
+
+    function updateFileName(file) {
+        if (file.type !== 'application/pdf') {
+            fileName.textContent = 'Erreur : seuls les fichiers PDF sont acceptés';
+            fileName.classList.add('text-red-600');
+            fileName.classList.remove('text-gray-700');
+        } else if (file.size > 10 * 1024 * 1024) {
+            fileName.textContent = 'Erreur : fichier trop volumineux (max 10 Mo)';
+            fileName.classList.add('text-red-600');
+            fileName.classList.remove('text-gray-700');
+        } else {
+            fileName.textContent = file.name;
+            fileName.classList.remove('text-red-600');
+            fileName.classList.add('text-gray-700');
+        }
+    }
+
+    // Clic sur la zone pour ouvrir le sélecteur
+    dropZone.addEventListener('click', function() {
+        fileInput.click();
+    });
+});
+</script>
+{% endblock %}

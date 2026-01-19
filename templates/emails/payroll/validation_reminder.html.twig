@@ -1,0 +1,81 @@
+{% extends 'emails/base.html.twig' %}
+
+{% block title %}Rappel : Rapports de paie à valider{% endblock %}
+
+{% block content %}
+<h1 style="color: #1a202c; font-size: 24px; font-weight: 600; margin-bottom: 16px;">
+    Rappel : Rapports de paie en attente de validation
+</h1>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Bonjour,
+</p>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Ce message est un rappel concernant les rapports de paie du mois de <strong>{{ period_label }}</strong> qui sont toujours en attente de validation.
+</p>
+
+<div style="background-color: #fffaf0; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+    <h2 style="color: #c05621; font-size: 18px; font-weight: 600; margin-bottom: 16px;">
+        État des rapports
+    </h2>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #fbd38d;">Total des rapports</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right; border-bottom: 1px solid #fbd38d;">
+                {{ stats.total }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #fbd38d;">
+                <span style="display: inline-block; width: 8px; height: 8px; background-color: #48bb78; border-radius: 50%; margin-right: 8px;"></span>
+                Validés
+            </td>
+            <td style="padding: 8px 0; color: #48bb78; font-weight: 500; text-align: right; border-bottom: 1px solid #fbd38d;">
+                {{ stats.validated }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #718096;">
+                <span style="display: inline-block; width: 8px; height: 8px; background-color: #ed8936; border-radius: 50%; margin-right: 8px;"></span>
+                En attente
+            </td>
+            <td style="padding: 8px 0; color: #ed8936; font-weight: 600; text-align: right;">
+                {{ stats.draft }}
+            </td>
+        </tr>
+    </table>
+</div>
+
+{% if pending_users|length > 0 %}
+<div style="margin-bottom: 24px;">
+    <h3 style="color: #2d3748; font-size: 16px; font-weight: 600; margin-bottom: 12px;">
+        Éducateurs concernés :
+    </h3>
+    <ul style="color: #4a5568; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+        {% for user in pending_users %}
+        <li>{{ user.fullName }} ({{ user.matricule ?? 'Sans matricule' }})</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div style="text-align: center; margin-bottom: 24px;">
+    <a href="{{ url('admin_payroll_month', {period: period}) }}"
+       style="display: inline-block; background-color: #ed8936; color: #ffffff; font-weight: 600; padding: 12px 24px; border-radius: 6px; text-decoration: none;">
+        Accéder aux rapports
+    </a>
+</div>
+
+<div style="background-color: #ebf8ff; border-left: 4px solid #3182ce; padding: 16px; margin-bottom: 24px;">
+    <p style="color: #2c5282; font-size: 14px; margin: 0;">
+        <strong>Rappel :</strong> Les rapports doivent être validés avant l'envoi au cabinet comptable,
+        généralement prévu pour le 5 du mois suivant.
+    </p>
+</div>
+
+<p style="color: #718096; font-size: 14px; line-height: 1.5;">
+    Ce rappel est envoyé automatiquement. Vous pouvez désactiver ces notifications dans les paramètres de l'application.
+</p>
+{% endblock %}

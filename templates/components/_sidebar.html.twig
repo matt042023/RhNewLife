@@ -115,6 +115,37 @@
             </a>
         </li>
 
+        {# Section Mon Espace Paie - visible to all #}
+        <li class="pt-2">
+            <span class="flex items-center px-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                Mon espace paie
+            </span>
+        </li>
+        <li>
+            <a href="{{ path('my_payroll_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'my_payroll' and app.request.get('_route') != 'my_payroll_payslips' and app.request.get('_route') != 'my_payroll_conges' ? 'glass-card glass-card-primary' : '' }}">
+                <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                <span class="ml-3">Mes rapports de paie</span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ path('my_payroll_payslips') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') == 'my_payroll_payslips' ? 'glass-card glass-card-primary' : '' }}">
+                <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span class="ml-3">Mes fiches de paie</span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ path('my_payroll_conges') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') == 'my_payroll_conges' ? 'glass-card glass-card-primary' : '' }}">
+                <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span class="ml-3">Mes congés payés</span>
+            </a>
+        </li>
+
         {# Divider #}
         <li class="pt-4 mt-4 space-y-2 border-t border-white/10">
             {# Admin section #}
@@ -215,6 +246,45 @@
                         <span class="ml-3">Affectation des gardes</span>
                     </a>
                 </li>
+
+                {# Section Paie #}
+                <li class="pt-2">
+                    <span class="flex items-center px-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        Paie & Variables
+                    </span>
+                </li>
+                <li>
+                    <a href="{{ path('admin_payroll_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'admin_payroll' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="ml-3">Consolidation paie</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('admin_element_variable_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'admin_element_variable' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="ml-3">Éléments variables</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('admin_cp_counter_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'admin_cp_counter' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="ml-3">Compteurs CP</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('admin_payslip_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'admin_payslip' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="ml-3">Fiches de paie</span>
+                    </a>
+                </li>
             {% endif %}
 
             {# Director section #}
@@ -230,6 +300,29 @@
                             <path d="M14 2a3.963 3.963 0 0 0-1.4.267 6.439 6.439 0 0 1-1.331 6.638A4 4 0 1 0 14 2Zm1 9h-1.264A6.957 6.957 0 0 1 15 15v2a2.97 2.97 0 0 1-.184 1H19a1 1 0 0 0 1-1v-1a5.006 5.006 0 0 0-5-5ZM6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Z"/>
                         </svg>
                         <span class="ml-3">Équipes</span>
+                    </a>
+                </li>
+
+                {# Section Paie Direction #}
+                <li class="pt-2">
+                    <span class="flex items-center px-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        Suivi Paie
+                    </span>
+                </li>
+                <li>
+                    <a href="{{ path('director_payroll_index') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') starts with 'director_payroll' and app.request.get('_route') != 'director_payroll_cp_counters' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="ml-3">Consolidations paie</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('director_payroll_cp_counters') }}" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white transition-all duration-300 hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.02] {{ app.request.get('_route') == 'director_payroll_cp_counters' ? 'glass-card glass-card-primary' : '' }}">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="ml-3">Compteurs CP</span>
                     </a>
                 </li>
             {% endif %}

@@ -1,0 +1,70 @@
+{% extends 'emails/base.html.twig' %}
+
+{% block title %}Votre rapport de paie est disponible{% endblock %}
+
+{% block content %}
+<h1 style="color: #1a202c; font-size: 24px; font-weight: 600; margin-bottom: 16px;">
+    Votre rapport de paie est disponible
+</h1>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Bonjour {{ user.firstName }},
+</p>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Votre rapport de paie pour le mois de <strong>{{ period_label }}</strong> a été validé et est maintenant disponible dans votre espace personnel.
+</p>
+
+<div style="background-color: #f7fafc; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+    <h2 style="color: #2d3748; font-size: 18px; font-weight: 600; margin-bottom: 16px;">
+        Récapitulatif
+    </h2>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #e2e8f0;">Jours travaillés</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right; border-bottom: 1px solid #e2e8f0;">
+                {{ consolidation.totalJoursTravailes|number_format(2, ',', ' ') }} j
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #e2e8f0;">Jours d'absence</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right; border-bottom: 1px solid #e2e8f0;">
+                {{ consolidation.totalJoursAbsence|number_format(2, ',', ' ') }} j
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #e2e8f0;">Congés payés pris</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right; border-bottom: 1px solid #e2e8f0;">
+                {{ consolidation.cpPris|number_format(2, ',', ' ') }} j
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #e2e8f0;">Solde CP</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right; border-bottom: 1px solid #e2e8f0;">
+                {{ consolidation.cpSoldeFin|number_format(2, ',', ' ') }} j
+            </td>
+        </tr>
+        {% if consolidation.totalVariables > 0 %}
+        <tr>
+            <td style="padding: 8px 0; color: #718096;">Éléments variables</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right;">
+                {{ consolidation.totalVariables|number_format(2, ',', ' ') }} €
+            </td>
+        </tr>
+        {% endif %}
+    </table>
+</div>
+
+<div style="text-align: center; margin-bottom: 24px;">
+    <a href="{{ url('my_payroll_show', {id: consolidation.id}) }}"
+       style="display: inline-block; background-color: #3182ce; color: #ffffff; font-weight: 600; padding: 12px 24px; border-radius: 6px; text-decoration: none;">
+        Consulter mon rapport
+    </a>
+</div>
+
+<p style="color: #718096; font-size: 14px; line-height: 1.5;">
+    Ce rapport détaille l'ensemble de vos gardes, événements et absences du mois.
+    Si vous constatez une erreur, merci de contacter l'administration RH.
+</p>
+{% endblock %}

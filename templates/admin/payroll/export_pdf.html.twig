@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Export Paie - {{ period_label }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            margin: 20px;
+        }
+        h1 {
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: center;
+        }
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .text-left {
+            text-align: left;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .total-row {
+            background-color: #e5e5e5;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 9px;
+        }
+        .status-draft { color: #666; }
+        .status-validated { color: #059669; }
+        .status-exported { color: #2563eb; }
+    </style>
+</head>
+<body>
+    <h1>Récapitulatif de Paie</h1>
+    <p class="subtitle">{{ period_label }}</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="text-left">Matricule</th>
+                <th class="text-left">Nom</th>
+                <th class="text-left">Prénom</th>
+                <th>Jours travaillés</th>
+                <th>CP pris</th>
+                <th>Maladie</th>
+                <th>Autres absences</th>
+                <th>Primes</th>
+                <th>Avances</th>
+                <th>Frais</th>
+                <th>Retenues</th>
+                <th>Total variables</th>
+                <th>Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data.rows %}
+            <tr>
+                <td class="text-left">{{ row.matricule }}</td>
+                <td class="text-left">{{ row.nom }}</td>
+                <td class="text-left">{{ row.prenom }}</td>
+                <td>{{ row.jours_travailes|number_format(2, ',', ' ') }}</td>
+                <td>{{ row.cp_pris|number_format(2, ',', ' ') }}</td>
+                <td>{{ row.maladie|number_format(2, ',', ' ') }}</td>
+                <td>{{ row.autres_absences|number_format(2, ',', ' ') }}</td>
+                <td>{{ row.primes|number_format(2, ',', ' ') }}</td>
+                <td>{{ row.avances|number_format(2, ',', ' ') }}</td>
+                <td>{{ row.frais|number_format(2, ',', ' ') }}</td>
+                <td>{{ row.retenues|number_format(2, ',', ' ') }}</td>
+                <td>{{ row.total_variables|number_format(2, ',', ' ') }}</td>
+                <td class="status-{{ row.status }}">{{ row.status_label }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="3" class="text-right">TOTAUX</td>
+                <td>{{ data.totals.jours_travailes|number_format(2, ',', ' ') }}</td>
+                <td>{{ data.totals.cp_pris|number_format(2, ',', ' ') }}</td>
+                <td>{{ data.totals.maladie|number_format(2, ',', ' ') }}</td>
+                <td>{{ data.totals.autres_absences|number_format(2, ',', ' ') }}</td>
+                <td>{{ data.totals.primes|number_format(2, ',', ' ') }}</td>
+                <td>{{ data.totals.avances|number_format(2, ',', ' ') }}</td>
+                <td>{{ data.totals.frais|number_format(2, ',', ' ') }}</td>
+                <td>{{ data.totals.retenues|number_format(2, ',', ' ') }}</td>
+                <td>{{ data.totals.total_variables|number_format(2, ',', ' ') }}</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="footer">
+        <p>Document interne - RhNewLife Paie {{ period_label }}</p>
+        <p>Généré le {{ generated_at|date('d/m/Y H:i') }} par {{ generated_by.fullName }}</p>
+        <p>{{ data.count }} éducateur(s)</p>
+    </div>
+</body>
+</html>

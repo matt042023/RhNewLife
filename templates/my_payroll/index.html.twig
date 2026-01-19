@@ -1,0 +1,119 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes rapports de paie{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gray-100">
+    <div class="py-10">
+        <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold leading-tight text-gray-900">Mes rapports de paie</h1>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+            <div class="space-y-6">
+                {# Carte solde CP #}
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-medium text-gray-900">Solde de congés payés</h2>
+                            <p class="text-sm text-gray-500">Période {{ cp_counter.periodeReference }}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold {% if cp_counter.soldeActuel >= 10 %}text-green-600{% elseif cp_counter.soldeActuel >= 5 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                {{ cp_counter.soldeActuel|number_format(2, ',', ' ') }}
+                            </div>
+                            <p class="text-sm text-gray-500">jours disponibles</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <p class="text-sm text-gray-500">Acquis</p>
+                            <p class="text-lg font-medium text-green-600">+{{ cp_counter.acquis|number_format(2, ',', ' ') }} j</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Pris</p>
+                            <p class="text-lg font-medium text-red-600">-{{ cp_counter.pris|number_format(2, ',', ' ') }} j</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Report</p>
+                            <p class="text-lg font-medium text-gray-900">{{ cp_counter.soldeInitial|number_format(2, ',', ' ') }} j</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-center">
+                        <a href="{{ path('my_payroll_conges') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            Voir le détail de mes congés →
+                        </a>
+                    </div>
+                </div>
+
+                {# Accès aux fiches de paie #}
+                <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-sm p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-medium">Mes fiches de paie</h2>
+                            <p class="text-blue-100 text-sm">Accédez à vos bulletins de salaire</p>
+                        </div>
+                        <a href="{{ path('my_payroll_payslips') }}" class="inline-flex items-center px-4 py-2 bg-white text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Voir mes fiches
+                        </a>
+                    </div>
+                </div>
+
+                {# Liste des rapports par année #}
+                {% for year, consolidations in consolidations_by_year %}
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b bg-gray-50">
+                        <h3 class="text-lg font-medium text-gray-900">{{ year }}</h3>
+                    </div>
+                    <div class="divide-y divide-gray-200">
+                        {% for consolidation in consolidations %}
+                        <a href="{{ path('my_payroll_show', {id: consolidation.id}) }}" class="block hover:bg-gray-50 transition">
+                            <div class="px-6 py-4 flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold mr-4">
+                                        {{ consolidation.month }}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">{{ consolidation.periodLabel }}</p>
+                                        <p class="text-xs text-gray-500">
+                                            {{ consolidation.totalJoursTravailes|number_format(2, ',', ' ') }} jours travaillés
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    {% if consolidation.totalVariables > 0 %}
+                                    <span class="text-sm text-gray-600">
+                                        {{ consolidation.totalVariables|number_format(2, ',', ' ') }} € variables
+                                    </span>
+                                    {% endif %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Validé
+                                    </span>
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">Aucun rapport disponible</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        Vos rapports de paie apparaîtront ici une fois validés par l'administration.
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

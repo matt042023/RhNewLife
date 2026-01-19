@@ -1,0 +1,212 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Paie - {{ period_label }}{% endblock %}
+
+{% block admin_title %}Consolidation Paie{% endblock %}
+{% block admin_subtitle %}{{ period_label }}{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    {# En-tête avec actions #}
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <a href="{{ path('admin_payroll_index') }}" class="text-blue-600 hover:text-blue-800 text-sm">
+                    &larr; Retour à la liste des périodes
+                </a>
+            </div>
+            <div class="flex space-x-2">
+                {% if stats.total == 0 %}
+                    <form method="POST" action="{{ path('admin_payroll_consolidate', {period: period}) }}" class="inline">
+                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Consolider le mois
+                        </button>
+                    </form>
+                {% else %}
+                    {% if stats.draft > 0 %}
+                        <form method="POST" action="{{ path('admin_payroll_validate_all', {period: period}) }}" class="inline"
+                              onsubmit="return confirm('Valider tous les {{ stats.draft }} rapports en brouillon ?');">
+                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Tout valider ({{ stats.draft }})
+                            </button>
+                        </form>
+                    {% endif %}
+                    <a href="{{ path('admin_payroll_export_csv', {period: period}) }}"
+                       class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Export CSV
+                    </a>
+                    <button type="button" onclick="openSendModal()"
+                            class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        Envoyer au comptable
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Statistiques #}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm font-medium text-gray-500">Total éducateurs</div>
+            <div class="text-2xl font-bold text-gray-900">{{ stats.total }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm font-medium text-gray-500">Brouillons</div>
+            <div class="text-2xl font-bold text-gray-500">{{ stats.draft }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm font-medium text-gray-500">Validés</div>
+            <div class="text-2xl font-bold text-green-600">{{ stats.validated }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm font-medium text-gray-500">Exportés</div>
+            <div class="text-2xl font-bold text-blue-600">{{ stats.exported }}</div>
+        </div>
+    </div>
+
+    {# Tableau des consolidations #}
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Rapports par éducateur</h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Éducateur
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Statut
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Jours travaillés
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Absences
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            CP (Solde fin)
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Variables
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for consolidation in consolidations %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ consolidation.user.fullName }}</div>
+                            <div class="text-xs text-gray-500">{{ consolidation.user.matricule ?? 'N/A' }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% set statusClass = {
+                                'draft': 'bg-gray-100 text-gray-800',
+                                'validated': 'bg-green-100 text-green-800',
+                                'exported': 'bg-blue-100 text-blue-800',
+                                'archived': 'bg-gray-200 text-gray-600'
+                            } %}
+                            <span class="px-2 py-1 text-xs rounded-full {{ statusClass[consolidation.status] ?? 'bg-gray-100' }}">
+                                {{ consolidation.statusLabel }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <div class="text-sm font-medium text-gray-900">{{ consolidation.totalJoursTravailes|number_format(2, ',', ' ') }}</div>
+                            <div class="text-xs text-gray-500">
+                                {{ consolidation.joursTravailes|number_format(2, ',', ' ') }} gardes + {{ consolidation.joursEvenements|number_format(2, ',', ' ') }} événements
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-sm text-gray-900">{{ consolidation.totalJoursAbsence|number_format(2, ',', ' ') }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <div class="text-sm font-medium text-gray-900">{{ consolidation.cpSoldeFin|number_format(2, ',', ' ') }} j</div>
+                            <div class="text-xs text-gray-500">
+                                {{ consolidation.cpSoldeDebut|number_format(2, ',', ' ') }} + {{ consolidation.cpAcquis|number_format(2, ',', ' ') }} - {{ consolidation.cpPris|number_format(2, ',', ' ') }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-sm font-medium {% if consolidation.totalVariables|number_format(2) != '0.00' %}text-purple-600{% else %}text-gray-400{% endif %}">
+                                {{ consolidation.totalVariables|number_format(2, ',', ' ') }} €
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <div class="flex justify-center space-x-2">
+                                <a href="{{ path('admin_payroll_show', {id: consolidation.id}) }}"
+                                   class="text-blue-600 hover:text-blue-900 text-sm font-medium">
+                                    Détails
+                                </a>
+                                {% if consolidation.isDraft %}
+                                    <form method="POST" action="{{ path('admin_payroll_validate', {id: consolidation.id}) }}" class="inline">
+                                        <button type="submit" class="text-green-600 hover:text-green-900 text-sm font-medium">
+                                            Valider
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            Aucune consolidation pour cette période. Cliquez sur "Consolider le mois" pour commencer.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# Modal envoi comptable #}
+<div id="sendModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Envoyer au comptable</h3>
+        <form method="POST" action="{{ path('admin_payroll_send_accountant', {period: period}) }}">
+            <div class="mb-4">
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Adresse email du comptable</label>
+                <input type="email" name="email" id="email" required
+                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                       placeholder="comptable@exemple.com">
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button type="button" onclick="closeSendModal()"
+                        class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition">
+                    Annuler
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition">
+                    Envoyer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openSendModal() {
+    document.getElementById('sendModal').classList.remove('hidden');
+}
+function closeSendModal() {
+    document.getElementById('sendModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

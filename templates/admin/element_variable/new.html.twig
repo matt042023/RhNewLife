@@ -1,0 +1,81 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Nouvel Élément Variable{% endblock %}
+
+{% block admin_title %}Nouvel Élément Variable{% endblock %}
+{% block admin_subtitle %}Ajouter une prime, avance ou retenue{% endblock %}
+
+{% block admin_content %}
+<div class="mx-auto">
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <form method="POST" action="{{ path('admin_element_variable_new') }}">
+            <div class="space-y-4">
+                <div>
+                    <label for="user" class="block text-sm font-medium text-gray-700 mb-1">Éducateur *</label>
+                    <select name="user" id="user" required
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">Sélectionner un éducateur</option>
+                        {% for user in users %}
+                            <option value="{{ user.id }}" {% if selectedUserId == user.id %}selected{% endif %}>
+                                {{ user.fullName }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="period" class="block text-sm font-medium text-gray-700 mb-1">Période *</label>
+                    <input type="month" name="period" id="period" value="{{ period }}" required
+                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Catégorie *</label>
+                    <select name="category" id="category" required
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        {% for code, label in categories %}
+                            <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="label" class="block text-sm font-medium text-gray-700 mb-1">Libellé *</label>
+                    <input type="text" name="label" id="label" required
+                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                           placeholder="Ex: Prime de performance">
+                </div>
+
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Montant (€) *</label>
+                    <input type="number" name="amount" id="amount" step="0.01" required
+                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                           placeholder="100.00">
+                    <p class="text-xs text-gray-500 mt-1">Utilisez un montant négatif pour les retenues</p>
+                </div>
+
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea name="description" id="description" rows="3"
+                              class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                              placeholder="Description optionnelle..."></textarea>
+                </div>
+            </div>
+
+            {% if consolidationId %}
+                <input type="hidden" name="consolidation" value="{{ consolidationId }}">
+            {% endif %}
+
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                <a href="{{ consolidationId ? path('admin_payroll_show', {id: consolidationId}) : path('admin_element_variable_index', {period: period}) }}"
+                   class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition">
+                    Annuler
+                </a>
+                <button type="submit" class="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg transition">
+                    Créer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

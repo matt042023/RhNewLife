@@ -1,0 +1,131 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Éléments Variables{% endblock %}
+
+{% block admin_title %}Éléments Variables{% endblock %}
+{% block admin_subtitle %}Gestion des primes, avances et retenues{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    {# Liens de navigation #}
+    <div class="flex justify-between items-center">
+        <div class="flex space-x-4">
+            <a href="{{ path('admin_payroll_index') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                ← Retour aux consolidations
+            </a>
+        </div>
+        <div class="flex space-x-2">
+            <a href="{{ path('admin_payroll_month', {period: period}) }}"
+               class="inline-flex items-center px-3 py-1.5 text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                Consolidation du mois
+            </a>
+            <a href="{{ path('admin_cp_counter_index') }}"
+               class="inline-flex items-center px-3 py-1.5 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                Compteurs CP
+            </a>
+        </div>
+    </div>
+
+    {# Filtres #}
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <form method="GET" action="{{ path('admin_element_variable_index') }}" class="flex flex-wrap items-end gap-4">
+            <div>
+                <label for="period" class="block text-sm font-medium text-gray-700 mb-1">Période</label>
+                <input type="month" name="period" id="period" value="{{ period }}"
+                       class="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="user" class="block text-sm font-medium text-gray-700 mb-1">Éducateur</label>
+                <select name="user" id="user" class="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="">Tous</option>
+                    {% for user in users %}
+                        <option value="{{ user.id }}" {% if selectedUserId == user.id %}selected{% endif %}>
+                            {{ user.fullName }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
+                Filtrer
+            </button>
+            <a href="{{ path('admin_element_variable_new', {period: period}) }}"
+               class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">
+                + Ajouter
+            </a>
+        </form>
+    </div>
+
+    {# Liste #}
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Éducateur</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Catégorie</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Libellé</th>
+                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Montant</th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Statut</th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for element in elements %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ element.user.fullName }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
+                                {{ element.categoryLabel }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ element.label }}</div>
+                            {% if element.description %}
+                                <div class="text-xs text-gray-500">{{ element.description|slice(0, 50) }}{% if element.description|length > 50 %}...{% endif %}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <span class="font-medium {% if element.amount < 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                                {{ element.amount|number_format(2, ',', ' ') }} €
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% if element.isValidated %}
+                                <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Validé</span>
+                            {% else %}
+                                <span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">Brouillon</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <div class="flex justify-center space-x-2">
+                                <a href="{{ path('admin_element_variable_edit', {id: element.id}) }}"
+                                   class="text-blue-600 hover:text-blue-900 text-sm">Modifier</a>
+                                <form method="POST" action="{{ path('admin_element_variable_delete', {id: element.id}) }}"
+                                      class="inline" onsubmit="return confirm('Supprimer cet élément ?');">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ element.id) }}">
+                                    <button type="submit" class="text-red-600 hover:text-red-900 text-sm">Supprimer</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            Aucun élément variable pour cette période.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

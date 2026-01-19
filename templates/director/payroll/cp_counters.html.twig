@@ -1,0 +1,144 @@
+{% extends 'director.html.twig' %}
+
+{% block title %}Compteurs CP - Directeur{% endblock %}
+
+{% block director_title %}Compteurs CP{% endblock %}
+{% block director_subtitle %}Vue d'ensemble des soldes de congés payés{% endblock %}
+
+{% block director_content %}
+<div class="space-y-6">
+    {# Navigation #}
+    <a href="{{ path('director_payroll_index') }}" class="inline-flex items-center text-blue-600 hover:text-blue-800">
+        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Retour au suivi paie
+    </a>
+
+    {# Statistiques globales #}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {% set totalSolde = 0 %}
+        {% set lowBalance = 0 %}
+        {% set mediumBalance = 0 %}
+        {% set highBalance = 0 %}
+        {% for item in counters %}
+            {% set totalSolde = totalSolde + item.counter.soldeActuel %}
+            {% if item.counter.soldeActuel < 5 %}
+                {% set lowBalance = lowBalance + 1 %}
+            {% elseif item.counter.soldeActuel < 10 %}
+                {% set mediumBalance = mediumBalance + 1 %}
+            {% else %}
+                {% set highBalance = highBalance + 1 %}
+            {% endif %}
+        {% endfor %}
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm font-medium text-gray-500">Éducateurs</div>
+            <div class="mt-1 text-2xl font-semibold text-gray-900">{{ counters|length }}</div>
+        </div>
+
+        <div class="bg-green-50 rounded-lg shadow-sm p-6">
+            <div class="text-sm font-medium text-green-600">Solde ≥ 10j</div>
+            <div class="mt-1 text-2xl font-semibold text-green-700">{{ highBalance }}</div>
+        </div>
+
+        <div class="bg-yellow-50 rounded-lg shadow-sm p-6">
+            <div class="text-sm font-medium text-yellow-600">Solde 5-10j</div>
+            <div class="mt-1 text-2xl font-semibold text-yellow-700">{{ mediumBalance }}</div>
+        </div>
+
+        <div class="bg-red-50 rounded-lg shadow-sm p-6">
+            <div class="text-sm font-medium text-red-600">Solde < 5j</div>
+            <div class="mt-1 text-2xl font-semibold text-red-700">{{ lowBalance }}</div>
+        </div>
+    </div>
+
+    {# Liste des compteurs #}
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b">
+            <h3 class="text-lg font-medium text-gray-900">Soldes individuels</h3>
+            <p class="text-sm text-gray-500">Triés par solde décroissant</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Éducateur</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Report</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acquis</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Pris</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ajustement</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Solde actuel</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in counters %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium text-sm mr-3">
+                                    {{ item.user.firstName|first }}{{ item.user.lastName|first }}
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">{{ item.user.fullName }}</div>
+                                    <div class="text-xs text-gray-500">{{ item.user.matricule ?? 'N/A' }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                            {{ item.counter.soldeInitial|number_format(2, ',', ' ') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-green-600">
+                            +{{ item.counter.acquis|number_format(2, ',', ' ') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-red-600">
+                            -{{ item.counter.pris|number_format(2, ',', ' ') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm {% if item.counter.ajustementAdmin != 0 %}{% if item.counter.ajustementAdmin > 0 %}text-blue-600{% else %}text-orange-600{% endif %}{% else %}text-gray-400{% endif %}">
+                            {% if item.counter.ajustementAdmin != 0 %}
+                                {{ item.counter.ajustementAdmin > 0 ? '+' : '' }}{{ item.counter.ajustementAdmin|number_format(2, ',', ' ') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold {% if item.counter.soldeActuel >= 10 %}bg-green-100 text-green-800{% elseif item.counter.soldeActuel >= 5 %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ item.counter.soldeActuel|number_format(2, ',', ' ') }} j
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <a href="{{ path('director_payroll_user', {id: item.user.id}) }}" class="text-blue-600 hover:text-blue-900 text-sm">
+                                Historique
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            Aucun compteur CP trouvé.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# Information sur la période #}
+    <div class="bg-blue-50 rounded-lg p-4">
+        <div class="flex">
+            <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">Période de référence CP</h3>
+                <p class="mt-1 text-sm text-blue-700">
+                    La période de référence pour les congés payés va du 1er juin au 31 mai.
+                    Chaque éducateur acquiert 2,5 jours de congés par mois travaillé.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

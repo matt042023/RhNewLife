@@ -1,0 +1,75 @@
+{% extends 'emails/base.html.twig' %}
+
+{% block title %}Export paie {{ period_label }} - RhNewLife{% endblock %}
+
+{% block content %}
+<h1 style="color: #1a202c; font-size: 24px; font-weight: 600; margin-bottom: 16px;">
+    Export de paie - {{ period_label }}
+</h1>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Bonjour,
+</p>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Veuillez trouver ci-joints les documents de paie pour le mois de <strong>{{ period_label }}</strong>.
+</p>
+
+<div style="background-color: #f7fafc; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+    <h2 style="color: #2d3748; font-size: 18px; font-weight: 600; margin-bottom: 16px;">
+        Récapitulatif
+    </h2>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #e2e8f0;">Nombre d'éducateurs</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right; border-bottom: 1px solid #e2e8f0;">
+                {{ stats.total }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #e2e8f0;">Rapports validés</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right; border-bottom: 1px solid #e2e8f0;">
+                {{ stats.validated }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #718096;">Taux de complétion</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right;">
+                {{ stats.completion_rate }}%
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div style="background-color: #ebf8ff; border-left: 4px solid #3182ce; padding: 16px; margin-bottom: 24px;">
+    <h3 style="color: #2c5282; font-size: 14px; font-weight: 600; margin-bottom: 8px;">
+        Pièces jointes
+    </h3>
+    <ul style="color: #2c5282; font-size: 14px; margin: 0; padding-left: 20px;">
+        <li>export_paie_{{ period|replace({'-': '_'}) }}.csv - Données de paie (format Excel)</li>
+        <li>export_paie_{{ period|replace({'-': '_'}) }}.pdf - Récapitulatif mensuel</li>
+    </ul>
+</div>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Le fichier CSV contient les informations suivantes pour chaque éducateur :
+</p>
+
+<ul style="color: #4a5568; font-size: 14px; line-height: 1.8; margin-bottom: 24px; padding-left: 20px;">
+    <li>Matricule, Nom, Prénom</li>
+    <li>Jours travaillés</li>
+    <li>Congés payés pris</li>
+    <li>Jours de maladie et autres absences</li>
+    <li>Éléments variables (primes, avances, frais, retenues)</li>
+</ul>
+
+<p style="color: #718096; font-size: 14px; line-height: 1.5;">
+    En cas de question, n'hésitez pas à nous contacter.
+</p>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-top: 24px;">
+    Cordialement,<br>
+    <strong>L'équipe RhNewLife</strong>
+</p>
+{% endblock %}
