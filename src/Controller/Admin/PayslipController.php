@@ -29,8 +29,7 @@ class PayslipController extends AbstractController
         private PayrollNotificationService $notificationService,
         private SluggerInterface $slugger,
         private LoggerInterface $logger
-    ) {
-    }
+    ) {}
 
     private function getUploadDir(): string
     {
@@ -57,13 +56,13 @@ class PayslipController extends AbstractController
 
         $payslips = $this->documentRepository->findBy(
             $criteria,
-            ['createdAt' => 'DESC']
+            ['uploadedAt' => 'DESC']
         );
 
         // Filtrer par année si spécifié
         if ($year) {
             $payslips = array_filter($payslips, function (Document $doc) use ($year) {
-                return $doc->getCreatedAt()?->format('Y') === $year;
+                return $doc->getUploadedAt()?->format('Y') === $year;
             });
         }
 
@@ -88,6 +87,11 @@ class PayslipController extends AbstractController
         $users = $this->userRepository->findActiveEducators();
 
         if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('upload_payslip', $request->request->get('_token'))) {
+                $this->addFlash('error', 'Token CSRF invalide.');
+                return $this->redirectToRoute('admin_payslip_upload');
+            }
+
             $userId = $request->request->get('user');
             $user = $this->userRepository->find($userId);
 
@@ -111,7 +115,9 @@ class PayslipController extends AbstractController
             }
 
             // Générer un nom de fichier sécurisé
-            $period = $request->request->get('period', date('Y-m'));
+            $year = $request->request->get('year', date('Y'));
+            $month = $request->request->get('month', date('m'));
+            $period = sprintf('%s-%s', $year, $month);
             $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
             $safeFilename = $this->slugger->slug($originalFilename);
             $newFilename = sprintf(
@@ -136,15 +142,15 @@ class PayslipController extends AbstractController
             $document = new Document();
             $document->setUser($user);
             $document->setType(Document::TYPE_PAYSLIP);
-            $document->setFilename($newFilename);
-            $document->setOriginalFilename($file->getClientOriginalName());
+            $document->setFileName($newFilename);
+            $document->setOriginalName($file->getClientOriginalName());
             $document->setStatus(Document::STATUS_VALIDATED);
             $document->setValidatedBy($this->getUser());
             $document->setValidatedAt(new \DateTime());
 
             // Stocker la période dans les métadonnées ou un champ dédié si disponible
             // Pour l'instant, on l'inclut dans le nom original
-            $document->setOriginalFilename(sprintf('%s - %s', $period, $file->getClientOriginalName()));
+            $document->setOriginalName(sprintf('%s - %s', $period, $file->getClientOriginalName()));
 
             $this->entityManager->persist($document);
             $this->entityManager->flush();
@@ -175,7 +181,14 @@ class PayslipController extends AbstractController
         $users = $this->userRepository->findActiveEducators();
 
         if ($request->isMethod('POST')) {
-            $period = $request->request->get('period', date('Y-m'));
+            if (!$this->isCsrfTokenValid('bulk_upload', $request->request->get('_token'))) {
+                $this->addFlash('error', 'Token CSRF invalide.');
+                return $this->redirectToRoute('admin_payslip_bulk_upload');
+            }
+
+            $year = $request->request->get('year', date('Y'));
+            $month = $request->request->get('month', date('m'));
+            $period = sprintf('%s-%s', $year, $month);
             $files = $request->files->get('files', []);
 
             if (empty($files)) {
@@ -224,8 +237,8 @@ class PayslipController extends AbstractController
                 $document = new Document();
                 $document->setUser($user);
                 $document->setType(Document::TYPE_PAYSLIP);
-                $document->setFilename($newFilename);
-                $document->setOriginalFilename(sprintf('%s - %s', $period, $file->getClientOriginalName()));
+                $document->setFileName($newFilename);
+                $document->setOriginalName(sprintf('%s - %s', $period, $file->getClientOriginalName()));
                 $document->setStatus(Document::STATUS_VALIDATED);
                 $document->setValidatedBy($this->getUser());
                 $document->setValidatedAt(new \DateTime());
@@ -251,9 +264,17 @@ class PayslipController extends AbstractController
             return $this->redirectToRoute('admin_payslip_index');
         }
 
+        $matricules = [];
+        foreach ($users as $user) {
+            if ($user->getMatricule()) {
+                $matricules[$user->getMatricule()] = $user->getFullName();
+            }
+        }
+
         return $this->render('admin/payslip/bulk_upload.html.twig', [
             'users' => $users,
             'currentPeriod' => date('Y-m'),
+            'matricules' => $matricules,
         ]);
     }
 

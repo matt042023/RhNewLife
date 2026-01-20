@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}RhNewLife{% endblock %}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f6; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f4f7f6; padding-bottom: 40px; }
+        .main { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-spacing: 0; font-family: sans-serif; color: #4a4a4a; }
+        .header { background-color: #10b981; padding: 40px; text-align: center; color: white; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .content { padding: 40px; }
+        .footer { background-color: #1f2937; color: #9ca3af; padding: 40px; text-align: center; font-size: 14px; }
+        .footer a { color: #10b981; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <table class="main" width="100%">
+            <tr>
+                <td class="header">
+                    <h1>RH NewLife</h1>
+                </td>
+            </tr>
+            <tr>
+                <td class="content">
+                    {% block content %}{% endblock %}
+                </td>
+            </tr>
+            <tr>
+                <td class="footer">
+                    <p>&copy; {{ "now"|date("Y") }} RhNewLife - Tous droits réservés.</p>
+                    <p>Ceci est un message automatique, merci de ne pas y répondre.</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

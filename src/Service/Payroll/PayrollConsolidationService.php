@@ -31,8 +31,7 @@ class PayrollConsolidationService
         private CPCounterService $cpCounterService,
         private PayrollHistoryService $historyService,
         private LoggerInterface $logger
-    ) {
-    }
+    ) {}
 
     /**
      * Consolide les données de paie pour un mois donné
@@ -504,7 +503,7 @@ class PayrollConsolidationService
                 'id' => $aff->getId(),
                 'start' => $aff->getStartAt()?->format('d/m/Y'),
                 'end' => $aff->getEndAt()?->format('d/m/Y'),
-                'villa' => $aff->getVilla()?->getName(),
+                'villa' => $aff->getVilla()?->getNom(),
                 'type' => $aff->getType(),
                 'jours' => $aff->getJoursTravailes(),
             ];

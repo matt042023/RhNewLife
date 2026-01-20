@@ -21,9 +21,9 @@ class PayrollNotificationService
         private MailerInterface $mailer,
         private UserRepository $userRepository,
         private UrlGeneratorInterface $urlGenerator,
-        private LoggerInterface $logger
-    ) {
-    }
+        private LoggerInterface $logger,
+        private PayrollValidationService $validationService
+    ) {}
 
     /**
      * Notifie l'éducateur quand son rapport de paie est validé
@@ -77,6 +77,8 @@ class PayrollNotificationService
     public function notifyExportSent(string $period, string $accountantEmail, User $admin): void
     {
         try {
+            $stats = $this->validationService->getMonthStats($period);
+
             $email = (new TemplatedEmail())
                 ->from(new Address('noreply@rhnewlife.com', 'RH NewLife'))
                 ->to(new Address($admin->getEmail(), $admin->getFullName()))
@@ -87,6 +89,7 @@ class PayrollNotificationService
                     'period_label' => $this->getPeriodLabel($period),
                     'accountant_email' => $accountantEmail,
                     'admin' => $admin,
+                    'stats' => $stats,
                     'sent_at' => new \DateTime(),
                     'currentYear' => date('Y'),
                 ]);
@@ -163,6 +166,9 @@ class PayrollNotificationService
                 return;
             }
 
+            $stats = $this->validationService->getMonthStats($period);
+            $pendingConsolidations = $this->userRepository->findByRole('ROLE_EDUCATOR'); // Simplification pour l'exemple, à affiner si besoin
+
             $url = $this->urlGenerator->generate(
                 'admin_payroll_month',
                 ['period' => $period],
@@ -180,6 +186,8 @@ class PayrollNotificationService
                         'period_label' => $this->getPeriodLabel($period),
                         'pending_count' => $pendingCount,
                         'admin' => $admin,
+                        'stats' => $stats,
+                        'pending_users' => [], // Sera rempli par le template si on passe les consolidations ou si on les récupère ici
                         'url' => $url,
                         'currentYear' => date('Y'),
                     ]);
@@ -214,6 +222,8 @@ class PayrollNotificationService
             $periodLabel = $this->getPeriodLabel($period);
             $filename = sprintf('export_paie_%s', str_replace('-', '_', $period));
 
+            $stats = $this->validationService->getMonthStats($period);
+
             $email = (new TemplatedEmail())
                 ->from(new Address('noreply@rhnewlife.com', 'RH NewLife'))
                 ->to(new Address($accountantEmail))
@@ -224,6 +234,8 @@ class PayrollNotificationService
                     'period' => $period,
                     'period_label' => $periodLabel,
                     'admin' => $admin,
+                    'stats' => $stats,
+                    'pdf_included' => $pdfContent !== null,
                     'currentYear' => date('Y'),
                 ])
                 ->attach($csvContent, $filename . '.csv', 'text/csv');
@@ -314,9 +326,18 @@ class PayrollNotificationService
     private function getPeriodLabel(string $period): string
     {
         $months = [
-            '01' => 'Janvier', '02' => 'Février', '03' => 'Mars', '04' => 'Avril',
-            '05' => 'Mai', '06' => 'Juin', '07' => 'Juillet', '08' => 'Août',
-            '09' => 'Septembre', '10' => 'Octobre', '11' => 'Novembre', '12' => 'Décembre',
+            '01' => 'Janvier',
+            '02' => 'Février',
+            '03' => 'Mars',
+            '04' => 'Avril',
+            '05' => 'Mai',
+            '06' => 'Juin',
+            '07' => 'Juillet',
+            '08' => 'Août',
+            '09' => 'Septembre',
+            '10' => 'Octobre',
+            '11' => 'Novembre',
+            '12' => 'Décembre',
         ];
 
         $year = substr($period, 0, 4);
