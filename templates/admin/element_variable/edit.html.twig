@@ -6,7 +6,7 @@
 {% block admin_subtitle %}{{ element.user.fullName }} - {{ element.period }}{% endblock %}
 
 {% block admin_content %}
-<div class="max-w-2xl mx-auto">
+<div class=" mx-auto">
     <div class="bg-white rounded-lg shadow-sm p-6">
         <form method="POST" action="{{ path('admin_element_variable_edit', {id: element.id}) }}">
             <div class="space-y-4">
