@@ -46,14 +46,14 @@ class ConsolidationPaie
     /**
      * Jours travaillés depuis les affectations (gardes)
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => 0])]
-    private string $joursTravailes = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $joursTravailes = 0.0;
 
     /**
      * Jours travaillés depuis les événements (RDV, réunions, formations) hors jours de garde
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => 0])]
-    private string $joursEvenements = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $joursEvenements = 0.0;
 
     /**
      * Absences par type (JSON: {"CP": 2, "MAL": 1, ...})
@@ -64,32 +64,32 @@ class ConsolidationPaie
     /**
      * CP acquis ce mois (2.5j × prorata)
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => 0])]
-    private string $cpAcquis = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $cpAcquis = 0.0;
 
     /**
      * CP pris ce mois
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => 0])]
-    private string $cpPris = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $cpPris = 0.0;
 
     /**
      * Solde CP au début du mois
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => 0])]
-    private string $cpSoldeDebut = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $cpSoldeDebut = 0.0;
 
     /**
      * Solde CP à la fin du mois (calculé: début + acquis - pris)
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => 0])]
-    private string $cpSoldeFin = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $cpSoldeFin = 0.0;
 
     /**
      * Total des éléments variables (somme des montants)
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, options: ['default' => 0])]
-    private string $totalVariables = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $totalVariables = 0.0;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -252,23 +252,23 @@ class ConsolidationPaie
         return $this->status === self::STATUS_ARCHIVED;
     }
 
-    public function getJoursTravailes(): string
+    public function getJoursTravailes(): float
     {
         return $this->joursTravailes;
     }
 
-    public function setJoursTravailes(string $joursTravailes): static
+    public function setJoursTravailes(float $joursTravailes): static
     {
         $this->joursTravailes = $joursTravailes;
         return $this;
     }
 
-    public function getJoursEvenements(): string
+    public function getJoursEvenements(): float
     {
         return $this->joursEvenements;
     }
 
-    public function setJoursEvenements(string $joursEvenements): static
+    public function setJoursEvenements(float $joursEvenements): static
     {
         $this->joursEvenements = $joursEvenements;
         return $this;
@@ -279,7 +279,7 @@ class ConsolidationPaie
      */
     public function getTotalJoursTravailes(): float
     {
-        return (float) $this->joursTravailes + (float) $this->joursEvenements;
+        return $this->joursTravailes + $this->joursEvenements;
     }
 
     public function getJoursAbsence(): ?array
@@ -312,45 +312,45 @@ class ConsolidationPaie
         return $this->joursAbsence[$type] ?? 0;
     }
 
-    public function getCpAcquis(): string
+    public function getCpAcquis(): float
     {
         return $this->cpAcquis;
     }
 
-    public function setCpAcquis(string $cpAcquis): static
+    public function setCpAcquis(float $cpAcquis): static
     {
         $this->cpAcquis = $cpAcquis;
         return $this;
     }
 
-    public function getCpPris(): string
+    public function getCpPris(): float
     {
         return $this->cpPris;
     }
 
-    public function setCpPris(string $cpPris): static
+    public function setCpPris(float $cpPris): static
     {
         $this->cpPris = $cpPris;
         return $this;
     }
 
-    public function getCpSoldeDebut(): string
+    public function getCpSoldeDebut(): float
     {
         return $this->cpSoldeDebut;
     }
 
-    public function setCpSoldeDebut(string $cpSoldeDebut): static
+    public function setCpSoldeDebut(float $cpSoldeDebut): static
     {
         $this->cpSoldeDebut = $cpSoldeDebut;
         return $this;
     }
 
-    public function getCpSoldeFin(): string
+    public function getCpSoldeFin(): float
     {
         return $this->cpSoldeFin;
     }
 
-    public function setCpSoldeFin(string $cpSoldeFin): static
+    public function setCpSoldeFin(float $cpSoldeFin): static
     {
         $this->cpSoldeFin = $cpSoldeFin;
         return $this;
@@ -361,17 +361,16 @@ class ConsolidationPaie
      */
     public function recalculateCpSoldeFin(): static
     {
-        $soldeFin = (float) $this->cpSoldeDebut + (float) $this->cpAcquis - (float) $this->cpPris;
-        $this->cpSoldeFin = number_format($soldeFin, 2, '.', '');
+        $this->cpSoldeFin = $this->cpSoldeDebut + $this->cpAcquis - $this->cpPris;
         return $this;
     }
 
-    public function getTotalVariables(): string
+    public function getTotalVariables(): float
     {
         return $this->totalVariables;
     }
 
-    public function setTotalVariables(string $totalVariables): static
+    public function setTotalVariables(float $totalVariables): static
     {
         $this->totalVariables = $totalVariables;
         return $this;
@@ -477,11 +476,11 @@ class ConsolidationPaie
      */
     public function recalculateTotalVariables(): static
     {
-        $total = 0;
+        $total = 0.0;
         foreach ($this->elementsVariables as $element) {
-            $total += (float) $element->getAmount();
+            $total += $element->getAmount();
         }
-        $this->totalVariables = number_format($total, 2, '.', '');
+        $this->totalVariables = $total;
         return $this;
     }
 

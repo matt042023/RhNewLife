@@ -34,26 +34,26 @@ class CompteurCP
     /**
      * Solde initial (report de la période précédente)
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => 0])]
-    private string $soldeInitial = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $soldeInitial = 0.0;
 
     /**
      * Jours acquis depuis le début de la période
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => 0])]
-    private string $acquis = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $acquis = 0.0;
 
     /**
      * Jours pris depuis le début de la période
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => 0])]
-    private string $pris = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $pris = 0.0;
 
     /**
      * Ajustement manuel par l'admin (+/-)
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => 0])]
-    private string $ajustementAdmin = '0.00';
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $ajustementAdmin = 0.0;
 
     /**
      * Commentaire pour l'ajustement admin
@@ -156,23 +156,23 @@ class CompteurCP
         return "Juin {$startYear} - Mai {$endYear}";
     }
 
-    public function getSoldeInitial(): string
+    public function getSoldeInitial(): float
     {
         return $this->soldeInitial;
     }
 
-    public function setSoldeInitial(string $soldeInitial): static
+    public function setSoldeInitial(float $soldeInitial): static
     {
         $this->soldeInitial = $soldeInitial;
         return $this;
     }
 
-    public function getAcquis(): string
+    public function getAcquis(): float
     {
         return $this->acquis;
     }
 
-    public function setAcquis(string $acquis): static
+    public function setAcquis(float $acquis): static
     {
         $this->acquis = $acquis;
         return $this;
@@ -183,17 +183,16 @@ class CompteurCP
      */
     public function addAcquis(float $days): static
     {
-        $current = (float) $this->acquis;
-        $this->acquis = number_format($current + $days, 2, '.', '');
+        $this->acquis += $days;
         return $this;
     }
 
-    public function getPris(): string
+    public function getPris(): float
     {
         return $this->pris;
     }
 
-    public function setPris(string $pris): static
+    public function setPris(float $pris): static
     {
         $this->pris = $pris;
         return $this;
@@ -204,17 +203,16 @@ class CompteurCP
      */
     public function addPris(float $days): static
     {
-        $current = (float) $this->pris;
-        $this->pris = number_format($current + $days, 2, '.', '');
+        $this->pris += $days;
         return $this;
     }
 
-    public function getAjustementAdmin(): string
+    public function getAjustementAdmin(): float
     {
         return $this->ajustementAdmin;
     }
 
-    public function setAjustementAdmin(string $ajustementAdmin): static
+    public function setAjustementAdmin(float $ajustementAdmin): static
     {
         $this->ajustementAdmin = $ajustementAdmin;
         return $this;
@@ -236,10 +234,7 @@ class CompteurCP
      */
     public function getSoldeActuel(): float
     {
-        return (float) $this->soldeInitial
-            + (float) $this->acquis
-            - (float) $this->pris
-            + (float) $this->ajustementAdmin;
+        return $this->soldeInitial + $this->acquis - $this->pris + $this->ajustementAdmin;
     }
 
     /**
@@ -247,7 +242,7 @@ class CompteurCP
      */
     public function getSoldeActuelFormatted(): string
     {
-        return number_format($this->getSoldeActuel(), 2, '.', '');
+        return number_format($this->getSoldeActuel(), 2, ',', ' ');
     }
 
     /**

@@ -52,7 +52,7 @@ class CPCounterService
 
         // Calcul du solde initial basé sur le prorata d'embauche
         $initialBalance = $this->calculateInitialBalance($user, $periodeReference);
-        $compteur->setSoldeInitial(number_format($initialBalance, 2, '.', ''));
+        $compteur->setSoldeInitial($initialBalance);
 
         $this->entityManager->persist($compteur);
         $this->entityManager->flush();
@@ -157,9 +157,9 @@ class CPCounterService
         }
 
         $compteur = $this->getOrCreateCounter($user);
-        $currentPris = (float) $compteur->getPris();
-        $newPris = max(0, $currentPris - $days);
-        $compteur->setPris(number_format($newPris, 2, '.', ''));
+        $currentPris = $compteur->getPris();
+        $newPris = max(0.0, $currentPris - $days);
+        $compteur->setPris($newPris);
         $this->entityManager->flush();
 
         $this->logger->info('Déduction CP annulée', [
@@ -176,10 +176,10 @@ class CPCounterService
     {
         $compteur = $this->getOrCreateCounter($user);
 
-        $oldAjustement = (float) $compteur->getAjustementAdmin();
+        $oldAjustement = $compteur->getAjustementAdmin();
         $newAjustement = $oldAjustement + $adjustment;
 
-        $compteur->setAjustementAdmin(number_format($newAjustement, 2, '.', ''));
+        $compteur->setAjustementAdmin($newAjustement);
         $compteur->setAjustementComment($comment);
         $this->entityManager->flush();
 
@@ -211,10 +211,10 @@ class CPCounterService
         return [
             'periode' => $compteur->getPeriodeReference(),
             'periode_label' => $compteur->getPeriodeLabel(),
-            'solde_initial' => (float) $compteur->getSoldeInitial(),
-            'acquis' => (float) $compteur->getAcquis(),
-            'pris' => (float) $compteur->getPris(),
-            'ajustement' => (float) $compteur->getAjustementAdmin(),
+            'solde_initial' => $compteur->getSoldeInitial(),
+            'acquis' => $compteur->getAcquis(),
+            'pris' => $compteur->getPris(),
+            'ajustement' => $compteur->getAjustementAdmin(),
             'solde_actuel' => $compteur->getSoldeActuel(),
         ];
     }
@@ -265,7 +265,7 @@ class CPCounterService
         // Reporter le solde
         if ($previousCompteur) {
             $soldeReport = $previousCompteur->getSoldeActuel();
-            $newCompteur->setSoldeInitial(number_format($soldeReport, 2, '.', ''));
+            $newCompteur->setSoldeInitial($soldeReport);
         }
 
         $this->entityManager->persist($newCompteur);
@@ -289,7 +289,7 @@ class CPCounterService
         $compteur = new CompteurCP();
         $compteur->setUser($user);
         $compteur->setPeriodeReference($periodeReference);
-        $compteur->setSoldeInitial(number_format($soldeReport, 2, '.', ''));
+        $compteur->setSoldeInitial($soldeReport);
 
         $this->entityManager->persist($compteur);
         $this->entityManager->flush();
@@ -357,8 +357,8 @@ class CPCounterService
             $period = sprintf('%04d-%02d', $startYear, $month);
             $consolidation = $this->consolidationPaieRepository->findByUserAndPeriod($user, $period);
             if ($consolidation) {
-                $cpAcquis = (float) $consolidation->getCpAcquis();
-                $cpPris = (float) $consolidation->getCpPris();
+                $cpAcquis = $consolidation->getCpAcquis();
+                $cpPris = $consolidation->getCpPris();
 
                 if ($cpAcquis > 0) {
                     $movements[] = [
@@ -389,8 +389,8 @@ class CPCounterService
             $period = sprintf('%04d-%02d', $endYear, $month);
             $consolidation = $this->consolidationPaieRepository->findByUserAndPeriod($user, $period);
             if ($consolidation) {
-                $cpAcquis = (float) $consolidation->getCpAcquis();
-                $cpPris = (float) $consolidation->getCpPris();
+                $cpAcquis = $consolidation->getCpAcquis();
+                $cpPris = $consolidation->getCpPris();
 
                 if ($cpAcquis > 0) {
                     $movements[] = [
@@ -417,8 +417,8 @@ class CPCounterService
         }
 
         // Ajouter le solde initial en premier s'il est non nul
-        $soldeInitial = (float) $compteur->getSoldeInitial();
-        if ($soldeInitial != 0) {
+        $soldeInitial = $compteur->getSoldeInitial();
+        if ($soldeInitial != 0.0) {
             array_unshift($movements, [
                 'date' => new \DateTime(sprintf('%04d-06-01', $startYear)),
                 'type' => 'report',
@@ -430,8 +430,8 @@ class CPCounterService
         }
 
         // Ajouter l'ajustement admin s'il y en a un
-        $ajustement = (float) $compteur->getAjustementAdmin();
-        if ($ajustement != 0) {
+        $ajustement = $compteur->getAjustementAdmin();
+        if ($ajustement != 0.0) {
             $movements[] = [
                 'date' => $compteur->getUpdatedAt() ?? new \DateTime(),
                 'type' => 'adjustment',

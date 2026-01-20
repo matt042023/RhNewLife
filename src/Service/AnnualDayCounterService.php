@@ -58,8 +58,8 @@ class AnnualDayCounterService
         $compteur->setDateEmbauche($hireDate);
 
         // Toujours 258 jours, pas de prorata
-        $compteur->setJoursAlloues((string)self::FULL_YEAR_DAYS);
-        $compteur->setJoursConsommes('0.00');
+        $compteur->setJoursAlloues((float)self::FULL_YEAR_DAYS);
+        $compteur->setJoursConsommes(0.0);
 
         $this->entityManager->persist($compteur);
         $this->entityManager->flush();
@@ -100,10 +100,10 @@ class AnnualDayCounterService
             throw new \RuntimeException("Aucun compteur trouvé pour l'utilisateur {$user->getId()} et l'année {$year}");
         }
 
-        $currentConsumed = (float)$compteur->getJoursConsommes();
+        $currentConsumed = $compteur->getJoursConsommes();
         $newConsumed = $currentConsumed + $days;
 
-        $compteur->setJoursConsommes((string)$newConsumed);
+        $compteur->setJoursConsommes($newConsumed);
         $this->entityManager->flush();
 
         $this->logger->info('Compteur décrémenté', [
@@ -126,10 +126,10 @@ class AnnualDayCounterService
             throw new \RuntimeException("Aucun compteur trouvé pour l'utilisateur {$user->getId()} et l'année {$year}");
         }
 
-        $currentConsumed = (float)$compteur->getJoursConsommes();
-        $newConsumed = max(0, $currentConsumed - $days); // Ne peut pas être négatif
+        $currentConsumed = $compteur->getJoursConsommes();
+        $newConsumed = max(0.0, $currentConsumed - $days); // Ne peut pas être négatif
 
-        $compteur->setJoursConsommes((string)$newConsumed);
+        $compteur->setJoursConsommes($newConsumed);
         $this->entityManager->flush();
 
         $this->logger->info('Compteur incrémenté (annulation)', [
@@ -180,8 +180,8 @@ class AnnualDayCounterService
                 $compteur->setDateEmbauche($contract->getStartDate());
 
                 // Toujours 258 jours, pas de prorata
-                $compteur->setJoursAlloues((string)self::FULL_YEAR_DAYS);
-                $compteur->setJoursConsommes('0.00');
+                $compteur->setJoursAlloues((float)self::FULL_YEAR_DAYS);
+                $compteur->setJoursConsommes(0.0);
 
                 $this->entityManager->persist($compteur);
                 $results['created']++;

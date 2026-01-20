@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Repository\AbsenceRepository;
 use App\Repository\AffectationRepository;
 use App\Repository\ConsolidationPaieRepository;
+use App\Repository\ElementVariableRepository;
 use App\Repository\RendezVousRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +29,7 @@ class PayrollConsolidationService
         private AbsenceRepository $absenceRepository,
         private RendezVousRepository $rendezVousRepository,
         private UserRepository $userRepository,
+        private ElementVariableRepository $elementVariableRepository,
         private CPCounterService $cpCounterService,
         private PayrollHistoryService $historyService,
         private LoggerInterface $logger
@@ -86,12 +88,12 @@ class PayrollConsolidationService
 
         // 1. Calculer les jours travaillés (affectations)
         $joursTravailes = $this->calculateWorkingDaysFromAffectations($user, $startDate, $endDate);
-        $consolidation->setJoursTravailes(number_format($joursTravailes, 2, '.', ''));
+        $consolidation->setJoursTravailes($joursTravailes);
 
         // 2. Calculer les jours événements (RDV, réunions, formations hors jours de garde)
         $guardDates = $this->getGuardDates($user, $startDate, $endDate);
         $joursEvenements = $this->calculateEventDays($user, $startDate, $endDate, $guardDates);
-        $consolidation->setJoursEvenements(number_format($joursEvenements, 2, '.', ''));
+        $consolidation->setJoursEvenements($joursEvenements);
 
         // 3. Agréger les absences par type
         $absences = $this->aggregateAbsences($user, $startDate, $endDate);
@@ -99,12 +101,17 @@ class PayrollConsolidationService
 
         // 4. Gérer les CP
         $cpData = $this->calculateCPData($user, $year, $month);
-        $consolidation->setCpSoldeDebut(number_format($cpData['solde_debut'], 2, '.', ''));
-        $consolidation->setCpAcquis(number_format($cpData['acquis'], 2, '.', ''));
-        $consolidation->setCpPris(number_format($cpData['pris'], 2, '.', ''));
+        $consolidation->setCpSoldeDebut($cpData['solde_debut']);
+        $consolidation->setCpAcquis($cpData['acquis']);
+        $consolidation->setCpPris($cpData['pris']);
         $consolidation->recalculateCpSoldeFin();
 
-        // 5. Calculer le total des variables (sera mis à jour plus tard si besoin)
+        // 5. Attacher les éléments variables existants de cette période qui ne sont pas encore liés
+        if ($isNew) {
+            $this->attachExistingVariables($consolidation, $user, $period);
+        }
+
+        // 6. Calculer le total des variables
         $consolidation->recalculateTotalVariables();
 
         // Persister
@@ -358,12 +365,17 @@ class PayrollConsolidationService
         $cpData = $this->calculateCPData($user, $year, $month);
 
         // Mettre à jour
-        $consolidation->setJoursTravailes(number_format($joursTravailes, 2, '.', ''));
-        $consolidation->setJoursEvenements(number_format($joursEvenements, 2, '.', ''));
+        $consolidation->setJoursTravailes($joursTravailes);
+        $consolidation->setJoursEvenements($joursEvenements);
         $consolidation->setJoursAbsence($absences);
-        $consolidation->setCpAcquis(number_format($cpData['acquis'], 2, '.', ''));
-        $consolidation->setCpPris(number_format($cpData['pris'], 2, '.', ''));
+        $consolidation->setCpAcquis($cpData['acquis']);
+        $consolidation->setCpPris($cpData['pris']);
         $consolidation->recalculateCpSoldeFin();
+
+        // Attacher les éléments variables non liés
+        $period = $consolidation->getPeriod();
+        $this->attachExistingVariables($consolidation, $user, $period);
+
         $consolidation->recalculateTotalVariables();
 
         $this->entityManager->flush();
@@ -576,5 +588,36 @@ class PayrollConsolidationService
                 'days' => $abs->getWorkingDaysCount(),
             ];
         }, $absences);
+    }
+
+    /**
+     * Attache les éléments variables existants à une nouvelle consolidation
+     */
+    private function attachExistingVariables(ConsolidationPaie $consolidation, User $user, string $period): void
+    {
+        // Récupérer tous les éléments variables de cette période pour cet utilisateur qui n'ont pas encore de consolidation
+        $elements = $this->elementVariableRepository->createQueryBuilder('e')
+            ->where('e.user = :user')
+            ->andWhere('e.period = :period')
+            ->andWhere('e.consolidation IS NULL')
+            ->setParameter('user', $user)
+            ->setParameter('period', $period)
+            ->getQuery()
+            ->getResult();
+
+        // Attacher chaque élément à la consolidation
+        foreach ($elements as $element) {
+            $element->setConsolidation($consolidation);
+            $this->entityManager->persist($element);
+        }
+
+        if (count($elements) > 0) {
+            $this->logger->info('Éléments variables attachés à la consolidation', [
+                'consolidation_id' => $consolidation->getId(),
+                'user_id' => $user->getId(),
+                'period' => $period,
+                'count' => count($elements),
+            ]);
+        }
     }
 }

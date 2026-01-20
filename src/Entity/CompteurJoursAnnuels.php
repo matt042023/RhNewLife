@@ -35,17 +35,17 @@ class CompteurJoursAnnuels
     /**
      * Total de jours alloués pour l'année (258 ou proratisé selon date d'embauche)
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2)]
+    #[ORM\Column(type: Types::FLOAT)]
     #[Assert\NotBlank(message: 'Le nombre de jours alloués est obligatoire.')]
     #[Assert\Positive(message: 'Le nombre de jours alloués doit être positif.')]
-    private ?string $joursAlloues = '258.00';
+    private float $joursAlloues = 258.0;
 
     /**
      * Jours consommés par les affectations/shifts (garde, renfort)
      */
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => '0.00'])]
+    #[ORM\Column(type: Types::FLOAT)]
     #[Assert\PositiveOrZero(message: 'Le nombre de jours consommés doit être positif ou zéro.')]
-    private string $joursConsommes = '0.00';
+    private float $joursConsommes = 0.0;
 
     /**
      * Date d'embauche (pour référence lors du calcul prorata)
@@ -100,23 +100,23 @@ class CompteurJoursAnnuels
         return $this;
     }
 
-    public function getJoursAlloues(): ?string
+    public function getJoursAlloues(): float
     {
         return $this->joursAlloues;
     }
 
-    public function setJoursAlloues(string $joursAlloues): static
+    public function setJoursAlloues(float $joursAlloues): static
     {
         $this->joursAlloues = $joursAlloues;
         return $this;
     }
 
-    public function getJoursConsommes(): string
+    public function getJoursConsommes(): float
     {
         return $this->joursConsommes;
     }
 
-    public function setJoursConsommes(string $joursConsommes): static
+    public function setJoursConsommes(float $joursConsommes): static
     {
         $this->joursConsommes = $joursConsommes;
         return $this;
@@ -162,7 +162,7 @@ class CompteurJoursAnnuels
      */
     public function getJoursRestants(): float
     {
-        return (float)$this->joursAlloues - (float)$this->joursConsommes;
+        return $this->joursAlloues - $this->joursConsommes;
     }
 
     /**
@@ -186,12 +186,11 @@ class CompteurJoursAnnuels
      */
     public function getPercentageUsed(): float
     {
-        $alloues = (float)$this->joursAlloues;
-        if ($alloues == 0) {
-            return 0;
+        if ($this->joursAlloues == 0) {
+            return 0.0;
         }
 
-        return round(((float)$this->joursConsommes / $alloues) * 100, 2);
+        return round(($this->joursConsommes / $this->joursAlloues) * 100, 2);
     }
 
     /**
@@ -216,6 +215,6 @@ class CompteurJoursAnnuels
      */
     public function getJoursAllouesFormatted(): string
     {
-        return number_format((float)$this->joursAlloues, 0) . ' jours';
+        return number_format($this->joursAlloues, 0) . ' jours';
     }
 }
