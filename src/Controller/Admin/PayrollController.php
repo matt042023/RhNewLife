@@ -41,26 +41,35 @@ class PayrollController extends AbstractController
     {
         $periods = $this->consolidationRepository->findAvailablePeriods();
 
+        // Générer les 12 derniers mois (incluant le mois courant)
+        $allPeriods = [];
+        $currentDate = new \DateTime();
+        for ($i = 0; $i < 12; $i++) {
+            $period = $currentDate->format('Y-m');
+            if (!in_array($period, $allPeriods, true)) {
+                $allPeriods[] = $period;
+            }
+            $currentDate->modify('-1 month');
+        }
+
+        // Ajouter les périodes existantes qui ne sont pas dans les 12 derniers mois
+        foreach ($periods as $period) {
+            if (!in_array($period, $allPeriods, true)) {
+                $allPeriods[] = $period;
+            }
+        }
+
+        // Trier par ordre décroissant
+        rsort($allPeriods);
+
         // Ajouter les stats pour chaque période
         $periodsData = [];
-        foreach ($periods as $period) {
+        foreach ($allPeriods as $period) {
             $stats = $this->validationService->getMonthStats($period);
             $periodsData[] = array_merge(['period' => $period], $stats);
         }
 
-        // Ajouter le mois courant s'il n'existe pas
         $currentPeriod = date('Y-m');
-        if (!in_array($currentPeriod, $periods, true)) {
-            array_unshift($periodsData, [
-                'period' => $currentPeriod,
-                'total' => 0,
-                'draft' => 0,
-                'validated' => 0,
-                'exported' => 0,
-                'archived' => 0,
-                'completion_rate' => 0,
-            ]);
-        }
 
         return $this->render('admin/payroll/index.html.twig', [
             'periods' => $periodsData,
