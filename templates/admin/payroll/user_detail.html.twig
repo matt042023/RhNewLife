@@ -102,6 +102,54 @@
             </div>
         </div>
 
+        {# Compteur Jours Annuels #}
+        {% if details.annual_counter is defined and details.annual_counter %}
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Compteur Jours Annuels</h3>
+                <a href="{{ path('admin_annual_day_counter_user', {id: consolidation.user.id, year: consolidation.year}) }}"
+                   class="text-sm text-blue-600 hover:text-blue-800">
+                    Voir détail →
+                </a>
+            </div>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span class="text-gray-600">Dotation annuelle</span>
+                    <span class="font-medium">{{ details.annual_counter.jours_alloues|number_format(0, ',', ' ') }} jours</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span class="text-gray-600">Jours travaillés</span>
+                    <span class="font-medium text-red-600">{{ details.annual_counter.jours_consommes|number_format(0, ',', ' ') }} jours</span>
+                </div>
+                {% if details.annual_counter.ajustement != 0 %}
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span class="text-gray-600">Ajustement</span>
+                    <span class="font-medium {% if details.annual_counter.ajustement > 0 %}text-blue-600{% else %}text-orange-600{% endif %}">
+                        {{ details.annual_counter.ajustement > 0 ? '+' : '' }}{{ details.annual_counter.ajustement|number_format(0, ',', ' ') }} jours
+                    </span>
+                </div>
+                {% endif %}
+                <div class="flex justify-between items-center py-2 bg-blue-50 -mx-6 px-6">
+                    <span class="font-semibold text-blue-900">Jours restants</span>
+                    <span class="font-bold {% if details.annual_counter.jours_restants < 0 %}text-red-600{% else %}text-blue-900{% endif %}">
+                        {{ details.annual_counter.jours_restants|number_format(0, ',', ' ') }} jours
+                    </span>
+                </div>
+                <div class="pt-2">
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>0%</span>
+                        <span>{{ details.annual_counter.percentage_used|number_format(0) }}% effectué</span>
+                        <span>100%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full transition-all {% if details.annual_counter.percentage_used > 90 %}bg-green-500{% elseif details.annual_counter.percentage_used > 75 %}bg-blue-500{% else %}bg-yellow-500{% endif %}"
+                             style="width: {{ details.annual_counter.percentage_used > 100 ? 100 : details.annual_counter.percentage_used }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         {# Détail des Absences #}
         {% if details.absences|length > 0 %}
         <div class="bg-white rounded-lg shadow-sm overflow-hidden">

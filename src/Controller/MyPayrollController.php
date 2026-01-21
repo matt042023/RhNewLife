@@ -2,12 +2,15 @@
 
 namespace App\Controller;
 
+use App\Entity\CompteurJoursAnnuels;
 use App\Entity\ConsolidationPaie;
 use App\Repository\ConsolidationPaieRepository;
 use App\Repository\DocumentRepository;
+use App\Service\AnnualDayCounterService;
 use App\Service\Payroll\CPCounterService;
 use App\Service\Payroll\PayrollConsolidationService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -23,7 +26,8 @@ class MyPayrollController extends AbstractController
         private ConsolidationPaieRepository $consolidationRepository,
         private DocumentRepository $documentRepository,
         private CPCounterService $cpCounterService,
-        private PayrollConsolidationService $consolidationService
+        private PayrollConsolidationService $consolidationService,
+        private AnnualDayCounterService $annualDayCounterService
     ) {
     }
 
@@ -165,6 +169,41 @@ class MyPayrollController extends AbstractController
         return $this->render('my_payroll/conges.html.twig', [
             'cp_counter' => $cpCounter,
             'consolidations' => $validatedConsolidations,
+        ]);
+    }
+
+    /**
+     * Affiche le compteur de jours annuels (258 jours)
+     */
+    #[Route('/jours-annuels', name: 'my_payroll_jours_annuels')]
+    public function joursAnnuels(Request $request): Response
+    {
+        $user = $this->getUser();
+
+        $currentYear = CompteurJoursAnnuels::getCurrentYear();
+        $year = $request->query->getInt('year', $currentYear);
+
+        // Récupérer ou créer le compteur pour l'année demandée
+        $counter = $this->annualDayCounterService->getOrCreateCounter($user, $year);
+
+        // Récupérer les détails du solde
+        $balanceDetails = $this->annualDayCounterService->getBalanceDetails($user, $year);
+
+        // Récupérer l'historique des mouvements
+        $movements = $this->annualDayCounterService->getMovementsHistory($user, $year);
+
+        // Années disponibles pour le sélecteur (5 dernières années)
+        $years = [];
+        for ($i = 0; $i < 5; $i++) {
+            $years[] = $currentYear - $i;
+        }
+
+        return $this->render('my_payroll/jours_annuels.html.twig', [
+            'counter' => $counter,
+            'balanceDetails' => $balanceDetails,
+            'movements' => $movements,
+            'year' => $year,
+            'years' => $years,
         ]);
     }
 }

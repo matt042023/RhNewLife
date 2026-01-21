@@ -1,0 +1,180 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Mes jours annuels{% endblock %}
+
+{% block breadcrumb_items %}
+    <li>
+        <a href="{{ path('my_payroll_index') }}" class="text-white/60 hover:text-white">Mon espace paie</a>
+    </li>
+    <li><span class="text-white">Mes jours annuels</span></li>
+{% endblock %}
+
+{% block page_title %}Mes jours annuels{% endblock %}
+{% block page_subtitle %}Année {{ year }}{% endblock %}
+
+{% block dashboard_content %}
+{# Sélecteur d'année #}
+<div class="mb-6 flex justify-end">
+    <form method="GET" action="{{ path('my_payroll_jours_annuels') }}" class="flex items-center space-x-2">
+        <label class="text-sm font-medium text-gray-700">Année :</label>
+        <select name="year" onchange="this.form.submit()"
+                class="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+            {% for y in years %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {# Jours restants #}
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Jours restants</h2>
+        <div class="text-center py-6">
+            <div class="text-5xl font-bold {% if balanceDetails.jours_restants >= 50 %}text-green-600{% elseif balanceDetails.jours_restants >= 20 %}text-yellow-600{% elseif balanceDetails.jours_restants < 0 %}text-red-600{% else %}text-orange-600{% endif %}">
+                {{ balanceDetails.jours_restants|number_format(0, ',', ' ') }}
+            </div>
+            <p class="text-gray-500 mt-2">jours à travailler</p>
+
+            {# Barre de progression #}
+            {% set percentage = balanceDetails.percentage_used %}
+            <div class="mt-4">
+                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>0%</span>
+                    <span>{{ percentage|number_format(0) }}% effectué</span>
+                    <span>100%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div class="h-3 rounded-full transition-all {% if percentage > 90 %}bg-green-500{% elseif percentage > 75 %}bg-blue-500{% else %}bg-yellow-500{% endif %}"
+                         style="width: {{ percentage > 100 ? 100 : percentage }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Détail du calcul #}
+    <div class="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Détail du calcul</h2>
+        <div class="grid grid-cols-3 {% if balanceDetails.ajustement != 0 %}md:grid-cols-4{% endif %} gap-4">
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+                <p class="text-xs text-gray-500 uppercase tracking-wide">Dotation</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ balanceDetails.jours_alloues|number_format(0, ',', ' ') }}</p>
+                <p class="text-xs text-gray-500">jours</p>
+            </div>
+            <div class="text-center p-4 bg-red-50 rounded-lg">
+                <p class="text-xs text-red-600 uppercase tracking-wide">Travaillés</p>
+                <p class="text-2xl font-bold text-red-600 mt-1">{{ balanceDetails.jours_consommes|number_format(0, ',', ' ') }}</p>
+                <p class="text-xs text-red-600">jours</p>
+            </div>
+            {% if balanceDetails.ajustement != 0 %}
+            <div class="text-center p-4 {% if balanceDetails.ajustement > 0 %}bg-blue-50{% else %}bg-orange-50{% endif %} rounded-lg">
+                <p class="text-xs {% if balanceDetails.ajustement > 0 %}text-blue-600{% else %}text-orange-600{% endif %} uppercase tracking-wide">Ajustement</p>
+                <p class="text-2xl font-bold {% if balanceDetails.ajustement > 0 %}text-blue-600{% else %}text-orange-600{% endif %} mt-1">
+                    {{ balanceDetails.ajustement > 0 ? '+' : '' }}{{ balanceDetails.ajustement|number_format(0, ',', ' ') }}
+                </p>
+                <p class="text-xs {% if balanceDetails.ajustement > 0 %}text-blue-600{% else %}text-orange-600{% endif %}">jours</p>
+            </div>
+            {% endif %}
+            <div class="text-center p-4 bg-green-50 rounded-lg">
+                <p class="text-xs text-green-600 uppercase tracking-wide">Restants</p>
+                <p class="text-2xl font-bold {% if balanceDetails.jours_restants < 0 %}text-red-600{% else %}text-green-600{% endif %} mt-1">
+                    {{ balanceDetails.jours_restants|number_format(0, ',', ' ') }}
+                </p>
+                <p class="text-xs text-green-600">jours</p>
+            </div>
+        </div>
+
+        {% if counter.ajustementAdmin != 0 and counter.ajustementComment %}
+        <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
+            <p class="text-sm text-yellow-800">
+                <strong>Note d'ajustement :</strong>
+                <span class="italic">{{ counter.ajustementComment }}</span>
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Historique des mouvements #}
+<div class="mt-6 bg-white rounded-lg shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b">
+        <h2 class="text-lg font-medium text-gray-900">Historique des mouvements ({{ year }})</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Jours</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Solde après</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for movement in movements %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ movement.date|date('d/m/Y') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if movement.type == 'allocation' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Dotation
+                            </span>
+                        {% elseif movement.type == 'consumption' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Travaillé
+                            </span>
+                        {% elseif movement.type == 'event' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                Événement
+                            </span>
+                        {% elseif movement.type == 'adjustment' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Ajustement
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900">
+                        {{ movement.description }}
+                        {% if movement.comment %}
+                            <br><span class="text-xs text-gray-500 italic">{{ movement.comment }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium {% if movement.days > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                        {{ movement.days > 0 ? '+' : '' }}{{ movement.days|number_format(0, ',', ' ') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                        {{ movement.balanceAfter|number_format(0, ',', ' ') }} j
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                        Aucun mouvement enregistré pour cette année.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# Information système 258 jours #}
+<div class="mt-6 bg-blue-50 rounded-lg p-4">
+    <div class="flex">
+        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+        </svg>
+        <div class="ml-3">
+            <h3 class="text-sm font-medium text-blue-800">Système 258 jours annuels</h3>
+            <p class="mt-1 text-sm text-blue-700">
+                Ce compteur représente le nombre de jours de travail annuels (258 jours ouvrables).
+                Chaque garde (24h ou 48h), renfort validé, ainsi que les événements hors garde (réunions, formations, rendez-vous) sont automatiquement déduits de ce compteur.
+                Le solde représente les jours restants à effectuer sur l'année civile (janvier à décembre).
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

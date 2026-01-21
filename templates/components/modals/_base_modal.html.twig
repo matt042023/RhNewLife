@@ -37,7 +37,7 @@
 <div id="{{ modalId }}" class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" {% if closeOnBackdrop %} onclick="if(event.target === this) this.classList.add('hidden');" {% endif %}>
 
 	<div
-		class="glass-modal max-h-[90vh] overflow-y-auto animate-scale-in {% if modalSize == 'sm' %}max-w-md{% elseif modalSize == 'lg' %}max-w-3xl{% elseif modalSize == 'xl' %}max-w-5xl{% elseif modalSize == 'full' %}max-w-7xl{% else %}max-w-2xl{% endif %}" onclick="event.stopPropagation();">
+		class="glass-modal max-h-[90vh] overflow-y-auto animate-scale-in " onclick="event.stopPropagation();">
 
 		{# Modal Header with glass effect #}
 		<div class="px-6 py-4 border-b border-white/10 flex items-center justify-between sticky top-0 glass-card rounded-t-2xl z-10">

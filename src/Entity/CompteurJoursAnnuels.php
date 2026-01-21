@@ -48,6 +48,18 @@ class CompteurJoursAnnuels
     private float $joursConsommes = 0.0;
 
     /**
+     * Ajustement manuel par l'admin (+/-)
+     */
+    #[ORM\Column(type: Types::FLOAT)]
+    private float $ajustementAdmin = 0.0;
+
+    /**
+     * Commentaire pour l'ajustement admin
+     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $ajustementComment = null;
+
+    /**
      * Date d'embauche (pour référence lors du calcul prorata)
      */
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
@@ -122,6 +134,28 @@ class CompteurJoursAnnuels
         return $this;
     }
 
+    public function getAjustementAdmin(): float
+    {
+        return $this->ajustementAdmin;
+    }
+
+    public function setAjustementAdmin(float $ajustementAdmin): static
+    {
+        $this->ajustementAdmin = $ajustementAdmin;
+        return $this;
+    }
+
+    public function getAjustementComment(): ?string
+    {
+        return $this->ajustementComment;
+    }
+
+    public function setAjustementComment(?string $ajustementComment): static
+    {
+        $this->ajustementComment = $ajustementComment;
+        return $this;
+    }
+
     public function getDateEmbauche(): ?\DateTimeInterface
     {
         return $this->dateEmbauche;
@@ -158,11 +192,27 @@ class CompteurJoursAnnuels
     // Helper Methods
 
     /**
-     * Calcule les jours restants (alloués - consommés)
+     * Calcule les jours restants (alloués - consommés + ajustement)
      */
     public function getJoursRestants(): float
     {
-        return $this->joursAlloues - $this->joursConsommes;
+        return $this->joursAlloues - $this->joursConsommes + $this->ajustementAdmin;
+    }
+
+    /**
+     * Retourne l'année en cours
+     */
+    public static function getCurrentYear(): int
+    {
+        return (int) date('Y');
+    }
+
+    /**
+     * Retourne le libellé de l'année
+     */
+    public function getYearLabel(): string
+    {
+        return sprintf('Année %d', $this->year);
     }
 
     /**

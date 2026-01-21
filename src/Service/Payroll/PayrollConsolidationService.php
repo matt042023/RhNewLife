@@ -14,6 +14,7 @@ use App\Repository\ConsolidationPaieRepository;
 use App\Repository\ElementVariableRepository;
 use App\Repository\RendezVousRepository;
 use App\Repository\UserRepository;
+use App\Service\AnnualDayCounterService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -32,6 +33,7 @@ class PayrollConsolidationService
         private ElementVariableRepository $elementVariableRepository,
         private CPCounterService $cpCounterService,
         private PayrollHistoryService $historyService,
+        private AnnualDayCounterService $annualDayCounterService,
         private LoggerInterface $logger
     ) {}
 
@@ -461,6 +463,14 @@ class PayrollConsolidationService
             ];
         }
 
+        // Récupérer les données du compteur jours annuels (calcul dynamique)
+        $annualCounter = $this->annualDayCounterService->getCounterByYear($user, $year);
+        $annualCounterData = null;
+        if ($annualCounter) {
+            // Utiliser getBalanceDetails pour obtenir les valeurs calculées dynamiquement
+            $annualCounterData = $this->annualDayCounterService->getBalanceDetails($user, $year);
+        }
+
         return [
             'consolidation' => $consolidation,
             'affectations' => $affectations,
@@ -480,6 +490,7 @@ class PayrollConsolidationService
                 'pris' => (float) $consolidation->getCpPris(),
                 'solde_fin' => (float) $consolidation->getCpSoldeFin(),
             ],
+            'annual_counter' => $annualCounterData,
         ];
     }
 

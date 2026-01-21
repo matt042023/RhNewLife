@@ -1,0 +1,328 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Compteur Jours Annuels - {{ user.fullName }}{% endblock %}
+
+{% block admin_title %}Compteur Jours Annuels{% endblock %}
+{% block admin_subtitle %}{{ user.fullName }} - Année {{ year }}{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    {# Navigation retour et sélecteur d'année #}
+    <div class="flex justify-between items-center">
+        <a href="{{ path('admin_annual_day_counter_index', {year: year}) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Retour à la liste
+        </a>
+        <form method="GET" action="{{ path('admin_annual_day_counter_user', {id: user.id}) }}" class="flex items-center space-x-2">
+            <label class="text-sm font-medium text-gray-700">Année :</label>
+            <select name="year" onchange="this.form.submit()"
+                    class="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                {% for y in years %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {# Informations utilisateur #}
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center mb-4">
+                <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl mr-4">
+                    {{ user.firstName|first }}{{ user.lastName|first }}
+                </div>
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900">{{ user.fullName }}</h3>
+                    <p class="text-sm text-gray-500">{{ user.matricule ?? 'Sans matricule' }}</p>
+                    <p class="text-sm text-gray-500">{{ user.email }}</p>
+                </div>
+            </div>
+            <div class="border-t pt-4 space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500">Date d'embauche</span>
+                    <span class="text-gray-900">{{ counter.dateEmbauche ? counter.dateEmbauche|date('d/m/Y') : 'Non renseignée' }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500">Année de référence</span>
+                    <span class="text-gray-900">{{ counter.yearLabel }}</span>
+                </div>
+            </div>
+        </div>
+
+        {# Solde actuel #}
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Jours restants</h3>
+            <div class="text-center py-4">
+                <div class="text-5xl font-bold {% if balanceDetails.jours_restants >= 50 %}text-green-600{% elseif balanceDetails.jours_restants >= 20 %}text-yellow-600{% elseif balanceDetails.jours_restants < 0 %}text-red-600{% else %}text-orange-600{% endif %}">
+                    {{ balanceDetails.jours_restants|number_format(0, ',', ' ') }}
+                </div>
+                <p class="text-gray-500 mt-2">jours à travailler</p>
+                {% set percentage = balanceDetails.percentage_used %}
+                <div class="mt-4">
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>0%</span>
+                        <span>{{ percentage|number_format(0) }}% effectué</span>
+                        <span>100%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="h-3 rounded-full transition-all {% if percentage > 90 %}bg-green-500{% elseif percentage > 75 %}bg-blue-500{% else %}bg-yellow-500{% endif %}"
+                             style="width: {{ percentage > 100 ? 100 : percentage }}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="button" onclick="openAdjustModal()" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
+                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                    </svg>
+                    Ajuster le compteur
+                </button>
+            </div>
+        </div>
+
+        {# Détail du calcul #}
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Détail du calcul</h3>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center py-2 border-b">
+                    <span class="text-gray-600">Dotation annuelle</span>
+                    <span class="font-medium">{{ balanceDetails.jours_alloues|number_format(0, ',', ' ') }} j</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b">
+                    <span class="text-red-600">- Jours travaillés</span>
+                    <span class="font-medium text-red-600">{{ balanceDetails.jours_consommes|number_format(0, ',', ' ') }} j</span>
+                </div>
+                {% if balanceDetails.ajustement != 0 %}
+                <div class="flex justify-between items-center py-2 border-b">
+                    <span class="{% if balanceDetails.ajustement > 0 %}text-blue-600{% else %}text-orange-600{% endif %}">
+                        {{ balanceDetails.ajustement > 0 ? '+ Ajustement' : '- Ajustement' }}
+                    </span>
+                    <span class="font-medium {% if balanceDetails.ajustement > 0 %}text-blue-600{% else %}text-orange-600{% endif %}">
+                        {{ balanceDetails.ajustement|abs|number_format(0, ',', ' ') }} j
+                    </span>
+                </div>
+                {% endif %}
+                <div class="flex justify-between items-center py-2 bg-gray-50 -mx-6 px-6">
+                    <span class="font-medium text-gray-900">= Jours restants</span>
+                    <span class="font-bold text-lg {% if balanceDetails.jours_restants < 0 %}text-red-600{% endif %}">{{ balanceDetails.jours_restants|number_format(0, ',', ' ') }} j</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Info système #}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div class="text-blue-800 text-sm">
+                <strong>Système 258 jours :</strong> Ce compteur représente le nombre de jours de travail annuels.
+                Chaque garde (24h ou 48h), renfort validé, ainsi que les événements hors garde (réunions, formations, rendez-vous) sont automatiquement déduits.
+                Le solde représente les jours restants à effectuer sur l'année.
+            </div>
+        </div>
+    </div>
+
+    {# Historique des mouvements #}
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b">
+            <h3 class="text-lg font-medium text-gray-900">Historique des mouvements ({{ year }})</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Jours</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Solde après</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for movement in movements %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ movement.date|date('d/m/Y') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if movement.type == 'allocation' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Dotation
+                                </span>
+                            {% elseif movement.type == 'consumption' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    Travaillé
+                                </span>
+                            {% elseif movement.type == 'event' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    Événement
+                                </span>
+                            {% elseif movement.type == 'adjustment' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Ajustement
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            {{ movement.description }}
+                            {% if movement.comment %}
+                                <br><span class="text-xs text-gray-500 italic">{{ movement.comment }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium {% if movement.days > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                            {{ movement.days > 0 ? '+' : '' }}{{ movement.days|number_format(0, ',', ' ') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                            {{ movement.balanceAfter|number_format(0, ',', ' ') }} j
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                            Aucun mouvement enregistré pour cette année.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# Historique des autres années #}
+    {% if allCounters|length > 1 %}
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b">
+            <h3 class="text-lg font-medium text-gray-900">Historique par année</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Année</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Alloués</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Travaillés</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ajustement</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Restants</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">% Utilisé</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for c in allCounters %}
+                    <tr class="hover:bg-gray-50 {% if c.year == year %}bg-blue-50{% endif %}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{{ path('admin_annual_day_counter_user', {id: user.id, year: c.year}) }}"
+                               class="text-blue-600 hover:text-blue-800 font-medium">
+                                {{ c.year }}
+                                {% if c.year == year %}
+                                    <span class="text-xs text-gray-500">(actuel)</span>
+                                {% endif %}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">{{ c.joursAlloues|number_format(0) }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-red-600">{{ c.joursConsommes|number_format(0) }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% if c.ajustementAdmin != 0 %}
+                                <span class="{% if c.ajustementAdmin >= 0 %}text-blue-600{% else %}text-orange-600{% endif %}">
+                                    {% if c.ajustementAdmin >= 0 %}+{% endif %}{{ c.ajustementAdmin|number_format(0) }}
+                                </span>
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center font-bold {% if c.joursRestants < 0 %}text-red-600{% endif %}">
+                            {{ c.joursRestants|number_format(0) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% set pct = c.percentageUsed %}
+                            <div class="flex items-center justify-center space-x-2">
+                                <div class="w-16 bg-gray-200 rounded-full h-2">
+                                    <div class="h-2 rounded-full {% if pct > 90 %}bg-green-500{% elseif pct > 75 %}bg-blue-500{% else %}bg-yellow-500{% endif %}"
+                                         style="width: {{ pct > 100 ? 100 : pct }}%"></div>
+                                </div>
+                                <span class="text-xs text-gray-600">{{ pct|number_format(0) }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{# Modal d'ajustement #}
+<div id="adjust-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 w-full max-w-md">
+        <div class="bg-white rounded-lg shadow-xl">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-medium text-gray-900">Ajuster le compteur jours annuels</h3>
+                <button type="button" onclick="closeAdjustModal()" class="text-gray-400 hover:text-gray-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form method="POST" action="{{ path('admin_annual_day_counter_adjust', {id: counter.id}) }}" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Type d'ajustement</label>
+                    <div class="flex space-x-4">
+                        <label class="flex items-center">
+                            <input type="radio" name="type" value="add" class="h-4 w-4 text-blue-600 focus:ring-blue-500" checked>
+                            <span class="ml-2 text-sm text-gray-700">Ajouter des jours</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="type" value="remove" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                            <span class="ml-2 text-sm text-gray-700">Retirer des jours</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="days" class="block text-sm font-medium text-gray-700 mb-1">Nombre de jours</label>
+                    <input type="number" name="days" id="days" step="1" min="1" required
+                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                           placeholder="Ex: 5">
+                </div>
+
+                <div>
+                    <label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Motif (obligatoire)</label>
+                    <textarea name="comment" id="comment" rows="3" required
+                              class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                              placeholder="Ex: Régularisation suite à erreur de saisie..."></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeAdjustModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                        Annuler
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        Appliquer l'ajustement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openAdjustModal() {
+    document.getElementById('adjust-modal').classList.remove('hidden');
+}
+
+function closeAdjustModal() {
+    document.getElementById('adjust-modal').classList.add('hidden');
+}
+
+// Fermer la modal en cliquant à l'extérieur
+document.getElementById('adjust-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAdjustModal();
+    }
+});
+</script>
+{% endblock %}

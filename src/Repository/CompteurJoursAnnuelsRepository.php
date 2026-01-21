@@ -65,11 +65,11 @@ class CompteurJoursAnnuelsRepository extends ServiceEntityRepository
 
         return $this->createQueryBuilder('c')
             ->where('c.year = :year')
-            ->andWhere('(c.joursAlloues - c.joursConsommes) < :threshold')
-            ->andWhere('(c.joursAlloues - c.joursConsommes) >= 0')
+            ->andWhere('(c.joursAlloues - c.joursConsommes + c.ajustementAdmin) < :threshold')
+            ->andWhere('(c.joursAlloues - c.joursConsommes + c.ajustementAdmin) >= 0')
             ->setParameter('year', $year)
             ->setParameter('threshold', $threshold)
-            ->orderBy('c.joursAlloues - c.joursConsommes', 'ASC')
+            ->orderBy('c.joursAlloues - c.joursConsommes + c.ajustementAdmin', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -85,9 +85,9 @@ class CompteurJoursAnnuelsRepository extends ServiceEntityRepository
 
         return $this->createQueryBuilder('c')
             ->where('c.year = :year')
-            ->andWhere('(c.joursAlloues - c.joursConsommes) < 0')
+            ->andWhere('(c.joursAlloues - c.joursConsommes + c.ajustementAdmin) < 0')
             ->setParameter('year', $year)
-            ->orderBy('c.joursAlloues - c.joursConsommes', 'ASC')
+            ->orderBy('c.joursAlloues - c.joursConsommes + c.ajustementAdmin', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -137,13 +137,94 @@ class CompteurJoursAnnuelsRepository extends ServiceEntityRepository
                 'COUNT(c.id) as total_counters',
                 'SUM(c.joursAlloues) as total_alloues',
                 'SUM(c.joursConsommes) as total_consommes',
+                'SUM(c.ajustementAdmin) as total_ajustement',
                 'AVG(c.joursAlloues) as avg_alloues',
                 'AVG(c.joursConsommes) as avg_consommes',
-                'AVG(c.joursAlloues - c.joursConsommes) as avg_remaining',
+                'AVG(c.joursAlloues - c.joursConsommes + c.ajustementAdmin) as avg_remaining',
             ])
             ->where('c.year = :year')
             ->setParameter('year', $year);
 
         return $qb->getQuery()->getSingleResult();
+    }
+
+    /**
+     * Trouve tous les compteurs pour une année avec jointure utilisateur
+     * Triés par nom d'utilisateur
+     *
+     * @return CompteurJoursAnnuels[]
+     */
+    public function findByYearWithUsers(int $year): array
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.year = :year')
+            ->setParameter('year', $year)
+            ->join('c.user', 'u')
+            ->orderBy('u.lastName', 'ASC')
+            ->addOrderBy('u.firstName', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Trouve les utilisateurs actifs sans compteur pour une année
+     *
+     * @return User[]
+     */
+    public function findUsersWithoutCounter(int $year): array
+    {
+        $em = $this->getEntityManager();
+
+        $subQuery = $em->createQueryBuilder()
+            ->select('IDENTITY(c2.user)')
+            ->from(CompteurJoursAnnuels::class, 'c2')
+            ->where('c2.year = :year')
+            ->getDQL();
+
+        return $em->createQueryBuilder()
+            ->select('u')
+            ->from(User::class, 'u')
+            ->where('u.status = :status')
+            ->andWhere('u.id NOT IN (' . $subQuery . ')')
+            ->setParameter('status', 'active')
+            ->setParameter('year', $year)
+            ->orderBy('u.lastName', 'ASC')
+            ->addOrderBy('u.firstName', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Retourne les totaux pour une année
+     */
+    public function getYearTotals(int $year): array
+    {
+        $qb = $this->createQueryBuilder('c')
+            ->select([
+                'COUNT(c.id) as total_counters',
+                'COALESCE(SUM(c.joursAlloues), 0) as total_alloues',
+                'COALESCE(SUM(c.joursConsommes), 0) as total_consommes',
+                'COALESCE(SUM(c.ajustementAdmin), 0) as total_ajustement',
+            ])
+            ->where('c.year = :year')
+            ->setParameter('year', $year);
+
+        return $qb->getQuery()->getSingleResult();
+    }
+
+    /**
+     * Retourne les années disponibles (années existantes dans les compteurs)
+     *
+     * @return int[]
+     */
+    public function findAvailableYears(): array
+    {
+        $result = $this->createQueryBuilder('c')
+            ->select('DISTINCT c.year')
+            ->orderBy('c.year', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return array_column($result, 'year');
     }
 }
