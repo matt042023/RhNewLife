@@ -47,7 +47,7 @@ class ElementVariableService
         // Lier à la consolidation si elle existe
         $consolidation = $this->consolidationRepository->findByUserAndPeriod($user, $period);
         if ($consolidation) {
-            $element->setConsolidation($consolidation);
+            $consolidation->addElementVariable($element);
         }
 
         $this->entityManager->persist($element);
@@ -295,7 +295,7 @@ class ElementVariableService
         ]);
 
         foreach ($orphans as $element) {
-            $element->setConsolidation($consolidation);
+            $consolidation->addElementVariable($element);
         }
 
         if (count($orphans) > 0) {

@@ -6,6 +6,7 @@ use App\Entity\ConsolidationPaie;
 use App\Repository\ConsolidationPaieRepository;
 use App\Repository\DocumentRepository;
 use App\Service\Payroll\CPCounterService;
+use App\Service\Payroll\PayrollConsolidationService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -21,7 +22,8 @@ class MyPayrollController extends AbstractController
     public function __construct(
         private ConsolidationPaieRepository $consolidationRepository,
         private DocumentRepository $documentRepository,
-        private CPCounterService $cpCounterService
+        private CPCounterService $cpCounterService,
+        private PayrollConsolidationService $consolidationService
     ) {
     }
 
@@ -82,13 +84,12 @@ class MyPayrollController extends AbstractController
             throw $this->createAccessDeniedException('Ce rapport n\'est pas encore disponible.');
         }
 
-        // Récupérer les détails
-        $absences = $consolidation->getJoursAbsence() ?? [];
-        $elementsVariables = $consolidation->getElementsVariables();
+        // Récupérer les détails via le service (includes affectations, events, absences, variables)
+        $details = $this->consolidationService->getConsolidationDetails($consolidation);
 
         // Grouper les variables par catégorie
         $variablesByCategory = [];
-        foreach ($elementsVariables as $variable) {
+        foreach ($consolidation->getElementsVariables() as $variable) {
             $category = $variable->getCategory();
             if (!isset($variablesByCategory[$category])) {
                 $variablesByCategory[$category] = [
@@ -103,7 +104,8 @@ class MyPayrollController extends AbstractController
 
         return $this->render('my_payroll/show.html.twig', [
             'consolidation' => $consolidation,
-            'absences' => $absences,
+            'details' => $details,
+            'absences' => $consolidation->getJoursAbsence() ?? [],
             'variables_by_category' => $variablesByCategory,
         ]);
     }

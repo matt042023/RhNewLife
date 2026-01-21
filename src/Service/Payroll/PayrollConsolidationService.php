@@ -513,11 +513,15 @@ class PayrollConsolidationService
         return array_map(function (Affectation $aff) {
             return [
                 'id' => $aff->getId(),
-                'start' => $aff->getStartAt()?->format('d/m/Y'),
-                'end' => $aff->getEndAt()?->format('d/m/Y'),
+                'start_date' => $aff->getStartAt()?->format('d/m/Y'),
+                'start_time' => $aff->getStartAt()?->format('H:i'),
+                'end_date' => $aff->getEndAt()?->format('d/m/Y'),
+                'end_time' => $aff->getEndAt()?->format('H:i'),
                 'villa' => $aff->getVilla()?->getNom(),
                 'type' => $aff->getType(),
+                'type_label' => $this->getAffectationTypeLabel($aff->getType()),
                 'jours' => $aff->getJoursTravailes(),
+                'status' => $aff->getStatut(),
             ];
         }, $affectations);
     }
@@ -552,6 +556,7 @@ class PayrollConsolidationService
                 'date' => $rdv->getStartAt()?->format('d/m/Y'),
                 'time' => $rdv->getStartAt()?->format('H:i'),
                 'title' => $rdv->getTitre(),
+                'description' => $rdv->getDescription(),
                 'type' => $rdv->getTypeLabel(),
                 'duration' => $rdv->getDurationMinutes(),
             ];
@@ -588,6 +593,20 @@ class PayrollConsolidationService
                 'days' => $abs->getWorkingDaysCount(),
             ];
         }, $absences);
+    }
+
+    /**
+     * Retourne le libellé lisible d'un type d'affectation
+     */
+    private function getAffectationTypeLabel(string $type): string
+    {
+        return match($type) {
+            'garde_48h' => 'Garde 48h',
+            'garde_24h' => 'Garde 24h',
+            'renfort' => 'Renfort',
+            'autre' => 'Autre',
+            default => $type,
+        };
     }
 
     /**

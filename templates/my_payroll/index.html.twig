@@ -1,16 +1,17 @@
-{% extends 'base.html.twig' %}
+{% extends 'layout/dashboard_base.html.twig' %}
 
 {% block title %}Mes rapports de paie{% endblock %}
 
-{% block body %}
-<div class="min-h-screen bg-gray-100">
-    <div class="py-10">
-        <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 class="text-3xl font-bold leading-tight text-gray-900">Mes rapports de paie</h1>
-        </header>
+{% block breadcrumb_items %}
+    <li><span class="text-white/60">Mon espace paie</span></li>
+    <li><span class="text-white">Mes rapports de paie</span></li>
+{% endblock %}
 
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-            <div class="space-y-6">
+{% block page_title %}Mes rapports de paie{% endblock %}
+{% block page_subtitle %}Consultez vos rapports de paie mensuels validés{% endblock %}
+
+{% block dashboard_content %}
+<div class="space-y-6">
                 {# Carte solde CP #}
                 <div class="bg-white rounded-lg shadow-sm p-6">
                     <div class="flex items-center justify-between">
@@ -112,8 +113,5 @@
                     </p>
                 </div>
                 {% endfor %}
-            </div>
-        </main>
-    </div>
 </div>
 {% endblock %}

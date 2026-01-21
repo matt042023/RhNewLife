@@ -478,7 +478,7 @@ class ConsolidationPaie
     {
         $total = 0.0;
         foreach ($this->elementsVariables as $element) {
-            $total += $element->getAmount();
+            $total += (float) $element->getAmount();
         }
         $this->totalVariables = $total;
         return $this;

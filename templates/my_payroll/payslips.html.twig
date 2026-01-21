@@ -1,22 +1,18 @@
-{% extends 'base.html.twig' %}
+{% extends 'layout/dashboard_base.html.twig' %}
 
 {% block title %}Mes fiches de paie{% endblock %}
 
-{% block body %}
-<div class="min-h-screen bg-gray-100">
-    <div class="py-10">
-        <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center">
-                <a href="{{ path('my_payroll_index') }}" class="text-blue-600 hover:text-blue-800 mr-4">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                </a>
-                <h1 class="text-3xl font-bold leading-tight text-gray-900">Mes fiches de paie</h1>
-            </div>
-        </header>
+{% block breadcrumb_items %}
+    <li>
+        <a href="{{ path('my_payroll_index') }}" class="text-white/60 hover:text-white">Mon espace paie</a>
+    </li>
+    <li><span class="text-white">Mes fiches de paie</span></li>
+{% endblock %}
 
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+{% block page_title %}Mes fiches de paie{% endblock %}
+{% block page_subtitle %}Téléchargez vos bulletins de salaire{% endblock %}
+
+{% block dashboard_content %}
             {% for year, payslips in payslips_by_year %}
             <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
                 <div class="px-6 py-4 border-b bg-gray-50">
@@ -59,21 +55,18 @@
             </div>
             {% endfor %}
 
-            {# Information sécurité #}
-            <div class="mt-6 bg-green-50 rounded-lg p-4">
-                <div class="flex">
-                    <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                    <div class="ml-3">
-                        <h3 class="text-sm font-medium text-green-800">Stockage sécurisé</h3>
-                        <p class="mt-1 text-sm text-green-700">
-                            Vos fiches de paie sont stockées de manière sécurisée et accessibles uniquement par vous et les administrateurs autorisés.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </main>
+{# Information sécurité #}
+<div class="mt-6 bg-green-50 rounded-lg p-4">
+    <div class="flex">
+        <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+        </svg>
+        <div class="ml-3">
+            <h3 class="text-sm font-medium text-green-800">Stockage sécurisé</h3>
+            <p class="mt-1 text-sm text-green-700">
+                Vos fiches de paie sont stockées de manière sécurisée et accessibles uniquement par vous et les administrateurs autorisés.
+            </p>
+        </div>
     </div>
 </div>
 {% endblock %}

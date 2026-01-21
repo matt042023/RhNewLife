@@ -102,27 +102,65 @@
             </div>
         </div>
 
-        {# Absences #}
+        {# Détail des Absences #}
+        {% if details.absences|length > 0 %}
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Détail des Absences</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date début</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date fin</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jours ouvrés</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for absence in details.absences %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {{ absence.start }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {{ absence.end }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded-full
+                                    {% if absence.type_code == 'CP' %}bg-blue-100 text-blue-800
+                                    {% elseif absence.type_code == 'MAL' or absence.type_code == 'MALADIE' %}bg-orange-100 text-orange-800
+                                    {% elseif absence.type_code == 'RTT' %}bg-purple-100 text-purple-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ absence.type }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                {{ absence.days|number_format(2, ',', ' ') }} j
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-gray-50">
+                        <tr>
+                            <td colspan="3" class="px-6 py-3 text-right text-sm font-semibold text-gray-700">
+                                Total Absences:
+                            </td>
+                            <td class="px-6 py-3 text-center text-sm font-bold text-gray-900">
+                                {{ consolidation.totalJoursAbsence|number_format(2, ',', ' ') }} j
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        {% else %}
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Absences</h3>
-            {% set absences = consolidation.joursAbsence %}
-            {% if absences is not empty %}
-                <div class="space-y-2">
-                    {% for type, jours in absences %}
-                        <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                            <span class="text-gray-600">{{ type }}</span>
-                            <span class="font-medium">{{ jours|number_format(2, ',', ' ') }} jours</span>
-                        </div>
-                    {% endfor %}
-                    <div class="flex justify-between items-center py-2 bg-orange-50 -mx-6 px-6 mt-2">
-                        <span class="font-semibold text-orange-900">Total absences</span>
-                        <span class="font-bold text-orange-900">{{ consolidation.totalJoursAbsence|number_format(2, ',', ' ') }} jours</span>
-                    </div>
-                </div>
-            {% else %}
-                <p class="text-gray-500 italic">Aucune absence ce mois</p>
-            {% endif %}
+            <p class="text-gray-500 italic">Aucune absence ce mois</p>
         </div>
+        {% endif %}
 
         {# Éléments Variables #}
         <div class="bg-white rounded-lg shadow-sm p-6">
@@ -155,6 +193,135 @@
                 <p class="text-gray-500 italic">Aucun élément variable</p>
             {% endif %}
         </div>
+    </div>
+
+    {# Détail des Gardes #}
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Détail des Gardes</h3>
+        </div>
+
+        {% if details.affectations|length > 0 %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Horaires</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Villa</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jours comptabilisés</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for affectation in details.affectations %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {{ affectation.start_date }}
+                                {% if affectation.start_date != affectation.end_date %}
+                                    → {{ affectation.end_date }}
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ affectation.start_time }} - {{ affectation.end_time }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded-full
+                                    {% if affectation.type == 'renfort' %}bg-blue-100 text-blue-800
+                                    {% else %}bg-purple-100 text-purple-800{% endif %}">
+                                    {{ affectation.type_label }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {{ affectation.villa ?? '-' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                {{ affectation.jours }} jour{{ affectation.jours > 1 ? 's' : '' }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-gray-50">
+                        <tr>
+                            <td colspan="4" class="px-6 py-3 text-right text-sm font-semibold text-gray-700">
+                                Total Gardes:
+                            </td>
+                            <td class="px-6 py-3 text-center text-sm font-bold text-gray-900">
+                                {{ consolidation.joursTravailes|number_format(2, ',', ' ') }} jours
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        {% else %}
+            <div class="px-6 py-8 text-center text-gray-500">
+                Aucune garde ce mois-ci
+            </div>
+        {% endif %}
+    </div>
+
+    {# Détail des Événements (hors garde) #}
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Détail des Événements (hors garde)</h3>
+        </div>
+
+        {% if details.events|length > 0 %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Heure</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motif</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Durée</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for event in details.events %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {{ event.date }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ event.time }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                    {{ event.type }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm font-medium">
+                                {{ event.title }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                {{ event.description|default('-') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                                {{ event.duration }} min
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-gray-50">
+                        <tr>
+                            <td colspan="5" class="px-6 py-3 text-right text-sm font-semibold text-gray-700">
+                                Total jours événements:
+                            </td>
+                            <td class="px-6 py-3 text-center text-sm font-bold text-gray-900">
+                                {{ consolidation.joursEvenements|number_format(2, ',', ' ') }} jours
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        {% else %}
+            <div class="px-6 py-8 text-center text-gray-500">
+                Aucun événement hors garde ce mois-ci
+            </div>
+        {% endif %}
     </div>
 
     {# Historique #}
