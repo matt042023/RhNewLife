@@ -29,10 +29,15 @@
             {% endif %}
         </div>
 
-        {# Remaining days counter #}
+        {# Remaining days counter (from annual day counter) #}
+        {% set remainingDays = usersRemainingDays[user.id]|default(258) %}
         <div class="ml-2">
-            <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
-                {{ user.remainingDays|default(258) }}j
+            <span class="px-2 py-1 text-xs font-semibold rounded
+                {% if remainingDays >= 100 %}bg-green-100 text-green-700
+                {% elseif remainingDays >= 50 %}bg-blue-100 text-blue-700
+                {% elseif remainingDays >= 20 %}bg-yellow-100 text-yellow-700
+                {% else %}bg-red-100 text-red-700{% endif %}">
+                {{ remainingDays }}j
             </span>
         </div>
     </div>
