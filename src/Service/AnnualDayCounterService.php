@@ -313,6 +313,7 @@ class AnnualDayCounterService
     /**
      * Calcule dynamiquement les jours consommés à partir des affectations validées
      * et des événements hors garde (rendez-vous, réunions, formations)
+     * Ne compte que les événements PASSÉS (date de fin dépassée)
      */
     public function calculateConsumedDays(User $user, ?int $year = null): float
     {
@@ -320,20 +321,21 @@ class AnnualDayCounterService
 
         $startDate = new \DateTime("{$year}-01-01");
         $endDate = new \DateTime("{$year}-12-31");
+        $now = new \DateTime();
 
-        // 1. Jours travaillés depuis les affectations (gardes, renforts)
-        $affectations = $this->getValidatedAffectations($user, $startDate, $endDate);
+        // 1. Jours travaillés depuis les affectations PASSÉES (gardes, renforts)
+        $affectations = $this->getValidatedAffectations($user, $startDate, $endDate, true);
 
         $totalDays = 0.0;
         foreach ($affectations as $aff) {
             $totalDays += (float) $aff['joursTravailes'];
         }
 
-        // 2. Récupérer les dates de garde pour éviter le double comptage
-        $guardDates = $this->getGuardDates($user, $startDate, $endDate);
+        // 2. Récupérer les dates de garde passées pour éviter le double comptage
+        $guardDates = $this->getGuardDates($user, $startDate, $endDate, true);
 
-        // 3. Ajouter les jours d'événements hors garde
-        $eventDays = $this->calculateEventDays($user, $startDate, $endDate, $guardDates);
+        // 3. Ajouter les jours d'événements PASSÉS hors garde
+        $eventDays = $this->calculateEventDays($user, $startDate, $endDate, $guardDates, true);
         $totalDays += $eventDays;
 
         return $totalDays;
@@ -342,9 +344,10 @@ class AnnualDayCounterService
     /**
      * Récupère les dates de garde pour un utilisateur (pour éviter le double comptage)
      *
+     * @param bool $pastOnly Si true, ne retourne que les dates des gardes passées
      * @return array<string> Liste des dates au format Y-m-d
      */
-    private function getGuardDates(User $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate): array
+    private function getGuardDates(User $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, bool $pastOnly = false): array
     {
         $validStatuses = [
             Affectation::STATUS_VALIDATED,
@@ -365,6 +368,13 @@ class AnnualDayCounterService
             ->setParameter('end', $endDate)
             ->setParameter('statuses', $validStatuses);
 
+        // Filtrer uniquement les gardes passées si demandé
+        if ($pastOnly) {
+            $now = new \DateTime();
+            $qb->andWhere('a.endAt < :now')
+               ->setParameter('now', $now);
+        }
+
         $affectations = $qb->getQuery()->getResult();
         $guardDates = [];
 
@@ -383,12 +393,16 @@ class AnnualDayCounterService
 
     /**
      * Calcule les jours d'événements (rendez-vous, réunions, formations) hors jours de garde
+     *
+     * @param bool $pastOnly Si true, ne compte que les événements passés
      */
-    private function calculateEventDays(User $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, array $guardDates): float
+    private function calculateEventDays(User $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, array $guardDates, bool $pastOnly = false): float
     {
+        $now = new \DateTime();
+
         // Récupérer les RDV confirmés ou terminés
         $qb = $this->entityManager->createQueryBuilder();
-        $qb->select('r.startAt')
+        $qb->select('r.startAt, r.endAt')
             ->from(RendezVous::class, 'r')
             ->leftJoin('r.appointmentParticipants', 'ap')
             ->where('ap.user = :user OR r.organizer = :user')
@@ -402,6 +416,12 @@ class AnnualDayCounterService
                 RendezVous::STATUS_CONFIRME,
                 RendezVous::STATUS_TERMINE,
             ]);
+
+        // Filtrer uniquement les événements passés si demandé
+        if ($pastOnly) {
+            $qb->andWhere('r.endAt < :now')
+               ->setParameter('now', $now);
+        }
 
         $rendezVous = $qb->getQuery()->getResult();
 
@@ -494,8 +514,9 @@ class AnnualDayCounterService
 
     /**
      * Récupère l'historique des mouvements pour un utilisateur
+     * Distingue les événements passés (comptabilisés) des événements à venir (non comptabilisés)
      *
-     * @return array<array{date: \DateTimeInterface, type: string, description: string, days: float, balanceAfter: float, comment: ?string}>
+     * @return array<array{date: \DateTimeInterface, type: string, description: string, days: float, balanceAfter: float, comment: ?string, isPast: bool}>
      */
     public function getMovementsHistory(User $user, ?int $year = null): array
     {
@@ -512,40 +533,56 @@ class AnnualDayCounterService
         $startDate = new \DateTime("{$year}-01-01");
         $endDate = new \DateTime("{$year}-12-31");
 
-        // Récupérer toutes les consommations (affectations + événements)
-        $affectations = $this->getValidatedAffectations($user, $startDate, $endDate);
-        $guardDates = $this->getGuardDates($user, $startDate, $endDate);
-        $events = $this->getEventsOutsideGuard($user, $startDate, $endDate, $guardDates);
+        // Récupérer TOUTES les affectations et événements (passés ET à venir)
+        $affectations = $this->getValidatedAffectations($user, $startDate, $endDate, false, false);
+        $guardDates = $this->getGuardDates($user, $startDate, $endDate, false);
+        $events = $this->getEventsOutsideGuard($user, $startDate, $endDate, $guardDates, false, false);
 
-        // Combiner et trier par date ASC pour calculer le solde progressif
-        $allConsumptions = [];
+        // Séparer les consommations passées et à venir
+        $pastConsumptions = [];
+        $upcomingConsumptions = [];
 
         foreach ($affectations as $aff) {
             $days = (float) $aff['joursTravailes'];
             if ($days <= 0) {
                 continue;
             }
-            $allConsumptions[] = [
+
+            $item = [
                 'date' => $aff['startAt'],
-                'type' => 'consumption',
+                'type' => $aff['isPast'] ? 'consumption' : 'upcoming_consumption',
                 'description' => \sprintf('%s - %s', $aff['type_label'], $aff['villa'] ?? 'Centre'),
                 'days' => -$days,
+                'isPast' => $aff['isPast'],
             ];
+
+            if ($aff['isPast']) {
+                $pastConsumptions[] = $item;
+            } else {
+                $upcomingConsumptions[] = $item;
+            }
         }
 
         foreach ($events as $event) {
-            $allConsumptions[] = [
+            $item = [
                 'date' => $event['date'],
-                'type' => 'event',
+                'type' => $event['isPast'] ? 'event' : 'upcoming_event',
                 'description' => $event['description'],
                 'days' => -1, // 1 jour par événement hors garde
+                'isPast' => $event['isPast'],
             ];
+
+            if ($event['isPast']) {
+                $pastConsumptions[] = $item;
+            } else {
+                $upcomingConsumptions[] = $item;
+            }
         }
 
-        // Trier par date ASC
-        usort($allConsumptions, fn($a, $b) => $a['date'] <=> $b['date']);
+        // Trier les consommations passées par date ASC
+        usort($pastConsumptions, fn($a, $b) => $a['date'] <=> $b['date']);
 
-        // Construire l'historique avec solde progressif
+        // Construire l'historique avec solde progressif (uniquement pour les passés)
         $movements = [];
         $runningBalance = $joursAlloues;
 
@@ -557,9 +594,11 @@ class AnnualDayCounterService
             'days' => $joursAlloues,
             'balanceAfter' => $joursAlloues,
             'comment' => null,
+            'isPast' => true,
         ];
 
-        foreach ($allConsumptions as $consumption) {
+        // Ajouter les consommations passées avec calcul du solde progressif
+        foreach ($pastConsumptions as $consumption) {
             $runningBalance += $consumption['days']; // days est négatif
 
             $movements[] = [
@@ -569,20 +608,40 @@ class AnnualDayCounterService
                 'days' => $consumption['days'],
                 'balanceAfter' => $runningBalance,
                 'comment' => null,
+                'isPast' => true,
             ];
         }
 
         // Ajouter l'ajustement admin s'il y en a un
         if ($ajustement != 0) {
-            $finalBalance = $runningBalance + $ajustement;
+            $runningBalance += $ajustement;
 
             $movements[] = [
                 'date' => $compteur->getUpdatedAt() ?? new \DateTime(),
                 'type' => 'adjustment',
                 'description' => 'Ajustement administratif',
                 'days' => $ajustement,
-                'balanceAfter' => $finalBalance,
+                'balanceAfter' => $runningBalance,
                 'comment' => $compteur->getAjustementComment(),
+                'isPast' => true,
+            ];
+        }
+
+        // Ajouter les événements à venir (sans impact sur le solde courant, solde prévisionnel)
+        $previsionalBalance = $runningBalance;
+        usort($upcomingConsumptions, fn($a, $b) => $a['date'] <=> $b['date']);
+
+        foreach ($upcomingConsumptions as $consumption) {
+            $previsionalBalance += $consumption['days'];
+
+            $movements[] = [
+                'date' => $consumption['date'],
+                'type' => $consumption['type'],
+                'description' => $consumption['description'],
+                'days' => $consumption['days'],
+                'balanceAfter' => $previsionalBalance, // Solde prévisionnel
+                'comment' => null,
+                'isPast' => false,
             ];
         }
 
@@ -594,11 +653,16 @@ class AnnualDayCounterService
 
     /**
      * Récupère les événements (rendez-vous) hors jours de garde avec leurs détails
+     *
+     * @param bool $pastOnly Si true, ne retourne que les événements passés
+     * @param bool $futureOnly Si true, ne retourne que les événements à venir
      */
-    private function getEventsOutsideGuard(User $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, array $guardDates): array
+    private function getEventsOutsideGuard(User $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, array $guardDates, bool $pastOnly = false, bool $futureOnly = false): array
     {
+        $now = new \DateTime();
+
         $qb = $this->entityManager->createQueryBuilder();
-        $qb->select('r.startAt, r.titre, r.type')
+        $qb->select('r.startAt, r.endAt, r.titre, r.type')
             ->from(RendezVous::class, 'r')
             ->leftJoin('r.appointmentParticipants', 'ap')
             ->where('ap.user = :user OR r.organizer = :user')
@@ -614,6 +678,15 @@ class AnnualDayCounterService
             ])
             ->orderBy('r.startAt', 'ASC');
 
+        // Filtrer par passé ou à venir
+        if ($pastOnly) {
+            $qb->andWhere('r.endAt < :now')
+               ->setParameter('now', $now);
+        } elseif ($futureOnly) {
+            $qb->andWhere('r.endAt >= :now')
+               ->setParameter('now', $now);
+        }
+
         $rendezVous = $qb->getQuery()->getResult();
 
         // Grouper par date et ne garder que ceux hors garde
@@ -621,9 +694,12 @@ class AnnualDayCounterService
         foreach ($rendezVous as $rdv) {
             $dateStr = $rdv['startAt']->format('Y-m-d');
             if (!in_array($dateStr, $guardDates, true) && !isset($eventsByDate[$dateStr])) {
+                $isPast = $rdv['endAt'] < $now;
                 $eventsByDate[$dateStr] = [
                     'date' => $rdv['startAt'],
+                    'endAt' => $rdv['endAt'],
                     'description' => \sprintf('Événement - %s', $rdv['titre'] ?? 'RDV'),
+                    'isPast' => $isPast,
                 ];
             }
         }
@@ -633,8 +709,11 @@ class AnnualDayCounterService
 
     /**
      * Récupère les affectations validées pour un utilisateur et une période
+     *
+     * @param bool $pastOnly Si true, ne retourne que les affectations passées (endAt < maintenant)
+     * @param bool $futureOnly Si true, ne retourne que les affectations à venir (endAt >= maintenant)
      */
-    private function getValidatedAffectations(User $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate): array
+    private function getValidatedAffectations(User $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, bool $pastOnly = false, bool $futureOnly = false): array
     {
         $validStatuses = [
             Affectation::STATUS_VALIDATED,
@@ -644,7 +723,7 @@ class AnnualDayCounterService
         ];
 
         $qb = $this->entityManager->createQueryBuilder();
-        $qb->select('a.startAt, a.joursTravailes, a.type, v.nom as villa')
+        $qb->select('a.startAt, a.endAt, a.joursTravailes, a.type, v.nom as villa')
             ->from(Affectation::class, 'a')
             ->leftJoin('a.villa', 'v')
             ->where('a.user = :user')
@@ -657,15 +736,28 @@ class AnnualDayCounterService
             ->setParameter('statuses', $validStatuses)
             ->orderBy('a.startAt', 'ASC');
 
+        $now = new \DateTime();
+
+        // Filtrer par passé ou à venir
+        if ($pastOnly) {
+            $qb->andWhere('a.endAt < :now')
+               ->setParameter('now', $now);
+        } elseif ($futureOnly) {
+            $qb->andWhere('a.endAt >= :now')
+               ->setParameter('now', $now);
+        }
+
         $results = $qb->getQuery()->getResult();
 
-        return array_map(function ($aff) {
+        return array_map(function ($aff) use ($now) {
             return [
                 'startAt' => $aff['startAt'],
+                'endAt' => $aff['endAt'],
                 'joursTravailes' => (float) ($aff['joursTravailes'] ?? 0),
                 'type' => $aff['type'],
                 'type_label' => $this->getAffectationTypeLabel($aff['type']),
                 'villa' => $aff['villa'],
+                'isPast' => $aff['endAt'] < $now,
             ];
         }, $results);
     }

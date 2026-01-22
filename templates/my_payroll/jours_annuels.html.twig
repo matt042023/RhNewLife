@@ -113,7 +113,7 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for movement in movements %}
-                <tr class="hover:bg-gray-50">
+                <tr class="hover:bg-gray-50 {{ not movement.isPast|default(true) ? 'bg-gray-50 opacity-70' : '' }}">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {{ movement.date|date('d/m/Y') }}
                     </td>
@@ -126,9 +126,17 @@
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                 Travaillé
                             </span>
+                        {% elseif movement.type == 'upcoming_consumption' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300">
+                                À venir
+                            </span>
                         {% elseif movement.type == 'event' %}
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                                 Événement
+                            </span>
+                        {% elseif movement.type == 'upcoming_event' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300">
+                                Événement à venir
                             </span>
                         {% elseif movement.type == 'adjustment' %}
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -136,17 +144,23 @@
                             </span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-900">
+                    <td class="px-6 py-4 text-sm {{ not movement.isPast|default(true) ? 'text-gray-500 italic' : 'text-gray-900' }}">
                         {{ movement.description }}
+                        {% if not movement.isPast|default(true) %}
+                            <span class="text-xs text-gray-400">(non comptabilisé)</span>
+                        {% endif %}
                         {% if movement.comment %}
                             <br><span class="text-xs text-gray-500 italic">{{ movement.comment }}</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium {% if movement.days > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium {% if not movement.isPast|default(true) %}text-gray-400{% elseif movement.days > 0 %}text-green-600{% else %}text-red-600{% endif %}">
                         {{ movement.days > 0 ? '+' : '' }}{{ movement.days|number_format(0, ',', ' ') }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right {{ not movement.isPast|default(true) ? 'text-gray-400 italic' : 'text-gray-900' }}">
                         {{ movement.balanceAfter|number_format(0, ',', ' ') }} j
+                        {% if not movement.isPast|default(true) %}
+                            <span class="text-xs">(prév.)</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
@@ -171,8 +185,8 @@
             <h3 class="text-sm font-medium text-blue-800">Système 258 jours annuels</h3>
             <p class="mt-1 text-sm text-blue-700">
                 Ce compteur représente le nombre de jours de travail annuels (258 jours ouvrables).
-                Chaque garde (24h ou 48h), renfort validé, ainsi que les événements hors garde (réunions, formations, rendez-vous) sont automatiquement déduits de ce compteur.
-                Le solde représente les jours restants à effectuer sur l'année civile (janvier à décembre).
+                Seuls les événements <strong>passés</strong> (gardes, renforts, réunions, formations) sont comptabilisés et déduits du compteur.
+                Les événements à venir sont affichés dans l'historique mais ne sont pas encore déduits du solde.
             </p>
         </div>
     </div>
