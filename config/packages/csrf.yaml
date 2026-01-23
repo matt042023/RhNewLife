@@ -4,8 +4,9 @@ framework:
         csrf_protection:
             token_id: submit
 
-    csrf_protection:
-        stateless_token_ids:
-            - submit
-            - authenticate
-            - logout
+    # CSRF stateless is usually for APIs. Standard forms use sessions.
+    # csrf_protection:
+    #     stateless_token_ids:
+    #         - submit
+
+

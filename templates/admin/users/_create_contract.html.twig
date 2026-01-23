@@ -1,0 +1,184 @@
+{# Step 3: Contract (optional) #}
+<div class="space-y-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <div class="w-8 h-8 glass-card rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(147, 51, 234, 0.05)); border: 1px solid rgba(147, 51, 234, 0.2);">
+            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+        </div>
+        Contrat de travail
+        <span class="text-sm font-normal text-gray-500 dark:text-gray-400">(optionnel)</span>
+    </h2>
+
+    {# Toggle create contract #}
+    <div class="flex items-center gap-3 p-4 glass-card">
+        <input type="checkbox" name="create_contract" value="1" id="create_contract"
+               class="w-5 h-5 text-purple-600 dark:text-purple-400 rounded focus:ring-2 focus:ring-purple-500"
+               {{ (formData.create_contract ?? '') == '1' ? 'checked' : '' }}
+               data-direct-user-creation-target="createContract"
+               data-action="change->direct-user-creation#toggleContractSection">
+        <label for="create_contract" class="text-sm text-gray-700 dark:text-gray-300 font-medium cursor-pointer">
+            Créer un contrat pour ce salarié
+        </label>
+    </div>
+
+    {# Contract form (conditionally shown) #}
+    <div class="contract-form-section {{ (formData.create_contract ?? '') != '1' ? 'hidden' : '' }}"
+         data-direct-user-creation-target="contractSection">
+
+        <div class="space-y-6">
+            {# Contract type and dates #}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Type de contrat *</label>
+                    <select name="contract_type" class="glass-input w-full"
+                            data-direct-user-creation-target="contractType"
+                            data-action="change->direct-user-creation#handleContractTypeChange">
+                        <option value="">Sélectionner un type</option>
+                        {% for type in contractTypes %}
+                            <option value="{{ type }}" {{ (formData.contract_type ?? '') == type ? 'selected' : '' }}>
+                                {{ type }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Villa du contrat</label>
+                    <select name="contract_villa_id" class="glass-input w-full">
+                        <option value="">Utiliser la villa de l'employé</option>
+                        {% for villa in villas %}
+                            <option value="{{ villa.id }}" {{ (formData.contract_villa_id ?? '') == villa.id ? 'selected' : '' }}>
+                                {{ villa.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Date de début *</label>
+                    <input type="date" name="contract_start_date" value="{{ formData.contract_start_date ?? '' }}"
+                           class="glass-input w-full"
+                           data-direct-user-creation-target="contractStartDate">
+                </div>
+
+                <div data-direct-user-creation-target="contractEndDateWrapper">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Date de fin
+                        <span class="cdd-required-marker hidden text-red-500">*</span>
+                    </label>
+                    <input type="date" name="contract_end_date" value="{{ formData.contract_end_date ?? '' }}"
+                           class="glass-input w-full"
+                           data-direct-user-creation-target="contractEndDate">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Obligatoire pour les CDD</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Fin de période d'essai</label>
+                    <input type="date" name="contract_essai_end_date" value="{{ formData.contract_essai_end_date ?? '' }}"
+                           class="glass-input w-full">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Salaire brut mensuel *</label>
+                    <div class="relative">
+                        <input type="number" name="contract_base_salary" value="{{ formData.contract_base_salary ?? '' }}"
+                               class="glass-input w-full pr-8" step="0.01" min="0"
+                               data-direct-user-creation-target="contractSalary">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">€</span>
+                    </div>
+                </div>
+            </div>
+
+            {# Annual day system #}
+            <div class="p-4 bg-white/5 rounded-xl border border-white/10 space-y-4">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" name="contract_use_annual_day_system" value="1" id="contract_use_annual_day_system"
+                           class="w-5 h-5 text-purple-600 dark:text-purple-400 rounded focus:ring-2 focus:ring-purple-500"
+                           {{ (formData.contract_use_annual_day_system ?? '') == '1' ? 'checked' : '' }}
+                           data-direct-user-creation-target="useAnnualDaySystem"
+                           data-action="change->direct-user-creation#toggleAnnualDaySystem">
+                    <label for="contract_use_annual_day_system" class="text-sm text-gray-700 dark:text-gray-300 font-medium cursor-pointer">
+                        Utiliser le système de compteur annuel de jours travaillés
+                    </label>
+                </div>
+
+                <div class="annual-days-input {{ (formData.contract_use_annual_day_system ?? '') != '1' ? 'hidden' : '' }}"
+                     data-direct-user-creation-target="annualDaysWrapper">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Nombre de jours requis par an
+                    </label>
+                    <input type="number" name="contract_annual_days_required"
+                           value="{{ formData.contract_annual_days_required ?? '218' }}"
+                           class="glass-input w-48" min="1" max="365">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Par défaut: 218 jours</p>
+                </div>
+            </div>
+
+            {# Signed contract upload #}
+            <div class="p-4 bg-white/5 rounded-xl border border-white/10 space-y-4">
+                <h3 class="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Contrat signé (optionnel)
+                </h3>
+
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    Si vous avez déjà le contrat signé, uploadez-le ici. Le contrat sera automatiquement marqué comme actif.
+                </p>
+
+                <div class="document-upload-zone relative">
+                    <input type="file" name="contract_signed_file" id="contract_signed_file"
+                           accept=".pdf"
+                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                           data-action="change->direct-user-creation#handleContractFileSelect">
+
+                    <div class="contract-drop-area border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:border-green-400 dark:hover:border-green-500 transition-colors"
+                         data-direct-user-creation-target="contractDropArea">
+                        <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Glissez le contrat signé ou <span class="text-green-500">cliquez pour parcourir</span>
+                        </p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">PDF uniquement (max 10 Mo)</p>
+                    </div>
+                </div>
+
+                {# Contract file preview #}
+                <div class="contract-file-preview hidden p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                     data-direct-user-creation-target="contractFilePreview">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span class="contract-filename text-sm text-gray-700 dark:text-gray-300 truncate max-w-[250px]"
+                                  data-direct-user-creation-target="contractFilename"></span>
+                        </div>
+                        <button type="button" class="text-red-500 hover:text-red-700 p-1"
+                                data-action="click->direct-user-creation#removeContractFile">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# No contract info #}
+    <div class="glass-card p-4 {{ (formData.create_contract ?? '') == '1' ? 'hidden' : '' }}"
+         data-direct-user-creation-target="noContractInfo">
+        <div class="flex gap-3">
+            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                <p>Vous pourrez créer un contrat plus tard depuis la fiche du salarié.</p>
+            </div>
+        </div>
+    </div>
+</div>

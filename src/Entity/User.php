@@ -96,6 +96,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 7, nullable: true)]
     private ?string $color = null;
 
+    #[ORM\Column(options: ['default' => false])]
+    private bool $forcePasswordChange = false;
+
     /**
      * @var Collection<int, Document>
      */
@@ -682,6 +685,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setColor(?string $color): self
     {
         $this->color = $color;
+        return $this;
+    }
+
+    public function isForcePasswordChange(): bool
+    {
+        return $this->forcePasswordChange;
+    }
+
+    public function setForcePasswordChange(bool $forcePasswordChange): static
+    {
+        $this->forcePasswordChange = $forcePasswordChange;
         return $this;
     }
 

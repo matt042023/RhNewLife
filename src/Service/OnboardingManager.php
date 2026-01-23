@@ -110,25 +110,22 @@ class OnboardingManager
         // Validation du mot de passe
         $this->validatePassword($plainPassword);
 
-        // Création de l'utilisateur directement actif
-        $user = new User();
-        $user
-            ->setEmail($invitation->getEmail())
-            ->setFirstName($invitation->getFirstName())
-            ->setLastName($invitation->getLastName())
-            ->setPosition($invitation->getPosition())
-            ->setVilla($invitation->getVilla())
-            ->setColor($invitation->getColor())
-            ->setStatus(User::STATUS_ACTIVE) // Directement actif
-            ->setRoles(['ROLE_USER'])
-            ->setCguAcceptedAt(new \DateTime());
+        // Rechercher l'utilisateur existant (créé par DirectUserCreationService)
+        $user = $this->userRepository->findOneBy(['email' => $invitation->getEmail()]);
+
+        if (!$user) {
+            throw new \LogicException('Utilisateur introuvable pour cette invitation.');
+        }
+
+        // Mettre à jour l'utilisateur existant
+        $user->setStatus(User::STATUS_ACTIVE);
+        $user->setCguAcceptedAt(new \DateTime());
 
         // Hash du mot de passe
         $hashedPassword = $this->passwordHasher->hashPassword($user, $plainPassword);
         $user->setPassword($hashedPassword);
 
         // Sauvegarde
-        $this->entityManager->persist($user);
         $this->entityManager->flush();
 
         // Marque l'invitation comme utilisée
