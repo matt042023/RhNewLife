@@ -1,0 +1,164 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Déposer une fiche de paie{% endblock %}
+
+{% block admin_title %}Déposer une fiche de paie{% endblock %}
+{% block admin_subtitle %}Associer une fiche de paie à un éducateur{% endblock %}
+
+{% block admin_content %}
+<div class="mx-auto">
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <form method="POST" action="{{ path('admin_payslip_upload') }}" enctype="multipart/form-data" class="space-y-6">
+            <input type="hidden" name="_token" value="{{ csrf_token('upload_payslip') }}">
+
+            {# Sélection de l'éducateur #}
+            <div>
+                <label for="user" class="block text-sm font-medium text-gray-700 mb-1">Éducateur</label>
+                <select name="user" id="user" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="">Sélectionner un éducateur</option>
+                    {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.fullName }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {# Période #}
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="year" class="block text-sm font-medium text-gray-700 mb-1">Année</label>
+                    <select name="year" id="year" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        {% set currentYear = "now"|date("Y") %}
+                        {% for y in range(currentYear, currentYear - 3) %}
+                            <option value="{{ y }}" {% if y == currentYear %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="month" class="block text-sm font-medium text-gray-700 mb-1">Mois</label>
+                    <select name="month" id="month" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        {% set months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'] %}
+                        {% for m in 1..12 %}
+                            <option value="{{ "%02d"|format(m) }}" {% if m == "now"|date("n") %}selected{% endif %}>{{ months[m-1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            {# Upload du fichier #}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fichier PDF</label>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-blue-400 transition cursor-pointer" id="drop-zone">
+                    <div class="space-y-1 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="flex text-sm text-gray-600">
+                            <span class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+                                <span>Sélectionner un fichier</span>
+                                <input type="file" name="file" id="file" accept="application/pdf" class="sr-only">
+                            </span>
+                            <p class="pl-1">ou glisser-deposer</p>
+                        </div>
+                        <p class="text-xs text-gray-500">PDF uniquement, max 10 Mo</p>
+                        <p class="text-sm text-gray-700 font-medium" id="file-name"></p>
+                    </div>
+                </div>
+            </div>
+
+            {# Notification #}
+            <div class="flex items-center">
+                <input type="checkbox" name="notify" id="notify" value="1" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                <label for="notify" class="ml-2 block text-sm text-gray-700">
+                    Notifier l'educateur par email
+                </label>
+            </div>
+
+            {# Actions #}
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <a href="{{ path('admin_payslip_index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                    Annuler
+                </a>
+                <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">
+                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    Déposer la fiche
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file');
+    const fileName = document.getElementById('file-name');
+
+    // Gestion du drag & drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+        dropZone.classList.add('border-blue-400', 'bg-blue-50');
+    }
+
+    function unhighlight() {
+        dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+    }
+
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            updateFileName(files[0]);
+        }
+    }
+
+    // Afficher le nom du fichier selectionne
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            updateFileName(this.files[0]);
+        }
+    });
+
+    function updateFileName(file) {
+        if (file.type !== 'application/pdf') {
+            fileName.textContent = 'Erreur : seuls les fichiers PDF sont acceptes';
+            fileName.classList.add('text-red-600');
+            fileName.classList.remove('text-gray-700');
+        } else if (file.size > 10 * 1024 * 1024) {
+            fileName.textContent = 'Erreur : fichier trop volumineux (max 10 Mo)';
+            fileName.classList.add('text-red-600');
+            fileName.classList.remove('text-gray-700');
+        } else {
+            fileName.textContent = file.name;
+            fileName.classList.remove('text-red-600');
+            fileName.classList.add('text-gray-700');
+        }
+    }
+
+    // Clic sur la zone pour ouvrir le selecteur
+    dropZone.addEventListener('click', function() {
+        fileInput.click();
+    });
+});
+</script>
+{% endblock %}

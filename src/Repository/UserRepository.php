@@ -33,28 +33,56 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->flush();
     }
 
-    //    /**
-    //     * @return User[] Returns an array of User objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('u')
-    //            ->andWhere('u.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('u.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /**
+     * Trouve les éducateurs (utilisateurs non-admin) pour les modules de paie
+     * Inclut les utilisateurs actifs et onboarding qui peuvent recevoir des éléments de paie
+     *
+     * @return User[]
+     */
+    public function findActiveEducators(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.status IN (:statuses)')
+            ->andWhere('u.roles NOT LIKE :adminRole')
+            ->setParameter('statuses', [User::STATUS_ACTIVE, User::STATUS_ONBOARDING])
+            ->setParameter('adminRole', '%ROLE_ADMIN%')
+            ->orderBy('u.lastName', 'ASC')
+            ->addOrderBy('u.firstName', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 
-    //    public function findOneBySomeField($value): ?User
-    //    {
-    //        return $this->createQueryBuilder('u')
-    //            ->andWhere('u.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    /**
+     * Trouve les utilisateurs par rôle (actifs uniquement)
+     *
+     * @return User[]
+     */
+    public function findByRole(string $role): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.roles LIKE :role')
+            ->andWhere('u.status = :status')
+            ->setParameter('role', '%' . $role . '%')
+            ->setParameter('status', User::STATUS_ACTIVE)
+            ->orderBy('u.lastName', 'ASC')
+            ->addOrderBy('u.firstName', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Trouve tous les utilisateurs actifs
+     *
+     * @return User[]
+     */
+    public function findAllActive(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.status = :status')
+            ->setParameter('status', User::STATUS_ACTIVE)
+            ->orderBy('u.lastName', 'ASC')
+            ->addOrderBy('u.firstName', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

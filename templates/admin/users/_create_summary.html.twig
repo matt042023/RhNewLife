@@ -1,0 +1,109 @@
+{# Step 5: Summary before submission #}
+<div class="space-y-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <div class="w-8 h-8 glass-card glass-card-success rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+        </div>
+        Récapitulatif
+    </h2>
+
+    <p class="text-gray-600 dark:text-gray-400">
+        Vérifiez les informations avant de créer le salarié.
+    </p>
+
+    {# Summary sections #}
+    <div class="space-y-6">
+        {# Personal info summary #}
+        <div class="p-4 bg-white/5 rounded-xl border border-white/10">
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Informations personnelles
+            </h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm" data-direct-user-creation-target="summaryPersonal">
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400">Nom complet</span>
+                    <p class="font-medium text-gray-800 dark:text-gray-200" data-summary="fullName">-</p>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400">Email</span>
+                    <p class="font-medium text-gray-800 dark:text-gray-200" data-summary="email">-</p>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400">Poste</span>
+                    <p class="font-medium text-gray-800 dark:text-gray-200" data-summary="position">-</p>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400">Villa</span>
+                    <p class="font-medium text-gray-800 dark:text-gray-200" data-summary="villa">-</p>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400">Date d'embauche</span>
+                    <p class="font-medium text-gray-800 dark:text-gray-200" data-summary="hiringDate">-</p>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400">Couleur</span>
+                    <p class="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2" data-summary="color">
+                        <span class="w-4 h-4 rounded-full inline-block" data-summary="colorSwatch" style="background-color: #3B82F6;"></span>
+                        <span data-summary="colorValue">-</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {# Documents summary #}
+        <div class="p-4 bg-white/5 rounded-xl border border-white/10">
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Documents
+            </h3>
+            <div data-direct-user-creation-target="summaryDocuments">
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Aucun document sélectionné</p>
+            </div>
+        </div>
+
+        {# Contract summary #}
+        <div class="p-4 bg-white/5 rounded-xl border border-white/10">
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Contrat
+            </h3>
+            <div data-direct-user-creation-target="summaryContract">
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Pas de contrat</p>
+            </div>
+        </div>
+
+        {# Activation summary #}
+        <div class="p-4 bg-white/5 rounded-xl border border-white/10">
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                Activation du compte
+            </h3>
+            <div data-direct-user-creation-target="summaryActivation">
+                <p class="text-gray-500 dark:text-gray-400 text-sm">-</p>
+            </div>
+        </div>
+    </div>
+
+    {# Final confirmation #}
+    <div class="glass-card glass-card-success p-4">
+        <div class="flex gap-3">
+            <svg class="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div class="text-sm text-green-800 dark:text-green-200">
+                <p class="font-semibold mb-1">Prêt à créer le salarié</p>
+                <p>Cliquez sur "Créer le salarié" pour finaliser. Un matricule sera automatiquement généré.</p>
+            </div>
+        </div>
+    </div>
+</div>

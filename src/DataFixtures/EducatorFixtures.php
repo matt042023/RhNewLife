@@ -32,7 +32,7 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
         // VILLA DES LILAS - 4 ÉDUCATEURS
         // ========================================
 
-        // 1. THOMAS DUBOIS - Villa des Lilas
+        // 1. THOMAS DUBOIS - Villa des Lilas (embauché avant la période en cours)
         $educator1 = new User();
         $educator1
             ->setEmail('thomas.dubois@rhnewlife.fr')
@@ -41,6 +41,8 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setPhone('06 12 34 56 01')
             ->setAddress('28 Rue du Tondu, 33000 Bordeaux')
             ->setPosition('Éducateur spécialisé')
+            ->setMatricule('EDU001')
+            ->setHiringDate(new \DateTime('2020-02-15'))
             ->setVilla($this->getReference(VillaFixtures::VILLA_LILAS, Villa::class))
             ->setColor('#3B82F6')
             ->setFamilyStatus('Marié')
@@ -62,7 +64,7 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
         $manager->persist($educator1);
         $this->addReference('educator-1', $educator1);
 
-        // 2. MARIE MARTIN - Villa des Lilas
+        // 2. MARIE MARTIN - Villa des Lilas (embauchée en juillet, prorata à calculer)
         $educator2 = new User();
         $educator2
             ->setEmail('marie.martin@rhnewlife.fr')
@@ -71,6 +73,8 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setPhone('06 12 34 56 02')
             ->setAddress('15 Avenue Thiers, 33100 Bordeaux')
             ->setPosition('Éducatrice technique')
+            ->setMatricule('EDU002')
+            ->setHiringDate(new \DateTime('2024-07-15'))
             ->setVilla($this->getReference(VillaFixtures::VILLA_LILAS, Villa::class))
             ->setColor('#EC4899')
             ->setFamilyStatus('Célibataire')
@@ -91,7 +95,7 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
         $manager->persist($educator2);
         $this->addReference('educator-2', $educator2);
 
-        // 3. LUCAS PETIT - Villa des Lilas
+        // 3. LUCAS PETIT - Villa des Lilas (embauché octobre 2025, prorata depuis octobre)
         $educator3 = new User();
         $educator3
             ->setEmail('lucas.petit@rhnewlife.fr')
@@ -100,6 +104,8 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setPhone('06 12 34 56 03')
             ->setAddress('42 Cours de la Marne, 33800 Bordeaux')
             ->setPosition('Moniteur éducateur')
+            ->setMatricule('EDU003')
+            ->setHiringDate(new \DateTime('2025-10-20'))
             ->setVilla($this->getReference(VillaFixtures::VILLA_LILAS, Villa::class))
             ->setColor('#10B981')
             ->setFamilyStatus('Pacsé')
@@ -118,7 +124,7 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
         $manager->persist($educator3);
         $this->addReference('educator-3', $educator3);
 
-        // 4. ÉMILIE ROBERT - Villa des Lilas
+        // 4. ÉMILIE ROBERT - Villa des Lilas (embauchée mi-décembre 2025, prorata depuis décembre)
         $educator4 = new User();
         $educator4
             ->setEmail('emilie.robert@rhnewlife.fr')
@@ -127,6 +133,8 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setPhone('06 12 34 56 04')
             ->setAddress('8 Allée de Tourny, 33000 Bordeaux')
             ->setPosition('Éducatrice spécialisée')
+            ->setMatricule('EDU004')
+            ->setHiringDate(new \DateTime('2025-12-16'))
             ->setVilla($this->getReference(VillaFixtures::VILLA_LILAS, Villa::class))
             ->setColor('#8B5CF6')
             ->setFamilyStatus('Mariée')
@@ -152,7 +160,7 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
         // VILLA DES ROSES - 4 ÉDUCATEURS
         // ========================================
 
-        // 5. ALEXANDRE MOREAU - Villa des Roses
+        // 5. ALEXANDRE MOREAU - Villa des Roses (embauché bien avant)
         $educator5 = new User();
         $educator5
             ->setEmail('alexandre.moreau@rhnewlife.fr')
@@ -161,6 +169,8 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setPhone('06 12 34 56 05')
             ->setAddress('33 Rue Sainte-Catherine, 33000 Bordeaux')
             ->setPosition('Éducateur sportif')
+            ->setMatricule('EDU005')
+            ->setHiringDate(new \DateTime('2019-04-01'))
             ->setVilla($this->getReference(VillaFixtures::VILLA_ROSES, Villa::class))
             ->setColor('#F59E0B')
             ->setFamilyStatus('Célibataire')
@@ -181,7 +191,7 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
         $manager->persist($educator5);
         $this->addReference('educator-5', $educator5);
 
-        // 6. JULIE SIMON - Villa des Roses
+        // 6. JULIE SIMON - Villa des Roses (embauchée en juin 2025, début de période)
         $educator6 = new User();
         $educator6
             ->setEmail('julie.simon@rhnewlife.fr')
@@ -190,6 +200,8 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setPhone('06 12 34 56 06')
             ->setAddress('19 Place de la Victoire, 33000 Bordeaux')
             ->setPosition('Éducatrice jeune enfant')
+            ->setMatricule('EDU006')
+            ->setHiringDate(new \DateTime('2025-06-01'))
             ->setVilla($this->getReference(VillaFixtures::VILLA_ROSES, Villa::class))
             ->setColor('#EF4444')
             ->setFamilyStatus('Mariée')
@@ -207,7 +219,7 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
         $manager->persist($educator6);
         $this->addReference('educator-6', $educator6);
 
-        // 7. ANTOINE BERNARD - Villa des Roses
+        // 7. ANTOINE BERNARD - Villa des Roses (embauché avant)
         $educator7 = new User();
         $educator7
             ->setEmail('antoine.bernard@rhnewlife.fr')
@@ -216,6 +228,8 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setPhone('06 12 34 56 07')
             ->setAddress('67 Rue Fondaudège, 33000 Bordeaux')
             ->setPosition('Moniteur éducateur')
+            ->setMatricule('EDU007')
+            ->setHiringDate(new \DateTime('2021-11-08'))
             ->setVilla($this->getReference(VillaFixtures::VILLA_ROSES, Villa::class))
             ->setColor('#06B6D4')
             ->setFamilyStatus('Marié')
@@ -237,7 +251,7 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
         $manager->persist($educator7);
         $this->addReference('educator-7', $educator7);
 
-        // 8. CAMILLE LAURENT - Villa des Roses
+        // 8. CAMILLE LAURENT - Villa des Roses (embauchée mi-août 2025, prorata depuis août)
         $educator8 = new User();
         $educator8
             ->setEmail('camille.laurent@rhnewlife.fr')
@@ -246,6 +260,8 @@ class EducatorFixtures extends Fixture implements DependentFixtureInterface
             ->setPhone('06 12 34 56 08')
             ->setAddress('91 Rue Judaïque, 33000 Bordeaux')
             ->setPosition('Éducatrice spécialisée')
+            ->setMatricule('EDU008')
+            ->setHiringDate(new \DateTime('2025-08-18'))
             ->setVilla($this->getReference(VillaFixtures::VILLA_ROSES, Villa::class))
             ->setColor('#84CC16')
             ->setFamilyStatus('Pacsée')

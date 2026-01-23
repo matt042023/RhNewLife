@@ -7,14 +7,19 @@ use App\Entity\CompteurAbsence;
 use App\Entity\TypeAbsence;
 use App\Entity\User;
 use App\Repository\CompteurAbsenceRepository;
+use App\Service\Payroll\CPCounterService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 class AbsenceCounterService
 {
+    // Code du type d'absence "Congés Payés" à synchroniser avec le module paie
+    private const CP_ABSENCE_TYPE_CODE = 'CP';
+
     public function __construct(
         private EntityManagerInterface $em,
         private CompteurAbsenceRepository $compteurRepository,
+        private CPCounterService $cpCounterService,
         private LoggerInterface $logger
     ) {
     }
@@ -119,6 +124,9 @@ class AbsenceCounterService
                 'balance' => $counter->getRemaining(),
             ]);
         }
+
+        // Synchronize with payroll CP counter if this is a "Congés Payés" absence
+        $this->syncWithPayrollCPCounter($absence, $workingDays, 'deduct');
     }
 
     /**
@@ -151,6 +159,9 @@ class AbsenceCounterService
             'days_credited' => $workingDays,
             'remaining' => $counter->getRemaining(),
         ]);
+
+        // Synchronize with payroll CP counter if this is a "Congés Payés" absence
+        $this->syncWithPayrollCPCounter($absence, $workingDays, 'credit');
     }
 
     /**
@@ -267,5 +278,45 @@ class AbsenceCounterService
         $holidays[] = $pentecostMonday->format('Y-m-d'); // Lundi de Pentecôte
 
         return $holidays;
+    }
+
+    /**
+     * Synchronize absence with payroll CP counter when the absence type is "Congés Payés"
+     * This ensures both the absence module counter and the payroll module counter stay in sync
+     *
+     * @param Absence $absence The absence being processed
+     * @param float $workingDays Number of working days
+     * @param string $operation Either 'deduct' or 'credit'
+     */
+    private function syncWithPayrollCPCounter(Absence $absence, float $workingDays, string $operation): void
+    {
+        $absenceTypeCode = $absence->getAbsenceType()?->getCode();
+
+        // Only sync if this is a "Congés Payés" (CP) absence type
+        if ($absenceTypeCode !== self::CP_ABSENCE_TYPE_CODE) {
+            return;
+        }
+
+        if ($workingDays <= 0) {
+            return;
+        }
+
+        $user = $absence->getUser();
+
+        if ($operation === 'deduct') {
+            $this->cpCounterService->deductCP($user, $workingDays);
+            $this->logger->info('CP absence synced with payroll counter (deducted)', [
+                'absence_id' => $absence->getId(),
+                'user_id' => $user->getId(),
+                'days' => $workingDays,
+            ]);
+        } elseif ($operation === 'credit') {
+            $this->cpCounterService->cancelDeduction($user, $workingDays);
+            $this->logger->info('CP absence synced with payroll counter (credited back)', [
+                'absence_id' => $absence->getId(),
+                'user_id' => $user->getId(),
+                'days' => $workingDays,
+            ]);
+        }
     }
 }

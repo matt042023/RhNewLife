@@ -57,20 +57,32 @@ class OnboardingController extends AbstractController
 
             try {
                 if (empty($errors)) {
-                    // Activation du compte
-                    $user = $this->onboardingManager->activateAccount(
-                        $invitation,
-                        $password,
-                        (bool) $acceptCGU
-                    );
+                    // Vérifier si c'est une activation simple (skipOnboarding)
+                    if ($invitation->isSkipOnboarding()) {
+                        // Activation simple - utilisateur directement actif (créé par admin)
+                        $user = $this->onboardingManager->activateSimpleAccount(
+                            $invitation,
+                            $password,
+                            (bool) $acceptCGU
+                        );
 
-                    // Connexion automatique de l'utilisateur
-                    $this->security->login($user);
+                        $this->security->login($user);
+                        $this->addFlash('success', 'Votre compte est activé ! Bienvenue, ' . $user->getFirstName() . ' !');
 
-                    // Message de bienvenue et redirection vers étape 1
-                    $this->addFlash('success', 'Votre compte a été activé avec succès ! Bienvenue, ' . $user->getFirstName() . ' !');
+                        return $this->redirectToRoute('app_dashboard');
+                    } else {
+                        // Activation classique avec onboarding
+                        $user = $this->onboardingManager->activateAccount(
+                            $invitation,
+                            $password,
+                            (bool) $acceptCGU
+                        );
 
-                    return $this->redirectToRoute('app_onboarding_step1');
+                        $this->security->login($user);
+                        $this->addFlash('success', 'Votre compte a été activé avec succès ! Bienvenue, ' . $user->getFirstName() . ' !');
+
+                        return $this->redirectToRoute('app_onboarding_step1');
+                    }
                 }
             } catch (\InvalidArgumentException $e) {
                 $errors[] = $e->getMessage();

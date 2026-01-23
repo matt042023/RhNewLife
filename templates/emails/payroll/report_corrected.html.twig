@@ -1,0 +1,69 @@
+{% extends 'emails/base.html.twig' %}
+
+{% block title %}Correction sur votre rapport de paie{% endblock %}
+
+{% block content %}
+<h1 style="color: #1a202c; font-size: 24px; font-weight: 600; margin-bottom: 16px;">
+    Une correction a été apportée à votre rapport de paie
+</h1>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Bonjour {{ user.firstName }},
+</p>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Une correction a été effectuée sur votre rapport de paie du mois de <strong>{{ period_label }}</strong>.
+</p>
+
+<div style="background-color: #fefcbf; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+    <h2 style="color: #744210; font-size: 18px; font-weight: 600; margin-bottom: 16px;">
+        Détail de la correction
+    </h2>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #f6e05e;">Champ modifié</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right; border-bottom: 1px solid #f6e05e;">
+                {{ field_label }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #f6e05e;">Ancienne valeur</td>
+            <td style="padding: 8px 0; color: #e53e3e; font-weight: 500; text-align: right; border-bottom: 1px solid #f6e05e;">
+                {{ old_value }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #718096; border-bottom: 1px solid #f6e05e;">Nouvelle valeur</td>
+            <td style="padding: 8px 0; color: #38a169; font-weight: 500; text-align: right; border-bottom: 1px solid #f6e05e;">
+                {{ new_value }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #718096;">Corrigé par</td>
+            <td style="padding: 8px 0; color: #1a202c; font-weight: 500; text-align: right;">
+                {{ admin.fullName }}
+            </td>
+        </tr>
+    </table>
+
+    {% if comment %}
+    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #f6e05e;">
+        <p style="color: #744210; font-size: 14px; margin: 0;">
+            <strong>Commentaire :</strong> {{ comment }}
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<div style="text-align: center; margin-bottom: 24px;">
+    <a href="{{ url('my_payroll_show', {id: consolidation.id}) }}"
+       style="display: inline-block; background-color: #3182ce; color: #ffffff; font-weight: 600; padding: 12px 24px; border-radius: 6px; text-decoration: none;">
+        Consulter mon rapport
+    </a>
+</div>
+
+<p style="color: #718096; font-size: 14px; line-height: 1.5;">
+    Si vous avez des questions concernant cette correction, n'hésitez pas à contacter l'administration RH.
+</p>
+{% endblock %}

@@ -12,6 +12,32 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\HasLifecycleCallbacks]
 class ElementVariable
 {
+    public const CATEGORY_PRIME = 'prime';
+    public const CATEGORY_PRIME_EXCEPTIONNELLE = 'prime_exceptionnelle';
+    public const CATEGORY_AVANCE = 'avance';
+    public const CATEGORY_ACOMPTE = 'acompte';
+    public const CATEGORY_FRAIS = 'frais';
+    public const CATEGORY_INDEMNITE_TRANSPORT = 'indemnite_transport';
+    public const CATEGORY_RETENUE = 'retenue';
+
+    public const CATEGORIES = [
+        self::CATEGORY_PRIME => 'Prime',
+        self::CATEGORY_PRIME_EXCEPTIONNELLE => 'Prime exceptionnelle',
+        self::CATEGORY_AVANCE => 'Avance',
+        self::CATEGORY_ACOMPTE => 'Acompte',
+        self::CATEGORY_FRAIS => 'Remboursement de frais',
+        self::CATEGORY_INDEMNITE_TRANSPORT => 'Indemnité transport',
+        self::CATEGORY_RETENUE => 'Retenue',
+    ];
+
+    public const STATUS_DRAFT = 'draft';
+    public const STATUS_VALIDATED = 'validated';
+
+    public const STATUSES = [
+        self::STATUS_DRAFT => 'Brouillon',
+        self::STATUS_VALIDATED => 'Validé',
+    ];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -32,6 +58,23 @@ class ElementVariable
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
+
+    #[ORM\Column(length: 50, options: ['default' => self::CATEGORY_PRIME])]
+    private string $category = self::CATEGORY_PRIME;
+
+    #[ORM\Column(length: 20, options: ['default' => self::STATUS_DRAFT])]
+    private string $status = self::STATUS_DRAFT;
+
+    #[ORM\ManyToOne(targetEntity: ConsolidationPaie::class, inversedBy: 'elementsVariables')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?ConsolidationPaie $consolidation = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?User $validatedBy = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $validatedAt = null;
 
     /**
      * @var Collection<int, Document>
@@ -176,5 +219,107 @@ class ElementVariable
     {
         $this->updatedAt = $updatedAt;
         return $this;
+    }
+
+    public function getCategory(): string
+    {
+        return $this->category;
+    }
+
+    public function setCategory(string $category): static
+    {
+        $this->category = $category;
+        return $this;
+    }
+
+    public function getCategoryLabel(): string
+    {
+        return self::CATEGORIES[$this->category] ?? $this->category;
+    }
+
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
+    public function setStatus(string $status): static
+    {
+        $this->status = $status;
+        return $this;
+    }
+
+    public function getStatusLabel(): string
+    {
+        return self::STATUSES[$this->status] ?? $this->status;
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->status === self::STATUS_DRAFT;
+    }
+
+    public function isValidated(): bool
+    {
+        return $this->status === self::STATUS_VALIDATED;
+    }
+
+    public function getConsolidation(): ?ConsolidationPaie
+    {
+        return $this->consolidation;
+    }
+
+    public function setConsolidation(?ConsolidationPaie $consolidation): static
+    {
+        $this->consolidation = $consolidation;
+        return $this;
+    }
+
+    public function getValidatedBy(): ?User
+    {
+        return $this->validatedBy;
+    }
+
+    public function setValidatedBy(?User $validatedBy): static
+    {
+        $this->validatedBy = $validatedBy;
+        return $this;
+    }
+
+    public function getValidatedAt(): ?\DateTimeInterface
+    {
+        return $this->validatedAt;
+    }
+
+    public function setValidatedAt(?\DateTimeInterface $validatedAt): static
+    {
+        $this->validatedAt = $validatedAt;
+        return $this;
+    }
+
+    /**
+     * Valide l'élément variable
+     */
+    public function validate(User $admin): static
+    {
+        $this->status = self::STATUS_VALIDATED;
+        $this->validatedBy = $admin;
+        $this->validatedAt = new \DateTime();
+        return $this;
+    }
+
+    /**
+     * Vérifie si le montant est positif (prime, frais, etc.)
+     */
+    public function isPositiveAmount(): bool
+    {
+        return (float) $this->amount >= 0;
+    }
+
+    /**
+     * Vérifie si le montant est négatif (retenue)
+     */
+    public function isNegativeAmount(): bool
+    {
+        return (float) $this->amount < 0;
     }
 }

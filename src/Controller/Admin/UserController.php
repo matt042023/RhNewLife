@@ -2,11 +2,15 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Document;
 use App\Entity\User;
 use App\Repository\DocumentRepository;
+use App\Repository\TemplateContratRepository;
 use App\Repository\UserRepository;
 use App\Repository\VillaRepository;
 use App\Service\ContractManager;
+use App\Service\DirectUserCreationService;
+use App\Service\DirectUserCreationValidator;
 use App\Service\DocumentManager;
 use App\Service\UserManager;
 use App\Service\MatriculeGenerator;
@@ -27,7 +31,10 @@ class UserController extends AbstractController
         private DocumentRepository $documentRepository,
         private DocumentManager $documentManager,
         private ContractManager $contractManager,
-        private VillaRepository $villaRepository
+        private VillaRepository $villaRepository,
+        private DirectUserCreationService $directUserCreationService,
+        private DirectUserCreationValidator $directUserCreationValidator,
+        private TemplateContratRepository $templateContratRepository
     ) {}
 
     /**
@@ -64,7 +71,8 @@ class UserController extends AbstractController
     }
 
     /**
-     * Formulaire de création manuelle d'un utilisateur
+     * Formulaire de création directe d'un utilisateur complet
+     * Permet de créer un utilisateur avec tous ses documents et son contrat
      */
     #[Route('/create', name: 'app_admin_users_create', methods: ['GET', 'POST'])]
     public function create(Request $request): Response
@@ -72,92 +80,131 @@ class UserController extends AbstractController
         $this->denyAccessUnlessGranted('USER_CREATE');
 
         if ($request->isMethod('POST')) {
-            $email = $request->request->get('email');
-            $firstName = $request->request->get('first_name');
-            $lastName = $request->request->get('last_name');
-            $position = $request->request->get('position');
+            // Récupérer les données personnelles
+            $personalData = [
+                'email' => $request->request->get('email'),
+                'firstName' => $request->request->get('first_name'),
+                'lastName' => $request->request->get('last_name'),
+                'position' => $request->request->get('position'),
+                'phone' => $request->request->get('phone'),
+                'address' => $request->request->get('address'),
+                'familyStatus' => $request->request->get('family_status'),
+                'children' => $request->request->get('children'),
+                'iban' => $request->request->get('iban'),
+                'bic' => $request->request->get('bic'),
+                'hiringDate' => $request->request->get('hiring_date'),
+                'color' => $request->request->get('color'),
+                'mutuelleEnabled' => $request->request->get('mutuelle_enabled') === '1',
+                'mutuelleNom' => $request->request->get('mutuelle_nom'),
+                'mutuelleFormule' => $request->request->get('mutuelle_formule'),
+                'mutuelleDateFin' => $request->request->get('mutuelle_date_fin'),
+                'prevoyanceEnabled' => $request->request->get('prevoyance_enabled') === '1',
+                'prevoyanceNom' => $request->request->get('prevoyance_nom'),
+            ];
+
+            // Ajouter la villa si fournie
             $villaId = $request->request->get('villa_id');
-            $phone = $request->request->get('phone');
-            $address = $request->request->get('address');
-            $familyStatus = $request->request->get('family_status');
-            $children = $request->request->get('children');
-            $iban = $request->request->get('iban');
-            $bic = $request->request->get('bic');
-            $hiringDate = $request->request->get('hiring_date');
-            $sendInvitation = $request->request->get('send_invitation', '1') === '1';
-
-            $errors = [];
-
-            // Validation basique
-            if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errors[] = 'Email invalide.';
-            }
-
-            // Vérifier si l'email existe déjà
-            if ($email && $this->userRepository->findOneBy(['email' => $email])) {
-                $errors[] = 'Cet email est déjà utilisé par un autre utilisateur.';
-            }
-
-            if (!$firstName || !$lastName) {
-                $errors[] = 'Le nom et le prénom sont obligatoires.';
-            }
-
-            if (!$position) {
-                $errors[] = 'Le poste est obligatoire.';
-            }
-
-            if (empty($errors)) {
-                try {
-                    $data = [
-                        'email' => $email,
-                        'firstName' => $firstName,
-                        'lastName' => $lastName,
-                        'position' => $position,
-                    ];
-
-                    // Ajouter les champs optionnels s'ils sont fournis
-                    if ($phone) $data['phone'] = $phone;
-                    if ($address) $data['address'] = $address;
-                    if ($familyStatus) $data['familyStatus'] = $familyStatus;
-                    if ($children) $data['children'] = $children;
-                    if ($iban) $data['iban'] = $iban;
-                    if ($bic) $data['bic'] = $bic;
-                    if ($hiringDate) {
-                        $data['hiringDate'] = new \DateTime($hiringDate);
-                    }
-                    if ($villaId) {
-                        $villa = $this->villaRepository->find($villaId);
-                        if ($villa) {
-                            $data['villa'] = $villa;
-                        }
-                    }
-
-                    // Ajouter la couleur
-                    $color = $request->request->get('color');
-                    if ($color) {
-                        $data['color'] = $color;
-                    }
-
-                    $user = $this->userManager->createManualUser($data, $sendInvitation);
-
-                    $this->addFlash('success', sprintf(
-                        'Utilisateur créé avec succès. Matricule: %s. %s',
-                        $user->getMatricule(),
-                        $sendInvitation ? 'Invitation d\'activation envoyée.' : 'Aucune invitation envoyée.'
-                    ));
-
-                    return $this->redirectToRoute('app_admin_users_view', ['id' => $user->getId()]);
-                } catch (\Exception $e) {
-                    $errors[] = 'Erreur : ' . $e->getMessage();
+            if ($villaId) {
+                $villa = $this->villaRepository->find($villaId);
+                if ($villa) {
+                    $personalData['villa'] = $villa;
                 }
             }
 
-            // S'il y a des erreurs, les stocker en flash et rediriger (requis par Turbo)
-            if (!empty($errors)) {
-                foreach ($errors as $error) {
-                    $this->addFlash('error', $error);
+            // Récupérer les fichiers de documents
+            $documentFiles = [
+                'cni' => $request->files->get('document_cni'),
+                'rib' => $request->files->get('document_rib'),
+                'domicile' => $request->files->get('document_domicile'),
+                'honorabilite' => $request->files->get('document_honorabilite'),
+                'diplome' => $request->files->get('document_diplome'),
+                'contract_signed' => $request->files->get('contract_signed_file'),
+            ];
+
+            // Récupérer les données du contrat
+            $contractData = [];
+            if ($request->request->get('create_contract') === '1') {
+                $contractData = [
+                    'type' => $request->request->get('contract_type'),
+                    'startDate' => $request->request->get('contract_start_date'),
+                    'endDate' => $request->request->get('contract_end_date'),
+                    'essaiEndDate' => $request->request->get('contract_essai_end_date'),
+                    'baseSalary' => $request->request->get('contract_base_salary'),
+                    'useAnnualDaySystem' => $request->request->get('contract_use_annual_day_system') === '1',
+                    'annualDaysRequired' => $request->request->get('contract_annual_days_required'),
+                ];
+
+                // Ajouter la villa du contrat si différente
+                $contractVillaId = $request->request->get('contract_villa_id');
+                if ($contractVillaId) {
+                    $contractVilla = $this->villaRepository->find($contractVillaId);
+                    if ($contractVilla) {
+                        $contractData['villa'] = $contractVilla;
+                    }
                 }
-                // Stocker les données du formulaire en session pour les ré-afficher
+            }
+
+            // Récupérer les options d'activation
+            $activationMode = $request->request->get('activation_mode', 'email');
+            $temporaryPassword = $request->request->get('temporary_password');
+            $documentsRequired = $request->request->get('documents_required', '1') === '1';
+
+            // Validation complète
+            $validation = $this->directUserCreationValidator->validateAll(
+                $personalData,
+                $documentFiles,
+                $contractData,
+                $activationMode,
+                $temporaryPassword,
+                $documentsRequired
+            );
+
+            if (!$validation['valid']) {
+                // Stocker les erreurs et les données pour ré-afficher le formulaire
+                $request->getSession()->set('create_user_form_data', $request->request->all());
+                $request->getSession()->set('create_user_form_errors', $validation['errors']);
+                return $this->redirectToRoute('app_admin_users_create');
+            }
+
+            try {
+                // Créer l'utilisateur complet
+                $result = $this->directUserCreationService->createCompleteUser(
+                    $personalData,
+                    $documentFiles,
+                    !empty($contractData) ? $contractData : null,
+                    $activationMode,
+                    $temporaryPassword,
+                    $this->getUser()
+                );
+
+                // Messages de succès
+                $user = $result->getUser();
+                $successMessage = sprintf(
+                    'Salarié créé avec succès. Matricule: %s.',
+                    $user->getMatricule()
+                );
+
+                if ($result->hasContract()) {
+                    $successMessage .= ' Contrat créé.';
+                }
+
+                if ($result->isActivationEmailSent()) {
+                    $successMessage .= ' Email d\'activation envoyé.';
+                } elseif ($activationMode === 'password') {
+                    $successMessage .= ' Compte activé avec mot de passe temporaire.';
+                }
+
+                $this->addFlash('success', $successMessage);
+
+                // Ajouter les warnings s'il y en a
+                foreach ($result->getWarnings() as $warning) {
+                    $this->addFlash('warning', $warning);
+                }
+
+                return $this->redirectToRoute('app_admin_users_view', ['id' => $user->getId()]);
+
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'Erreur lors de la création : ' . $e->getMessage());
                 $request->getSession()->set('create_user_form_data', $request->request->all());
                 return $this->redirectToRoute('app_admin_users_create');
             }
@@ -167,16 +214,23 @@ class UserController extends AbstractController
         $formData = $request->getSession()->get('create_user_form_data', []);
         $request->getSession()->remove('create_user_form_data');
 
+        // Récupérer les erreurs depuis la session
+        $formErrors = $request->getSession()->get('create_user_form_errors', []);
+        $request->getSession()->remove('create_user_form_errors');
+
         // Récupérer les erreurs depuis les flash messages
-        $errors = [];
+        $flashErrors = [];
         foreach ($this->container->get('request_stack')->getSession()->getFlashBag()->get('error', []) as $error) {
-            $errors[] = $error;
+            $flashErrors[] = $error;
         }
 
         return $this->render('admin/users/create.html.twig', [
-            'errors' => $errors,
             'formData' => $formData,
+            'formErrors' => $formErrors,
+            'flashErrors' => $flashErrors,
             'villas' => $this->villaRepository->findAll(),
+            'contractTypes' => ['CDI', 'CDD', 'Stage', 'Alternance', 'Autre'],
+            'templateContrats' => $this->templateContratRepository->findAll(),
         ]);
     }
 

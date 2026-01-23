@@ -1,0 +1,64 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Modifier Élément Variable{% endblock %}
+
+{% block admin_title %}Modifier Élément Variable{% endblock %}
+{% block admin_subtitle %}{{ element.user.fullName }} - {{ element.period }}{% endblock %}
+
+{% block admin_content %}
+<div class=" mx-auto">
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <form method="POST" action="{{ path('admin_element_variable_edit', {id: element.id}) }}">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Éducateur</label>
+                    <p class="text-gray-900 font-medium">{{ element.user.fullName }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Période</label>
+                    <p class="text-gray-900">{{ element.period }}</p>
+                </div>
+
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Catégorie *</label>
+                    <select name="category" id="category" required
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        {% for code, label in categories %}
+                            <option value="{{ code }}" {% if element.category == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="label" class="block text-sm font-medium text-gray-700 mb-1">Libellé *</label>
+                    <input type="text" name="label" id="label" value="{{ element.label }}" required
+                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Montant (€) *</label>
+                    <input type="number" name="amount" id="amount" step="0.01" value="{{ element.amount }}" required
+                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea name="description" id="description" rows="3"
+                              class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">{{ element.description }}</textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                <a href="{{ element.consolidation ? path('admin_payroll_show', {id: element.consolidation.id}) : path('admin_element_variable_index', {period: element.period}) }}"
+                   class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition">
+                    Annuler
+                </a>
+                <button type="submit" class="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition">
+                    Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

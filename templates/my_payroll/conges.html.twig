@@ -1,0 +1,130 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Mes congés payés{% endblock %}
+
+{% block breadcrumb_items %}
+    <li>
+        <a href="{{ path('my_payroll_index') }}" class="text-white/60 hover:text-white">Mon espace paie</a>
+    </li>
+    <li><span class="text-white">Mes congés payés</span></li>
+{% endblock %}
+
+{% block page_title %}Mes congés payés{% endblock %}
+{% block page_subtitle %}Période {{ cp_counter.periodeReference }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {# Solde actuel #}
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Solde actuel</h2>
+                    <div class="text-center py-6">
+                        <div class="text-5xl font-bold {% if cp_counter.soldeActuel >= 10 %}text-green-600{% elseif cp_counter.soldeActuel >= 5 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                            {{ cp_counter.soldeActuel|number_format(2, ',', ' ') }}
+                        </div>
+                        <p class="text-gray-500 mt-2">jours disponibles</p>
+                    </div>
+                </div>
+
+                {# Détail du calcul #}
+                <div class="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Détail du calcul</h2>
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="text-center p-4 bg-gray-50 rounded-lg">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Report</p>
+                            <p class="text-2xl font-bold text-gray-900 mt-1">{{ cp_counter.soldeInitial|number_format(1, ',', ' ') }}</p>
+                            <p class="text-xs text-gray-500">jours</p>
+                        </div>
+                        <div class="text-center p-4 bg-green-50 rounded-lg">
+                            <p class="text-xs text-green-600 uppercase tracking-wide">Acquis</p>
+                            <p class="text-2xl font-bold text-green-600 mt-1">+{{ cp_counter.acquis|number_format(1, ',', ' ') }}</p>
+                            <p class="text-xs text-green-600">jours</p>
+                        </div>
+                        <div class="text-center p-4 bg-red-50 rounded-lg">
+                            <p class="text-xs text-red-600 uppercase tracking-wide">Pris</p>
+                            <p class="text-2xl font-bold text-red-600 mt-1">-{{ cp_counter.pris|number_format(1, ',', ' ') }}</p>
+                            <p class="text-xs text-red-600">jours</p>
+                        </div>
+                        <div class="text-center p-4 bg-blue-50 rounded-lg">
+                            <p class="text-xs text-blue-600 uppercase tracking-wide">Solde</p>
+                            <p class="text-2xl font-bold text-blue-600 mt-1">{{ cp_counter.soldeActuel|number_format(1, ',', ' ') }}</p>
+                            <p class="text-xs text-blue-600">jours</p>
+                        </div>
+                    </div>
+
+                    {% if cp_counter.ajustementAdmin != 0 %}
+                    <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
+                        <p class="text-sm text-yellow-800">
+                            <strong>Ajustement admin :</strong>
+                            {{ cp_counter.ajustementAdmin > 0 ? '+' : '' }}{{ cp_counter.ajustementAdmin|number_format(2, ',', ' ') }} jours
+                            {% if cp_counter.ajustementComment %}
+                            <br><span class="text-xs italic">{{ cp_counter.ajustementComment }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Historique mensuel #}
+            <div class="mt-6 bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b">
+                    <h2 class="text-lg font-medium text-gray-900">Historique mensuel</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mois</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Solde début</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acquis</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pris</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Solde fin</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for consolidation in consolidations %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {{ consolidation.periodLabel }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
+                                    {{ consolidation.cpSoldeDebut|number_format(2, ',', ' ') }} j
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 text-right">
+                                    +{{ consolidation.cpAcquis|number_format(2, ',', ' ') }} j
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 text-right">
+                                    {% if consolidation.cpPris > 0 %}-{% endif %}{{ consolidation.cpPris|number_format(2, ',', ' ') }} j
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
+                                    {{ consolidation.cpSoldeFin|number_format(2, ',', ' ') }} j
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                                    Aucun historique disponible.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+{# Information période #}
+<div class="mt-6 bg-blue-50 rounded-lg p-4">
+    <div class="flex">
+        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+        </svg>
+        <div class="ml-3">
+            <h3 class="text-sm font-medium text-blue-800">Période de référence des congés payés</h3>
+            <p class="mt-1 text-sm text-blue-700">
+                La période de référence pour les congés payés va du 1er juin au 31 mai de l'année suivante.
+                Vous acquérez 2,5 jours de congés par mois travaillé.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

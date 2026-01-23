@@ -47,6 +47,9 @@ security:
         - { path: ^/onboarding/activate, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
 
+        # Route changement mot de passe obligatoire (utilisateur authentifié)
+        - { path: ^/force-password-change, roles: ROLE_USER }
+
         # Routes admin
         - { path: ^/admin, roles: ROLE_ADMIN }
 

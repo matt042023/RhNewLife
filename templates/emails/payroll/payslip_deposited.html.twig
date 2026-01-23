@@ -1,0 +1,46 @@
+{% extends 'emails/base.html.twig' %}
+
+{% block title %}Votre fiche de paie est disponible{% endblock %}
+
+{% block content %}
+<h1 style="color: #1a202c; font-size: 24px; font-weight: 600; margin-bottom: 16px;">
+    Votre fiche de paie est disponible
+</h1>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Bonjour {{ user.firstName }},
+</p>
+
+<p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+    Votre fiche de paie pour le mois de <strong>{{ period_label }}</strong> a été déposée et est maintenant disponible dans votre espace personnel.
+</p>
+
+<div style="background-color: #f0fff4; border-radius: 8px; padding: 24px; margin-bottom: 24px; text-align: center;">
+    <svg style="width: 48px; height: 48px; margin: 0 auto 16px;" fill="none" stroke="#38a169" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <p style="color: #276749; font-size: 16px; font-weight: 500; margin: 0;">
+        Fiche de paie {{ period_label }} déposée
+    </p>
+</div>
+
+<div style="text-align: center; margin-bottom: 24px;">
+    <a href="{{ url('my_payroll_payslips') }}"
+       style="display: inline-block; background-color: #38a169; color: #ffffff; font-weight: 600; padding: 12px 24px; border-radius: 6px; text-decoration: none;">
+        Accéder à mes fiches de paie
+    </a>
+</div>
+
+<div style="background-color: #fff5f5; border-left: 4px solid #e53e3e; padding: 16px; margin-bottom: 24px;">
+    <h3 style="color: #c53030; font-size: 14px; font-weight: 600; margin-bottom: 8px;">
+        Important
+    </h3>
+    <p style="color: #c53030; font-size: 14px; margin: 0;">
+        Pensez à vérifier votre fiche de paie et à signaler toute anomalie dans les plus brefs délais.
+    </p>
+</div>
+
+<p style="color: #718096; font-size: 14px; line-height: 1.5;">
+    Vos fiches de paie sont conservées de manière sécurisée et accessibles à tout moment depuis votre espace personnel.
+</p>
+{% endblock %}

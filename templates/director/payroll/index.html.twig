@@ -1,0 +1,175 @@
+{% extends 'director.html.twig' %}
+
+{% block title %}Suivi paie - {{ "now"|date('F Y') }}{% endblock %}
+
+{% block director_title %}Suivi paie{% endblock %}
+{% block director_subtitle %}Vue d'ensemble des rapports de paie{% endblock %}
+
+{% block director_content %}
+<div class="space-y-6">
+    {# Filtres #}
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <form method="GET" class="flex items-center space-x-4">
+            <div>
+                <label for="year" class="block text-sm font-medium text-gray-700 mb-1">Année</label>
+                <select name="year" id="year" class="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    {% for year in years %}
+                        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="month" class="block text-sm font-medium text-gray-700 mb-1">Mois</label>
+                <select name="month" id="month" class="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    {% set months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'] %}
+                    {% for m in 1..12 %}
+                        <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ months[m-1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="pt-6">
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
+                    Afficher
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {# Statistiques #}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total éducateurs</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ stats.total }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Validés</p>
+                    <p class="text-2xl font-semibold text-green-600">{{ stats.validated }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">En attente</p>
+                    <p class="text-2xl font-semibold text-yellow-600">{{ stats.draft }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Taux complétion</p>
+                    <p class="text-2xl font-semibold text-purple-600">{{ stats.completion_rate }}%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Liste des rapports #}
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b flex justify-between items-center">
+            <h3 class="text-lg font-medium text-gray-900">
+                {% set months = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'] %}
+                Rapports - {{ months[selected_month] }} {{ selected_year }}
+            </h3>
+            <a href="{{ path('director_payroll_cp_counters') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                Voir les compteurs CP →
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Éducateur</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Jours travaillés</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Absences</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">CP pris</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Solde CP</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Statut</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for consolidation in consolidations %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{{ path('director_payroll_user', {id: consolidation.user.id}) }}" class="text-blue-600 hover:text-blue-800">
+                                <div class="text-sm font-medium text-gray-900">{{ consolidation.user.fullName }}</div>
+                                <div class="text-xs text-gray-500">{{ consolidation.user.matricule ?? 'N/A' }}</div>
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
+                            {{ consolidation.totalJoursTravailes|number_format(2, ',', ' ') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
+                            {{ consolidation.totalJoursAbsence|number_format(2, ',', ' ') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
+                            {{ consolidation.cpPris|number_format(2, ',', ' ') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm {% if consolidation.cpSoldeFin >= 10 %}text-green-600{% elseif consolidation.cpSoldeFin >= 5 %}text-yellow-600{% else %}text-red-600{% endif %} font-medium">
+                            {{ consolidation.cpSoldeFin|number_format(2, ',', ' ') }} j
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% if consolidation.isDraft %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Brouillon
+                                </span>
+                            {% elseif consolidation.isExported %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    Exporté
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Validé
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <a href="{{ path('director_payroll_show', {id: consolidation.id}) }}" class="text-blue-600 hover:text-blue-900 text-sm">
+                                Voir détail
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            Aucun rapport pour cette période.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
