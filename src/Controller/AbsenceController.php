@@ -54,6 +54,8 @@ class AbsenceController extends AbstractController
         $form = $this->createForm(AbsenceType::class, $absence);
         $form->handleRequest($request);
 
+        $hasError = false;
+
         if ($form->isSubmitted() && $form->isValid()) {
             try {
                 $justificationFile = $form->get('justificationFile')->getData();
@@ -71,13 +73,16 @@ class AbsenceController extends AbstractController
                 return $this->redirectToRoute('app_absence_show', ['id' => $createdAbsence->getId()]);
             } catch (\Exception $e) {
                 $this->addFlash('error', 'Erreur : ' . $e->getMessage());
+                $hasError = true;
             }
         }
+
+        $statusCode = ($form->isSubmitted() && !$form->isValid()) || $hasError ? 422 : 200;
 
         return $this->render('absence/new.html.twig', [
             'form' => $form->createView(),
             'absenceTypes' => $this->typeAbsenceRepository->findActive(),
-        ], new Response(null, $form->isSubmitted() && !$form->isValid() ? 422 : 200));
+        ], new Response(null, $statusCode));
     }
 
     /**

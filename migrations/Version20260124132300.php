@@ -10,7 +10,7 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Auto-generated Migration: Please modify to your needs!
  */
-final class Version20260122125751 extends AbstractMigration
+final class Version20260124132300 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -22,6 +22,7 @@ final class Version20260122125751 extends AbstractMigration
         // this up() migration is auto-generated, please modify it to your needs
         $this->addSql('CREATE TABLE absence (id INT AUTO_INCREMENT NOT NULL, user_id INT NOT NULL, absence_type_id INT DEFAULT NULL, validated_by_id INT DEFAULT NULL, type VARCHAR(50) DEFAULT NULL, start_at DATE NOT NULL, end_at DATE NOT NULL, reason LONGTEXT DEFAULT NULL, status VARCHAR(30) NOT NULL, justification_status VARCHAR(30) DEFAULT NULL, justification_deadline DATETIME DEFAULT NULL, rejection_reason LONGTEXT DEFAULT NULL, admin_comment LONGTEXT DEFAULT NULL, affects_planning TINYINT(1) DEFAULT 0 NOT NULL, working_days_count DOUBLE PRECISION DEFAULT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, INDEX IDX_765AE0C9A76ED395 (user_id), INDEX IDX_765AE0C9CCAA91B (absence_type_id), INDEX IDX_765AE0C9C69DE5E5 (validated_by_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE affectation (id INT AUTO_INCREMENT NOT NULL, planning_mois_id INT NOT NULL, user_id INT DEFAULT NULL, villa_id INT DEFAULT NULL, start_at DATETIME NOT NULL, end_at DATETIME NOT NULL, type VARCHAR(20) NOT NULL, statut VARCHAR(30) NOT NULL, is_from_squelette TINYINT(1) NOT NULL, commentaire LONGTEXT DEFAULT NULL, jours_travailes INT DEFAULT NULL, is_segmented TINYINT(1) DEFAULT 0 NOT NULL, segment_number INT DEFAULT NULL, total_segments INT DEFAULT NULL, INDEX IDX_F4DD61D3276A1453 (planning_mois_id), INDEX IDX_F4DD61D3A76ED395 (user_id), INDEX IDX_F4DD61D3285D9761 (villa_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE annonce_interne (id INT AUTO_INCREMENT NOT NULL, publie_par_id INT NOT NULL, titre VARCHAR(255) NOT NULL, contenu LONGTEXT NOT NULL, date_publication DATETIME NOT NULL, visibilite VARCHAR(20) DEFAULT \'tous\' NOT NULL, image VARCHAR(500) DEFAULT NULL, epingle TINYINT(1) DEFAULT 0 NOT NULL, date_expiration DATETIME DEFAULT NULL, actif TINYINT(1) DEFAULT 1 NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, INDEX IDX_DAAA0CFC801A2092 (publie_par_id), INDEX idx_annonce_date (date_publication), INDEX idx_annonce_epingle (epingle), INDEX idx_annonce_actif (actif), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE appointment_participants (id INT AUTO_INCREMENT NOT NULL, appointment_id INT NOT NULL, user_id INT NOT NULL, presence_status VARCHAR(20) NOT NULL, confirmed_at DATETIME DEFAULT NULL, created_at DATETIME NOT NULL, INDEX IDX_88AB679FE5B533F9 (appointment_id), INDEX IDX_88AB679FA76ED395 (user_id), UNIQUE INDEX unique_appointment_user (appointment_id, user_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE astreinte (id INT AUTO_INCREMENT NOT NULL, educateur_id INT DEFAULT NULL, created_by_id INT DEFAULT NULL, updated_by_id INT DEFAULT NULL, start_at DATETIME NOT NULL, end_at DATETIME NOT NULL, period_label VARCHAR(50) DEFAULT NULL, status VARCHAR(30) NOT NULL, replacement_count INT DEFAULT 0 NOT NULL, notes LONGTEXT DEFAULT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, INDEX IDX_F23DC0736BFC1A0E (educateur_id), INDEX IDX_F23DC073B03A8386 (created_by_id), INDEX IDX_F23DC073896DBBDE (updated_by_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE compteur_absence (id INT AUTO_INCREMENT NOT NULL, user_id INT NOT NULL, absence_type_id INT NOT NULL, year INT NOT NULL, earned DOUBLE PRECISION DEFAULT \'0\' NOT NULL, taken DOUBLE PRECISION DEFAULT \'0\' NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, INDEX IDX_C49D8C0BA76ED395 (user_id), INDEX IDX_C49D8C0BCCAA91B (absence_type_id), UNIQUE INDEX unique_user_type_year (user_id, absence_type_id, year), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
@@ -36,6 +37,9 @@ final class Version20260122125751 extends AbstractMigration
         $this->addSql('CREATE TABLE health (id INT AUTO_INCREMENT NOT NULL, user_id INT NOT NULL, mutuelle_enabled TINYINT(1) DEFAULT 0 NOT NULL, mutuelle_nom VARCHAR(255) DEFAULT NULL, mutuelle_formule VARCHAR(255) DEFAULT NULL, mutuelle_date_fin DATE DEFAULT NULL, prevoyance_enabled TINYINT(1) DEFAULT 0 NOT NULL, prevoyance_nom VARCHAR(255) DEFAULT NULL, UNIQUE INDEX UNIQ_CEDA2313A76ED395 (user_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE invitation (id INT AUTO_INCREMENT NOT NULL, villa_id INT DEFAULT NULL, user_id INT DEFAULT NULL, email VARCHAR(180) NOT NULL, first_name VARCHAR(100) NOT NULL, last_name VARCHAR(100) NOT NULL, position VARCHAR(100) DEFAULT NULL, color VARCHAR(7) DEFAULT NULL, token VARCHAR(64) NOT NULL, expires_at DATETIME NOT NULL, used_at DATETIME DEFAULT NULL, status VARCHAR(20) DEFAULT \'pending\' NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, error_message LONGTEXT DEFAULT NULL, skip_onboarding TINYINT(1) DEFAULT 0 NOT NULL, UNIQUE INDEX UNIQ_F11D61A25F37A13B (token), INDEX IDX_F11D61A2285D9761 (villa_id), INDEX IDX_F11D61A2A76ED395 (user_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE jour_chome (id INT AUTO_INCREMENT NOT NULL, educateur_id INT NOT NULL, created_by_id INT DEFAULT NULL, date DATE NOT NULL, notes LONGTEXT DEFAULT NULL, created_at DATETIME NOT NULL, INDEX IDX_4A0A883F6BFC1A0E (educateur_id), INDEX IDX_4A0A883FB03A8386 (created_by_id), UNIQUE INDEX unique_educateur_date (educateur_id, date), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE message_interne (id INT AUTO_INCREMENT NOT NULL, expediteur_id INT NOT NULL, roles_cible JSON DEFAULT NULL COMMENT \'(DC2Type:json)\', sujet VARCHAR(255) NOT NULL, contenu LONGTEXT NOT NULL, date_envoi DATETIME NOT NULL, pieces_jointes JSON DEFAULT NULL COMMENT \'(DC2Type:json)\', lu_par JSON NOT NULL COMMENT \'(DC2Type:json)\', created_at DATETIME NOT NULL, INDEX idx_message_expediteur (expediteur_id), INDEX idx_message_date (date_envoi), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE message_interne_destinataires (message_interne_id INT NOT NULL, user_id INT NOT NULL, INDEX IDX_378918B8918DB3B8 (message_interne_id), INDEX IDX_378918B8A76ED395 (user_id), PRIMARY KEY(message_interne_id, user_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE notification (id INT AUTO_INCREMENT NOT NULL, cible_user_id INT DEFAULT NULL, type VARCHAR(20) NOT NULL, titre VARCHAR(255) NOT NULL, message LONGTEXT NOT NULL, lien VARCHAR(500) DEFAULT NULL, roles_cible JSON DEFAULT NULL COMMENT \'(DC2Type:json)\', date_envoi DATETIME NOT NULL, lu TINYINT(1) DEFAULT 0 NOT NULL, lu_at DATETIME DEFAULT NULL, source_event VARCHAR(50) DEFAULT NULL, source_entity_id INT DEFAULT NULL, created_at DATETIME NOT NULL, INDEX idx_notification_user (cible_user_id), INDEX idx_notification_date (date_envoi), INDEX idx_notification_lu (lu), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE planning_month (id INT AUTO_INCREMENT NOT NULL, villa_id INT NOT NULL, valide_par_id INT DEFAULT NULL, annee INT NOT NULL, mois INT NOT NULL, statut VARCHAR(20) NOT NULL, date_validation DATETIME DEFAULT NULL, INDEX IDX_1F1AAA99285D9761 (villa_id), INDEX IDX_1F1AAA996AF12ED9 (valide_par_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE profile_update_request (id INT AUTO_INCREMENT NOT NULL, user_id INT NOT NULL, processed_by_id INT DEFAULT NULL, requested_data JSON NOT NULL COMMENT \'(DC2Type:json)\', status VARCHAR(20) DEFAULT \'pending\' NOT NULL, reason LONGTEXT DEFAULT NULL, requested_at DATETIME NOT NULL, processed_at DATETIME DEFAULT NULL, INDEX IDX_E76C5773A76ED395 (user_id), INDEX IDX_E76C57732FFD4FD3 (processed_by_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE rendez_vous (id INT AUTO_INCREMENT NOT NULL, created_by_id INT NOT NULL, organizer_id INT NOT NULL, titre VARCHAR(255) NOT NULL, description LONGTEXT DEFAULT NULL, start_at DATETIME NOT NULL, end_at DATETIME NOT NULL, type VARCHAR(20) NOT NULL, impact_garde TINYINT(1) NOT NULL, statut VARCHAR(20) NOT NULL, couleur VARCHAR(7) DEFAULT NULL, duration_minutes INT DEFAULT NULL, subject VARCHAR(255) NOT NULL, location VARCHAR(255) DEFAULT NULL, refusal_reason LONGTEXT DEFAULT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, INDEX IDX_65E8AA0AB03A8386 (created_by_id), INDEX IDX_65E8AA0A876C4DDA (organizer_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
@@ -53,6 +57,7 @@ final class Version20260122125751 extends AbstractMigration
         $this->addSql('ALTER TABLE affectation ADD CONSTRAINT FK_F4DD61D3276A1453 FOREIGN KEY (planning_mois_id) REFERENCES planning_month (id)');
         $this->addSql('ALTER TABLE affectation ADD CONSTRAINT FK_F4DD61D3A76ED395 FOREIGN KEY (user_id) REFERENCES user (id)');
         $this->addSql('ALTER TABLE affectation ADD CONSTRAINT FK_F4DD61D3285D9761 FOREIGN KEY (villa_id) REFERENCES villa (id)');
+        $this->addSql('ALTER TABLE annonce_interne ADD CONSTRAINT FK_DAAA0CFC801A2092 FOREIGN KEY (publie_par_id) REFERENCES user (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE appointment_participants ADD CONSTRAINT FK_88AB679FE5B533F9 FOREIGN KEY (appointment_id) REFERENCES rendez_vous (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE appointment_participants ADD CONSTRAINT FK_88AB679FA76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE astreinte ADD CONSTRAINT FK_F23DC0736BFC1A0E FOREIGN KEY (educateur_id) REFERENCES user (id) ON DELETE SET NULL');
@@ -89,6 +94,10 @@ final class Version20260122125751 extends AbstractMigration
         $this->addSql('ALTER TABLE invitation ADD CONSTRAINT FK_F11D61A2A76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE SET NULL');
         $this->addSql('ALTER TABLE jour_chome ADD CONSTRAINT FK_4A0A883F6BFC1A0E FOREIGN KEY (educateur_id) REFERENCES user (id)');
         $this->addSql('ALTER TABLE jour_chome ADD CONSTRAINT FK_4A0A883FB03A8386 FOREIGN KEY (created_by_id) REFERENCES user (id)');
+        $this->addSql('ALTER TABLE message_interne ADD CONSTRAINT FK_B04DAC9010335F61 FOREIGN KEY (expediteur_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE message_interne_destinataires ADD CONSTRAINT FK_378918B8918DB3B8 FOREIGN KEY (message_interne_id) REFERENCES message_interne (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE message_interne_destinataires ADD CONSTRAINT FK_378918B8A76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE notification ADD CONSTRAINT FK_BF5476CA6A2544E6 FOREIGN KEY (cible_user_id) REFERENCES user (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE planning_month ADD CONSTRAINT FK_1F1AAA99285D9761 FOREIGN KEY (villa_id) REFERENCES villa (id)');
         $this->addSql('ALTER TABLE planning_month ADD CONSTRAINT FK_1F1AAA996AF12ED9 FOREIGN KEY (valide_par_id) REFERENCES user (id)');
         $this->addSql('ALTER TABLE profile_update_request ADD CONSTRAINT FK_E76C5773A76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
@@ -115,6 +124,7 @@ final class Version20260122125751 extends AbstractMigration
         $this->addSql('ALTER TABLE affectation DROP FOREIGN KEY FK_F4DD61D3276A1453');
         $this->addSql('ALTER TABLE affectation DROP FOREIGN KEY FK_F4DD61D3A76ED395');
         $this->addSql('ALTER TABLE affectation DROP FOREIGN KEY FK_F4DD61D3285D9761');
+        $this->addSql('ALTER TABLE annonce_interne DROP FOREIGN KEY FK_DAAA0CFC801A2092');
         $this->addSql('ALTER TABLE appointment_participants DROP FOREIGN KEY FK_88AB679FE5B533F9');
         $this->addSql('ALTER TABLE appointment_participants DROP FOREIGN KEY FK_88AB679FA76ED395');
         $this->addSql('ALTER TABLE astreinte DROP FOREIGN KEY FK_F23DC0736BFC1A0E');
@@ -151,6 +161,10 @@ final class Version20260122125751 extends AbstractMigration
         $this->addSql('ALTER TABLE invitation DROP FOREIGN KEY FK_F11D61A2A76ED395');
         $this->addSql('ALTER TABLE jour_chome DROP FOREIGN KEY FK_4A0A883F6BFC1A0E');
         $this->addSql('ALTER TABLE jour_chome DROP FOREIGN KEY FK_4A0A883FB03A8386');
+        $this->addSql('ALTER TABLE message_interne DROP FOREIGN KEY FK_B04DAC9010335F61');
+        $this->addSql('ALTER TABLE message_interne_destinataires DROP FOREIGN KEY FK_378918B8918DB3B8');
+        $this->addSql('ALTER TABLE message_interne_destinataires DROP FOREIGN KEY FK_378918B8A76ED395');
+        $this->addSql('ALTER TABLE notification DROP FOREIGN KEY FK_BF5476CA6A2544E6');
         $this->addSql('ALTER TABLE planning_month DROP FOREIGN KEY FK_1F1AAA99285D9761');
         $this->addSql('ALTER TABLE planning_month DROP FOREIGN KEY FK_1F1AAA996AF12ED9');
         $this->addSql('ALTER TABLE profile_update_request DROP FOREIGN KEY FK_E76C5773A76ED395');
@@ -168,6 +182,7 @@ final class Version20260122125751 extends AbstractMigration
         $this->addSql('ALTER TABLE visite_medicale DROP FOREIGN KEY FK_B6D49D3FE5B533F9');
         $this->addSql('DROP TABLE absence');
         $this->addSql('DROP TABLE affectation');
+        $this->addSql('DROP TABLE annonce_interne');
         $this->addSql('DROP TABLE appointment_participants');
         $this->addSql('DROP TABLE astreinte');
         $this->addSql('DROP TABLE compteur_absence');
@@ -182,6 +197,9 @@ final class Version20260122125751 extends AbstractMigration
         $this->addSql('DROP TABLE health');
         $this->addSql('DROP TABLE invitation');
         $this->addSql('DROP TABLE jour_chome');
+        $this->addSql('DROP TABLE message_interne');
+        $this->addSql('DROP TABLE message_interne_destinataires');
+        $this->addSql('DROP TABLE notification');
         $this->addSql('DROP TABLE planning_month');
         $this->addSql('DROP TABLE profile_update_request');
         $this->addSql('DROP TABLE rendez_vous');

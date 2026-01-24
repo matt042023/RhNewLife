@@ -28,8 +28,8 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         $admin = new User();
         $admin
             ->setEmail('admin@rhnewlife.fr')
-            ->setFirstName('Marie')
-            ->setLastName('Dubois')
+            ->setFirstName('Melanie')
+            ->setLastName('Adjovi')
             ->setPhone('06 12 34 56 78')
             ->setAddress('123 Avenue des Champs-Élysées, 75008 Paris')
             ->setPosition('Administratrice RH')
@@ -63,8 +63,8 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         $director = new User();
         $director
             ->setEmail('directeur@rhnewlife.fr')
-            ->setFirstName('Jean')
-            ->setLastName('Martin')
+            ->setFirstName('Fernand')
+            ->setLastName('Adjovi')
             ->setPhone('06 23 45 67 89')
             ->setAddress('45 Rue de la République, 69002 Lyon')
             ->setPosition('Directeur')
@@ -90,40 +90,6 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         $manager->persist($director);
         $this->addReference('director', $director);
 
-        // ========================================
-        // 3. ÉDUCATEUR
-        // ========================================
-        $educator = new User();
-        $educator
-            ->setEmail('educateur@rhnewlife.fr')
-            ->setFirstName('Sophie')
-            ->setLastName('Bernard')
-            ->setPhone('06 34 56 78 90')
-            ->setAddress('12 Rue Victor Hugo, 33000 Bordeaux')
-            ->setPosition('Éducateur spécialisé')
-            ->setMatricule('EDU000')
-            ->setHiringDate(new \DateTime('2021-03-10'))
-            ->setVilla($this->getReference(VillaFixtures::VILLA_ROSES, Villa::class))
-            ->setFamilyStatus('Célibataire')
-            ->setChildren(0)
-            ->setIban('FR76 1234 5678 9012 3456 7890 123')
-            ->setBic('BNPAFRPP')
-            ->setStatus(User::STATUS_ACTIVE)
-            ->setRoles(['ROLE_USER'])
-            ->setCguAcceptedAt(new \DateTime('-20 days'));
-
-        $educatorHealth = $educator->getHealth();
-        $educatorHealth->setMutuelleEnabled(true)
-            ->setMutuelleNom('Alan')
-            ->setMutuelleFormule('Formule Or')
-            ->setMutuelleDateFin(new \DateTime('2027-01-01'))
-            ->setPrevoyanceEnabled(false);
-
-        $hashedPassword = $this->passwordHasher->hashPassword($educator, 'Educator123!@#');
-        $educator->setPassword($hashedPassword);
-
-        $manager->persist($educator);
-
         // Sauvegarde en base
         $manager->flush();
 
@@ -143,11 +109,6 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         echo "   Rôle     : ROLE_DIRECTOR\n";
         echo "   Nom      : Jean Martin\n\n";
 
-        echo "👨‍🏫 ÉDUCATEUR\n";
-        echo "   Email    : educateur@rhnewlife.fr\n";
-        echo "   Password : Educator123!@#\n";
-        echo "   Rôle     : ROLE_USER\n";
-        echo "   Nom      : Sophie Bernard\n\n";
 
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
         echo "🚀 Vous pouvez maintenant vous connecter sur /login\n\n";
