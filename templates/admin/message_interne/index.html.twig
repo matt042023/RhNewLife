@@ -1,0 +1,169 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Messagerie interne - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Administration</span>
+        </div>
+    </li>
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Messagerie</span>
+        </div>
+    </li>
+{% endblock %}
+
+{% block page_header %}
+    <div class="px-4 py-6 lg:px-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div class="flex-1 min-w-0">
+                <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">
+                    Messagerie interne
+                </h1>
+                <p class="text-blue-100 text-sm md:text-base">
+                    {% if unreadCount > 0 %}
+                        {{ unreadCount }} message{{ unreadCount > 1 ? 's' : '' }} non lu{{ unreadCount > 1 ? 's' : '' }}
+                    {% else %}
+                        Gestion des messages internes
+                    {% endif %}
+                </p>
+            </div>
+            <div class="mt-4 md:mt-0 md:ml-4">
+                <a href="{{ path('admin_message_interne_compose') }}"
+                   class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-medium rounded-lg transition-all duration-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Nouveau message
+                </a>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="grid grid-cols-12 gap-6">
+    {# Sidebar - Tabs #}
+    <div class="col-span-12 md:col-span-3">
+        <div class="glass-card p-4">
+            <nav class="space-y-2">
+                <a href="{{ path('admin_message_interne_index', {tab: 'received'}) }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 {{ tab == 'received' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'text-gray-700 dark:text-gray-300 hover:bg-white/20' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                    </svg>
+                    <span class="font-medium">Boite de reception</span>
+                    {% if unreadCount > 0 %}
+                        <span class="ml-auto glass-badge glass-badge-danger text-xs">{{ unreadCount }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ path('admin_message_interne_index', {tab: 'sent'}) }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 {{ tab == 'sent' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'text-gray-700 dark:text-gray-300 hover:bg-white/20' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                    </svg>
+                    <span class="font-medium">Messages envoyes</span>
+                </a>
+            </nav>
+
+            <div class="mt-6 pt-4 border-t border-white/10">
+                <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                    <p>Reception: {{ receivedCount }} messages</p>
+                    <p>Envoyes: {{ sentCount }} messages</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Message List #}
+    <div class="col-span-12 md:col-span-9">
+        <div class="glass-card overflow-hidden">
+            {% if messages|length > 0 %}
+                {% for message in messages %}
+                    <a href="{{ path('admin_message_interne_show', {id: message.id}) }}"
+                       class="block p-4 border-b border-white/10 last:border-0 hover:bg-white/10 dark:hover:bg-white/5 transition-colors {{ tab == 'received' and message.isUnreadBy(currentUser) ? 'bg-emerald-50/30 dark:bg-emerald-900/10' : '' }}">
+                        <div class="flex items-center gap-4">
+                            {# Avatar #}
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                                {% if tab == 'sent' %}
+                                    {% if message.destinataires|length > 0 %}
+                                        {{ message.destinataires|first.firstName|slice(0,1)|upper }}{{ message.destinataires|first.lastName|slice(0,1)|upper }}
+                                    {% else %}
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
+                                    {% endif %}
+                                {% else %}
+                                    {{ message.expediteur.firstName|slice(0,1)|upper }}{{ message.expediteur.lastName|slice(0,1)|upper }}
+                                {% endif %}
+                            </div>
+
+                            {# Content #}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium text-gray-900 dark:text-white truncate">
+                                        {% if tab == 'sent' %}
+                                            {% if message.destinataires|length > 0 %}
+                                                A: {{ message.destinataires|map(d => d.fullName)|join(', ')|u.truncate(50) }}
+                                            {% elseif message.rolesCible|length > 0 %}
+                                                A: {% for role in message.rolesCible %}{% if role == 'ROLE_USER' %}Tous{% elseif role == 'ROLE_ADMIN' %}Admins{% elseif role == 'ROLE_DIRECTOR' %}Direction{% else %}{{ role }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+                                            {% else %}
+                                                A: (inconnu)
+                                            {% endif %}
+                                        {% else %}
+                                            {{ message.expediteur.fullName }}
+                                        {% endif %}
+                                    </span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
+                                        {{ message.dateEnvoi|date('d/m H:i') }}
+                                    </span>
+                                </div>
+                                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate mt-0.5">
+                                    {{ message.sujet }}
+                                </p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                    {{ message.contentPreview(80) }}
+                                </p>
+                            </div>
+
+                            {# Unread indicator #}
+                            {% if tab == 'received' and message.isUnreadBy(currentUser) %}
+                                <div class="w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0"></div>
+                            {% endif %}
+                        </div>
+                    </a>
+                {% endfor %}
+            {% else %}
+                <div class="p-12 text-center">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                    </svg>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                        Aucun message
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6">
+                        {% if tab == 'sent' %}
+                            Vous n'avez pas encore envoye de message.
+                        {% else %}
+                            Vous n'avez pas encore recu de message.
+                        {% endif %}
+                    </p>
+                    <a href="{{ path('admin_message_interne_compose') }}" class="glass-btn glass-btn-primary inline-flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        Nouveau message
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

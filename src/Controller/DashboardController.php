@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Absence;
 use App\Entity\User;
 use App\Repository\AbsenceRepository;
+use App\Repository\AnnonceInterneRepository;
 use App\Service\Absence\AbsenceCounterService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,7 +46,8 @@ class DashboardController extends AbstractController
     #[IsGranted('ROLE_USER')]
     public function employee(
         #[CurrentUser] User $user,
-        AbsenceCounterService $counterService
+        AbsenceCounterService $counterService,
+        AnnonceInterneRepository $annonceRepository
     ): Response {
         // Get user's leave counters for current year
         $currentYear = (int) date('Y');
@@ -54,20 +56,30 @@ class DashboardController extends AbstractController
         // Current date for planning widget
         $now = new \DateTime();
 
+        // Get active announcements visible to user
+        $annonces = $annonceRepository->findActiveForUser($user, 5);
+
         return $this->render('dashboard/employee.html.twig', [
             'user' => $user,
             'counters' => $counters,
             'currentYear' => (int) $now->format('Y'),
             'currentMonth' => (int) $now->format('m'),
+            'annonces' => $annonces,
         ]);
     }
 
     #[Route('/dashboard/director', name: 'app_dashboard_director')]
     #[IsGranted('ROLE_DIRECTOR')]
-    public function director(#[CurrentUser] User $user): Response
-    {
+    public function director(
+        #[CurrentUser] User $user,
+        AnnonceInterneRepository $annonceRepository
+    ): Response {
+        // Get active announcements visible to user
+        $annonces = $annonceRepository->findActiveForUser($user, 5);
+
         return $this->render('dashboard/director.html.twig', [
             'user' => $user,
+            'annonces' => $annonces,
         ]);
     }
 
@@ -75,7 +87,8 @@ class DashboardController extends AbstractController
     #[IsGranted('ROLE_ADMIN')]
     public function admin(
         #[CurrentUser] User $user,
-        AbsenceRepository $absenceRepository
+        AbsenceRepository $absenceRepository,
+        AnnonceInterneRepository $annonceRepository
     ): Response {
         // Get pending absences for admin dashboard
         $pendingAbsences = $absenceRepository->findBy([
@@ -85,11 +98,15 @@ class DashboardController extends AbstractController
         // Current date for planning widget
         $now = new \DateTime();
 
+        // Get active announcements visible to user
+        $annonces = $annonceRepository->findActiveForUser($user, 5);
+
         return $this->render('dashboard/admin.html.twig', [
             'user' => $user,
             'pendingAbsences' => $pendingAbsences,
             'currentYear' => (int) $now->format('Y'),
             'currentMonth' => (int) $now->format('m'),
+            'annonces' => $annonces,
         ]);
     }
 }

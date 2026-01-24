@@ -1,0 +1,126 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Répondre - {{ originalMessage.sujet }} - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <a href="{{ path('admin_message_interne_index') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">
+                Messagerie
+            </a>
+        </div>
+    </li>
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Répondre</span>
+        </div>
+    </li>
+{% endblock %}
+
+{% block page_header %}
+    <div class="px-4 py-6 lg:px-6">
+        <div class="flex items-center gap-4">
+            <a href="{{ path('admin_message_interne_show', {id: originalMessage.id}) }}"
+               class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">
+                    Répondre à {{ originalMessage.expediteur.fullName }}
+                </h1>
+                <p class="text-blue-100 text-sm md:text-base mt-1">
+                    Re: {{ originalMessage.sujet }}
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    {# Message original (collapsible) #}
+    <div class="glass-card" x-data="{ open: false }">
+        <button @click="open = !open"
+                class="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-white/5 transition-colors">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                </svg>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Message original de {{ originalMessage.expediteur.fullName }}
+                </span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                    {{ originalMessage.dateEnvoi|date('d/m/Y H:i') }}
+                </span>
+            </div>
+            <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+        <div x-show="open" x-collapse class="px-6 pb-4 border-t border-white/10">
+            <div class="pt-4 text-sm text-gray-600 dark:text-gray-400">
+                {{ originalMessage.contenu|nl2br }}
+            </div>
+        </div>
+    </div>
+
+    {# Formulaire de réponse #}
+    <div class="glass-card p-6">
+        {{ form_start(form, {'attr': {'class': 'space-y-6'}}) }}
+
+            {# Destinataire (readonly) #}
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    À
+                </label>
+                <div class="glass-input w-full flex items-center gap-2 cursor-not-allowed opacity-75">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                        {{ originalMessage.expediteur.prenom|first|upper }}{{ originalMessage.expediteur.nom|first|upper }}
+                    </div>
+                    <span class="text-gray-900 dark:text-white">{{ originalMessage.expediteur.fullName }}</span>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">({{ originalMessage.expediteur.email }})</span>
+                </div>
+            </div>
+
+            {# Sujet (pre-filled) #}
+            <div>
+                {{ form_label(form.sujet, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                {{ form_widget(form.sujet) }}
+                {{ form_errors(form.sujet) }}
+            </div>
+
+            {# Contenu #}
+            <div>
+                {{ form_label(form.contenu, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                {{ form_widget(form.contenu) }}
+                {{ form_errors(form.contenu) }}
+            </div>
+
+            {# Hidden fields #}
+            {{ form_rest(form) }}
+
+            {# Actions #}
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                <a href="{{ path('admin_message_interne_show', {id: originalMessage.id}) }}" class="glass-btn px-4 py-2">
+                    Annuler
+                </a>
+                <button type="submit" class="glass-btn glass-btn-primary inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                    </svg>
+                    Envoyer la réponse
+                </button>
+            </div>
+
+        {{ form_end(form) }}
+    </div>
+</div>
+{% endblock %}

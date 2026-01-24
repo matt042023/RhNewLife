@@ -42,3 +42,7 @@ services:
     App\Service\ContractGeneratorService:
         arguments:
             $projectDir: '%kernel.project_dir%'
+
+    App\Service\Communication\AnnonceInterneService:
+        arguments:
+            $uploadDir: '%app.uploads_directory%'

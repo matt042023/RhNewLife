@@ -1,0 +1,64 @@
+{# Notification Bell Component with Glass Design #}
+<div class="relative"
+     data-controller="notification-bell"
+     data-notification-bell-url-value="{{ path('api_notifications_unread') }}"
+     data-notification-bell-refresh-interval-value="60000">
+
+    {# Bell Button #}
+    <button type="button"
+            class="relative p-2 rounded-lg transition-all duration-200 hover:bg-white/20 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            data-action="click->notification-bell#toggle"
+            aria-label="Notifications">
+        <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+        </svg>
+
+        {# Badge Count #}
+        <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 flex items-center justify-center px-1 text-xs font-bold text-white bg-red-500 rounded-full hidden"
+              data-notification-bell-target="badge">
+            0
+        </span>
+    </button>
+
+    {# Dropdown Panel #}
+    <div class="absolute right-0 mt-2 w-80 sm:w-96 glass-modal rounded-xl overflow-hidden z-50 hidden"
+         data-notification-bell-target="dropdown">
+
+        {# Header #}
+        <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-emerald-500/10 to-blue-500/10">
+            <h3 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                Notifications
+            </h3>
+            <button type="button"
+                    class="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium transition-colors"
+                    data-action="click->notification-bell#markAllRead">
+                Tout marquer comme lu
+            </button>
+        </div>
+
+        {# Notification List #}
+        <div class="max-h-96 overflow-y-auto" data-notification-bell-target="list">
+            {# Loading state - replaced by JS #}
+            <div class="p-6 text-center">
+                <div class="glass-loader mx-auto"></div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Chargement...</p>
+            </div>
+        </div>
+
+        {# Footer #}
+        <div class="px-4 py-3 border-t border-white/10 bg-gray-50/50 dark:bg-gray-800/50">
+            <a href="{{ path('app_notifications_index') }}"
+               class="flex items-center justify-center gap-2 text-sm text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium transition-colors">
+                <span>Voir toutes les notifications</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+</div>
