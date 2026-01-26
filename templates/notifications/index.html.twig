@@ -1,0 +1,186 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Centre de notifications - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Notifications</span>
+        </div>
+    </li>
+{% endblock %}
+
+{% block page_header %}
+    <div class="px-4 py-6 lg:px-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div class="flex-1 min-w-0">
+                <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">
+                    Centre de notifications
+                </h1>
+                <p class="text-blue-100 text-sm md:text-base">
+                    {{ unreadCount }} notification{{ unreadCount > 1 ? 's' : '' }} non lue{{ unreadCount > 1 ? 's' : '' }} sur {{ totalCount }}
+                </p>
+            </div>
+            {% if unreadCount > 0 %}
+                <div class="mt-4 md:mt-0 md:ml-4">
+                    <form action="{{ path('app_notifications_mark_all_read') }}" method="post">
+                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-medium rounded-lg transition-all duration-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Tout marquer comme lu
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-4xl mx-auto">
+    {# Stats #}
+    <div class="glass-card p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <span class="inline-flex items-center gap-1.5 glass-badge glass-badge-info">
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                    {{ totalCount }} total
+                </span>
+                {% if unreadCount > 0 %}
+                    <span class="inline-flex items-center gap-1.5 glass-badge glass-badge-warning">
+                        <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                        {{ unreadCount }} non lue{{ unreadCount > 1 ? 's' : '' }}
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Notification List #}
+    <div class="space-y-4">
+        {% for notification in notifications %}
+            <div class="glass-card p-4 transition-all duration-200 hover:scale-[1.01] {{ not notification.lu ? 'border-l-4 border-emerald-500' : '' }}">
+                <div class="flex items-start gap-4">
+                    {# Type Icon #}
+                    <div class="flex-shrink-0">
+                        {% if notification.type == 'alerte' %}
+                            <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                        {% elseif notification.type == 'action' %}
+                            <div class="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                        {% else %}
+                            <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# Content #}
+                    <div class="flex-1 min-w-0">
+                        <h4 class="text-base font-semibold text-gray-900 dark:text-white">
+                            {{ notification.titre }}
+                        </h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                            {{ notification.message }}
+                        </p>
+                        <div class="flex items-center gap-4 mt-3">
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ notification.dateEnvoi|date('d/m/Y H:i') }}
+                            </span>
+                            {% if notification.lien %}
+                                <a href="{{ path('app_notification_go', {id: notification.id}) }}"
+                                   class="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium">
+                                    Voir le detail
+                                </a>
+                            {% endif %}
+                            {% if notification.lu %}
+                                <span class="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    Lu
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {# Actions #}
+                    <div class="flex-shrink-0 flex items-center gap-2">
+                        {% if not notification.lu %}
+                            <form action="{{ path('app_notification_mark_read', {id: notification.id}) }}" method="post">
+                                <button type="submit"
+                                        class="p-2 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors rounded-lg hover:bg-white/20"
+                                        title="Marquer comme lu">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </button>
+                            </form>
+                        {% endif %}
+                        {% if notification.lien %}
+                            <a href="{{ path('app_notification_go', {id: notification.id}) }}"
+                               class="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-white/20"
+                               title="Ouvrir">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="glass-card p-12 text-center">
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                </svg>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Aucune notification</h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Vous n'avez pas encore de notifications.
+                </p>
+            </div>
+        {% endfor %}
+    </div>
+
+    {# Pagination #}
+    {% if totalPages > 1 %}
+        <div class="mt-8 flex items-center justify-center gap-2">
+            {% if page > 1 %}
+                <a href="{{ path('app_notifications_index', {page: page - 1}) }}"
+                   class="glass-btn px-4 py-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </a>
+            {% endif %}
+
+            <span class="glass-badge">
+                Page {{ page }} sur {{ totalPages }}
+            </span>
+
+            {% if page < totalPages %}
+                <a href="{{ path('app_notifications_index', {page: page + 1}) }}"
+                   class="glass-btn px-4 py-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

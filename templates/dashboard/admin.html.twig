@@ -414,68 +414,12 @@
 		{% endembed %}
 	</div>
 
-	{# Full-width widget: Annonces internes #}
-	<div class="mt-6">
-		{% embed 'components/widgets/_widget_card.html.twig' with {
-            'title': 'Annonces internes',
-            'icon': '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"></path></svg>',
-            'icon_color': 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300',
-            'badge': '2 annonces publiées',
-            'badge_color': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
-            'actions': [
-                {'label': 'Voir toutes les annonces', 'url': '#', 'type': 'secondary'},
-                {'label': 'Publier une annonce', 'url': '#', 'type': 'primary'}
-            ]
-        } %}
-			{% block widget_content %}
-				<div class="grid md:grid-cols-2 gap-4">
-					<div class="p-4 glass-card glass-card-primary rounded-lg border-l-4 border-blue-600 hover:scale-[1.01] transition-transform">
-						<div class="flex items-start justify-between mb-2 flex-wrap gap-2">
-							<span class="text-sm font-semibold text-blue-900 dark:text-blue-200">Nouvelle politique de télétravail</span>
-							<span class="glass-badge glass-badge-info">Active</span>
-						</div>
-						<p class="text-sm text-blue-800 dark:text-blue-300 mb-3 font-medium">À partir du 1er février, nouvelle politique flexible de télétravail...</p>
-						<div class="flex items-center justify-between text-xs mb-3">
-							<span class="text-blue-600 dark:text-blue-400 font-medium">Publié le 20/01/2025</span>
-							<div class="flex items-center gap-1">
-								<svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-									<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
-									<path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
-								</svg>
-								<span class="text-blue-600 dark:text-blue-400 font-medium">35/42 vues</span>
-							</div>
-						</div>
-						<div class="flex gap-2">
-							<button class="glass-btn glass-btn-primary text-xs px-3 py-1">Modifier</button>
-							<button class="glass-btn text-xs px-3 py-1">Archiver</button>
-						</div>
-					</div>
-
-					<div class="p-4 glass-card glass-card-success rounded-lg border-l-4 border-green-600 hover:scale-[1.01] transition-transform">
-						<div class="flex items-start justify-between mb-2 flex-wrap gap-2">
-							<span class="text-sm font-semibold text-gray-900 dark:text-white">Séminaire d'entreprise 2025</span>
-							<span class="glass-badge glass-badge-success">Active</span>
-						</div>
-						<p class="text-sm text-gray-600 dark:text-gray-400 mb-3 font-medium">Save the date ! Notre séminaire annuel aura lieu du 15 au 17 mars...</p>
-						<div class="flex items-center justify-between text-xs mb-3">
-							<span class="text-gray-500 dark:text-gray-400 font-medium">Publié le 18/01/2025</span>
-							<div class="flex items-center gap-1">
-								<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-									<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
-									<path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
-								</svg>
-								<span class="text-gray-500 dark:text-gray-400 font-medium">42/42 vues</span>
-							</div>
-						</div>
-						<div class="flex gap-2">
-							<button class="glass-btn glass-btn-primary text-xs px-3 py-1">Modifier</button>
-							<button class="glass-btn text-xs px-3 py-1">Archiver</button>
-						</div>
-					</div>
-				</div>
-			{% endblock %}
-		{% endembed %}
-	</div>
+	{# Widget Annonces internes - dynamique #}
+	{% if annonces is defined and annonces|length > 0 %}
+		<div class="mt-6">
+			{% include 'components/widgets/_annonces_widget.html.twig' with {'annonces': annonces} %}
+		</div>
+	{% endif %}
 
 	{# Widget Planning du mois #}
 	<div class="mt-6">

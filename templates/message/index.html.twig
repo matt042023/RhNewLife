@@ -1,0 +1,63 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Mes messages | RH NewLife{% endblock %}
+
+{% block page_header %}
+    <div class="px-4 py-6 lg:px-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Mes messages</h1>
+                <p class="text-emerald-100 mt-1">
+                    {% if unreadCount > 0 %}
+                        {{ unreadCount }} message(s) non lu(s)
+                    {% else %}
+                        Tous les messages sont lus
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block dashboard_content %}
+    {# Messages list #}
+    <div class="glass-card p-6">
+        {% if messages|length > 0 %}
+            <div class="space-y-4">
+                {% for message in messages %}
+                    <a href="{{ path('app_message_show', {'id': message.id}) }}"
+                       class="block glass-card p-4 hover:bg-white/30 dark:hover:bg-white/10 transition-all duration-200 {{ not message.isReadBy(currentUser) ? 'border-l-4 border-emerald-500' : '' }}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold">
+                                    {{ message.expediteur.firstName|slice(0,1)|upper }}{{ message.expediteur.lastName|slice(0,1)|upper }}
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-900 dark:text-white">
+                                        {{ message.expediteur.fullName }}
+                                    </p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                                        {{ message.sujet }}
+                                    </p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                        {{ message.dateEnvoi|date('d/m/Y H:i') }}
+                                    </p>
+                                </div>
+                            </div>
+                            {% if not message.isReadBy(currentUser) %}
+                                <span class="glass-badge glass-badge-primary text-xs">Nouveau</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-12">
+                <svg class="mx-auto w-16 h-16 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                <p class="mt-4 text-gray-600 dark:text-gray-400">Aucun message recu</p>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

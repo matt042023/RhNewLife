@@ -1,0 +1,249 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Annonces internes - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Annonces</span>
+        </div>
+    </li>
+{% endblock %}
+
+{% block page_header %}
+    <div class="px-4 py-6 lg:px-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">
+                    Annonces internes
+                </h1>
+                <p class="text-blue-100 text-sm md:text-base mt-1">
+                    {{ total }} annonce{% if total > 1 %}s{% endif %} au total
+                </p>
+            </div>
+            <a href="{{ path('admin_annonce_interne_new') }}"
+               class="glass-btn glass-btn-primary inline-flex items-center gap-2 self-start">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Nouvelle annonce
+            </a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="space-y-6">
+    {# Liste des annonces #}
+    {% if annonces|length > 0 %}
+        <div class="grid grid-cols-1 gap-4">
+            {% for annonce in annonces %}
+                <div class="glass-card p-6 {% if not annonce.isVisible %}opacity-60{% endif %}">
+                    <div class="flex flex-col md:flex-row md:items-start gap-4">
+                        {# Image preview #}
+                        {% if annonce.image %}
+                            <div class="flex-shrink-0">
+                                <img src="{{ asset('uploads/' ~ annonce.image) }}"
+                                     alt="{{ annonce.titre }}"
+                                     class="w-full md:w-32 h-24 object-cover rounded-lg">
+                            </div>
+                        {% endif %}
+
+                        {# Content #}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <a href="{{ path('admin_annonce_interne_show', {id: annonce.id}) }}"
+                                           class="text-lg font-semibold text-gray-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                                            {{ annonce.titre }}
+                                        </a>
+                                        {% if annonce.epingle %}
+                                            <span class="glass-badge glass-badge-warning inline-flex items-center gap-1">
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M5 5a2 2 0 012-2h6a2 2 0 012 2v2H5V5zm0 4h10v6a2 2 0 01-2 2H7a2 2 0 01-2-2V9z"/>
+                                                </svg>
+                                                Epingle
+                                            </span>
+                                        {% endif %}
+                                        {% if not annonce.actif %}
+                                            <span class="glass-badge glass-badge-danger">Inactive</span>
+                                        {% elseif annonce.isExpired %}
+                                            <span class="glass-badge glass-badge-danger">Expiree</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                        {{ annonce.contentPreview(200) }}
+                                    </p>
+
+                                    <div class="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+                                        <span class="inline-flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                            </svg>
+                                            {{ annonce.publiePar.fullName }}
+                                        </span>
+                                        <span class="inline-flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                            {{ annonce.datePublication|date('d/m/Y') }}
+                                        </span>
+                                        <span class="glass-badge glass-badge-{% if annonce.visibilite == 'tous' %}success{% elseif annonce.visibilite == 'admin' %}danger{% else %}primary{% endif %}">
+                                            {{ annonce.visibiliteLabel }}
+                                        </span>
+                                        {% if annonce.dateExpiration %}
+                                            {% set daysLeft = annonce.daysUntilExpiration %}
+                                            <span class="inline-flex items-center gap-1 {% if daysLeft is not null and daysLeft < 7 %}text-orange-500{% endif %}">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                {% if daysLeft is null %}
+                                                    Pas d'expiration
+                                                {% elseif daysLeft < 0 %}
+                                                    Expiree
+                                                {% elseif daysLeft == 0 %}
+                                                    Expire aujourd'hui
+                                                {% elseif daysLeft == 1 %}
+                                                    Expire demain
+                                                {% else %}
+                                                    {{ daysLeft }} jours
+                                                {% endif %}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                {# Actions #}
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    {# Toggle pin #}
+                                    <form action="{{ path('admin_annonce_interne_toggle_pin', {id: annonce.id}) }}" method="POST" class="inline">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('toggle_pin' ~ annonce.id) }}">
+                                        <button type="submit"
+                                                class="p-2 rounded-lg hover:bg-white/10 transition-colors {% if annonce.epingle %}text-amber-500{% else %}text-gray-400{% endif %}"
+                                                title="{{ annonce.epingle ? 'Desepingler' : 'Epingler' }}">
+                                            <svg class="w-5 h-5" fill="{% if annonce.epingle %}currentColor{% else %}none{% endif %}" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+
+                                    {# Edit #}
+                                    <a href="{{ path('admin_annonce_interne_edit', {id: annonce.id}) }}"
+                                       class="p-2 rounded-lg text-gray-400 hover:text-emerald-500 hover:bg-white/10 transition-colors"
+                                       title="Modifier">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                    </a>
+
+                                    {# Toggle active #}
+                                    {% if annonce.actif %}
+                                        <form action="{{ path('admin_annonce_interne_deactivate', {id: annonce.id}) }}" method="POST" class="inline">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('deactivate' ~ annonce.id) }}">
+                                            <button type="submit"
+                                                    class="p-2 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-white/10 transition-colors"
+                                                    title="Desactiver"
+                                                    onclick="return confirm('Desactiver cette annonce ?')">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form action="{{ path('admin_annonce_interne_activate', {id: annonce.id}) }}" method="POST" class="inline">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('activate' ~ annonce.id) }}">
+                                            <button type="submit"
+                                                    class="p-2 rounded-lg text-gray-400 hover:text-green-500 hover:bg-white/10 transition-colors"
+                                                    title="Activer">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+
+                                    {# Delete #}
+                                    <form action="{{ path('admin_annonce_interne_delete', {id: annonce.id}) }}" method="POST" class="inline">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ annonce.id) }}">
+                                        <button type="submit"
+                                                class="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-white/10 transition-colors"
+                                                title="Supprimer"
+                                                onclick="return confirm('Supprimer definitivement cette annonce ?')">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        {# Pagination #}
+        {% if totalPages > 1 %}
+            <div class="flex justify-center">
+                <nav class="inline-flex gap-1">
+                    {% if page > 1 %}
+                        <a href="{{ path('admin_annonce_interne_index', {page: page - 1}) }}"
+                           class="glass-btn px-3 py-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                        </a>
+                    {% endif %}
+
+                    {% for p in 1..totalPages %}
+                        {% if p == page %}
+                            <span class="glass-btn glass-btn-primary px-4 py-2">{{ p }}</span>
+                        {% elseif p == 1 or p == totalPages or (p >= page - 2 and p <= page + 2) %}
+                            <a href="{{ path('admin_annonce_interne_index', {page: p}) }}"
+                               class="glass-btn px-4 py-2">{{ p }}</a>
+                        {% elseif p == page - 3 or p == page + 3 %}
+                            <span class="px-2 py-2 text-gray-400">...</span>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page < totalPages %}
+                        <a href="{{ path('admin_annonce_interne_index', {page: page + 1}) }}"
+                           class="glass-btn px-3 py-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    {% endif %}
+                </nav>
+            </div>
+        {% endif %}
+    {% else %}
+        {# Empty state #}
+        <div class="glass-card p-12 text-center">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <svg class="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Aucune annonce
+            </h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">
+                Commencez par creer votre premiere annonce interne.
+            </p>
+            <a href="{{ path('admin_annonce_interne_new') }}"
+               class="glass-btn glass-btn-primary inline-flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Creer une annonce
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

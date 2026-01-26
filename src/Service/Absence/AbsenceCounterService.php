@@ -177,10 +177,27 @@ class AbsenceCounterService
             return; // No check needed if type doesn't deduct from counter
         }
 
+        $requiredDays = $this->calculateWorkingDays($start, $end);
+
+        // For CP (Congés Payés), use the payroll CP counter instead
+        if ($absenceType->getCode() === self::CP_ABSENCE_TYPE_CODE) {
+            $availableBalance = $this->cpCounterService->getCurrentBalance($user);
+
+            if ($availableBalance < $requiredDays) {
+                throw new \LogicException(sprintf(
+                    'Solde insuffisant pour %s : %s jours disponibles, %s jours demandés',
+                    $absenceType->getLabel(),
+                    $availableBalance,
+                    $requiredDays
+                ));
+            }
+
+            return;
+        }
+
+        // For other absence types, use the CompteurAbsence
         $year = (int) $start->format('Y');
         $counter = $this->getOrCreateCounter($user, $absenceType, $year);
-
-        $requiredDays = $this->calculateWorkingDays($start, $end);
 
         if (!$counter->hasSufficientBalance($requiredDays)) {
             throw new \LogicException(sprintf(

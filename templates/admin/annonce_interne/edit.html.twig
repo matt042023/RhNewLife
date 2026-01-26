@@ -1,0 +1,220 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Modifier annonce - {{ annonce.titre }} - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <a href="{{ path('admin_annonce_interne_index') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">
+                Annonces
+            </a>
+        </div>
+    </li>
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Modifier</span>
+        </div>
+    </li>
+{% endblock %}
+
+{% block page_header %}
+    <div class="px-4 py-6 lg:px-6">
+        <div class="flex items-center gap-4">
+            <a href="{{ path('admin_annonce_interne_index') }}"
+               class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <div class="flex-1 min-w-0">
+                <h1 class="text-2xl md:text-3xl font-bold text-white truncate">
+                    Modifier l'annonce
+                </h1>
+                <p class="text-blue-100 text-sm md:text-base mt-1">
+                    {{ annonce.titre }}
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    {# Status info #}
+    <div class="glass-card p-4 flex flex-wrap items-center gap-4 text-sm">
+        <div class="flex items-center gap-2">
+            <span class="text-gray-500 dark:text-gray-400">Statut:</span>
+            {% if annonce.actif %}
+                {% if annonce.isExpired %}
+                    <span class="glass-badge glass-badge-warning">Expiree</span>
+                {% else %}
+                    <span class="glass-badge glass-badge-success">Active</span>
+                {% endif %}
+            {% else %}
+                <span class="glass-badge glass-badge-danger">Inactive</span>
+            {% endif %}
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-gray-500 dark:text-gray-400">Publiee le:</span>
+            <span class="text-gray-900 dark:text-white">{{ annonce.datePublication|date('d/m/Y H:i') }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-gray-500 dark:text-gray-400">Par:</span>
+            <span class="text-gray-900 dark:text-white">{{ annonce.publiePar.fullName }}</span>
+        </div>
+        {% if annonce.dateExpiration %}
+            <div class="flex items-center gap-2">
+                <span class="text-gray-500 dark:text-gray-400">Expire le:</span>
+                <span class="text-gray-900 dark:text-white">{{ annonce.dateExpiration|date('d/m/Y') }}</span>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="glass-card p-6">
+        {{ form_start(form, {'attr': {'class': 'space-y-6', 'enctype': 'multipart/form-data'}}) }}
+
+            {# Titre #}
+            <div>
+                {{ form_label(form.titre, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                {{ form_widget(form.titre) }}
+                {{ form_errors(form.titre) }}
+            </div>
+
+            {# Contenu #}
+            <div>
+                {{ form_label(form.contenu, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                {{ form_widget(form.contenu) }}
+                {{ form_errors(form.contenu) }}
+            </div>
+
+            {# Image actuelle et upload #}
+            <div>
+                {{ form_label(form.image, 'Image', {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+
+                {% if annonce.image %}
+                    <div class="mb-4 flex items-start gap-4">
+                        <div class="w-40 h-24 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                            <img src="{{ asset('uploads/' ~ annonce.image) }}" alt="{{ annonce.titre }}" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Image actuelle</p>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="remove_image" value="1"
+                                       class="rounded border-gray-300 text-red-600 shadow-sm focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50">
+                                <span class="text-sm text-red-600 dark:text-red-400">Supprimer l'image</span>
+                            </label>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="flex items-center gap-4">
+                    <div id="image-preview" class="hidden w-32 h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                        <img id="preview-img" src="" alt="Preview" class="w-full h-full object-cover">
+                    </div>
+                    <label class="flex-1">
+                        {{ form_widget(form.image, {'attr': {'class': 'block w-full text-sm text-gray-500 dark:text-gray-400
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-lg file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-emerald-50 file:text-emerald-700
+                            hover:file:bg-emerald-100
+                            dark:file:bg-emerald-900/50 dark:file:text-emerald-300
+                            cursor-pointer', 'onchange': 'previewImage(this)'}}) }}
+                    </label>
+                </div>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {% if annonce.image %}Uploadez une nouvelle image pour remplacer l'actuelle{% else %}Image optionnelle pour illustrer l'annonce{% endif %}
+                </p>
+                {{ form_errors(form.image) }}
+            </div>
+
+            {# Options row #}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {# Visibilite #}
+                <div>
+                    {{ form_label(form.visibilite, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                    {{ form_widget(form.visibilite) }}
+                    {{ form_help(form.visibilite, {'help_attr': {'class': 'mt-1 text-xs text-gray-500 dark:text-gray-400'}}) }}
+                    {{ form_errors(form.visibilite) }}
+                </div>
+
+                {# Expiration #}
+                <div>
+                    {{ form_label(form.expirationDays, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                    {{ form_widget(form.expirationDays) }}
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Laisser vide pour conserver la date d'expiration actuelle
+                    </p>
+                    {{ form_errors(form.expirationDays) }}
+                </div>
+            </div>
+
+            {# Epingler checkbox #}
+            <div class="glass-card glass-card-primary p-4">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    {{ form_widget(form.epingle, {'attr': {'class': 'rounded border-gray-300 text-emerald-600 shadow-sm focus:border-emerald-300 focus:ring focus:ring-emerald-200 focus:ring-opacity-50'}}) }}
+                    <div>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {{ form_label(form.epingle) }}
+                        </span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Les annonces epinglees apparaissent en premier sur le tableau de bord
+                        </p>
+                    </div>
+                </label>
+            </div>
+
+            {# Actions #}
+            <div class="flex items-center justify-between pt-4 border-t border-white/10">
+                <form action="{{ path('admin_annonce_interne_delete', {id: annonce.id}) }}" method="POST" class="inline"
+                      onsubmit="return confirm('Supprimer definitivement cette annonce ?');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ annonce.id) }}">
+                    <button type="submit" class="glass-btn text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 inline-flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Supprimer
+                    </button>
+                </form>
+
+                <div class="flex items-center gap-3">
+                    <a href="{{ path('admin_annonce_interne_index') }}" class="glass-btn px-4 py-2">
+                        Annuler
+                    </a>
+                    <button type="submit" class="glass-btn glass-btn-primary inline-flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Enregistrer
+                    </button>
+                </div>
+            </div>
+
+        {{ form_end(form) }}
+    </div>
+</div>
+
+<script>
+function previewImage(input) {
+    const preview = document.getElementById('image-preview');
+    const previewImg = document.getElementById('preview-img');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.classList.remove('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.classList.add('hidden');
+    }
+}
+</script>
+{% endblock %}

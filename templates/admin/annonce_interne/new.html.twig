@@ -1,0 +1,156 @@
+{% extends 'layout/dashboard_base.html.twig' %}
+
+{% block title %}Nouvelle annonce - RH NewLife{% endblock %}
+
+{% block breadcrumb_items %}
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <a href="{{ path('admin_annonce_interne_index') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">
+                Annonces
+            </a>
+        </div>
+    </li>
+    <li>
+        <div class="flex items-center">
+            <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Nouvelle annonce</span>
+        </div>
+    </li>
+{% endblock %}
+
+{% block page_header %}
+    <div class="px-4 py-6 lg:px-6">
+        <div class="flex items-center gap-4">
+            <a href="{{ path('admin_annonce_interne_index') }}"
+               class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">
+                    Nouvelle annonce
+                </h1>
+                <p class="text-blue-100 text-sm md:text-base mt-1">
+                    Publier une annonce interne
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-3xl mx-auto">
+    <div class="glass-card p-6">
+        {{ form_start(form, {'attr': {'class': 'space-y-6', 'enctype': 'multipart/form-data'}}) }}
+
+            {# Titre #}
+            <div>
+                {{ form_label(form.titre, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                {{ form_widget(form.titre) }}
+                {{ form_errors(form.titre) }}
+            </div>
+
+            {# Contenu #}
+            <div>
+                {{ form_label(form.contenu, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                {{ form_widget(form.contenu) }}
+                {{ form_errors(form.contenu) }}
+            </div>
+
+            {# Image (optional) #}
+            <div>
+                {{ form_label(form.image, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                <div class="mt-1 flex items-center gap-4">
+                    <div id="image-preview" class="hidden w-32 h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                        <img id="preview-img" src="" alt="Preview" class="w-full h-full object-cover">
+                    </div>
+                    <label class="flex-1">
+                        {{ form_widget(form.image, {'attr': {'class': 'block w-full text-sm text-gray-500 dark:text-gray-400
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-lg file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-emerald-50 file:text-emerald-700
+                            hover:file:bg-emerald-100
+                            dark:file:bg-emerald-900/50 dark:file:text-emerald-300
+                            cursor-pointer', 'onchange': 'previewImage(this)'}}) }}
+                    </label>
+                </div>
+                {{ form_help(form.image, {'help_attr': {'class': 'mt-1 text-xs text-gray-500 dark:text-gray-400'}}) }}
+                {{ form_errors(form.image) }}
+            </div>
+
+            {# Options row #}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {# Visibilite #}
+                <div>
+                    {{ form_label(form.visibilite, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                    {{ form_widget(form.visibilite) }}
+                    {{ form_help(form.visibilite, {'help_attr': {'class': 'mt-1 text-xs text-gray-500 dark:text-gray-400'}}) }}
+                    {{ form_errors(form.visibilite) }}
+                </div>
+
+                {# Expiration #}
+                <div>
+                    {{ form_label(form.expirationDays, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2'}}) }}
+                    {{ form_widget(form.expirationDays) }}
+                    {{ form_help(form.expirationDays, {'help_attr': {'class': 'mt-1 text-xs text-gray-500 dark:text-gray-400'}}) }}
+                    {{ form_errors(form.expirationDays) }}
+                </div>
+            </div>
+
+            {# Epingler checkbox #}
+            <div class="glass-card glass-card-primary p-4">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    {{ form_widget(form.epingle, {'attr': {'class': 'rounded border-gray-300 text-emerald-600 shadow-sm focus:border-emerald-300 focus:ring focus:ring-emerald-200 focus:ring-opacity-50'}}) }}
+                    <div>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {{ form_label(form.epingle) }}
+                        </span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Les annonces epinglees apparaissent en premier sur le tableau de bord
+                        </p>
+                    </div>
+                </label>
+            </div>
+
+            {# Actions #}
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                <a href="{{ path('admin_annonce_interne_index') }}" class="glass-btn px-4 py-2">
+                    Annuler
+                </a>
+                <button type="submit" class="glass-btn glass-btn-primary inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                    </svg>
+                    Publier l'annonce
+                </button>
+            </div>
+
+        {{ form_end(form) }}
+    </div>
+</div>
+
+<script>
+function previewImage(input) {
+    const preview = document.getElementById('image-preview');
+    const previewImg = document.getElementById('preview-img');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.classList.remove('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.classList.add('hidden');
+    }
+}
+</script>
+{% endblock %}
