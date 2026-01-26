@@ -287,17 +287,17 @@ class PayrollConsolidationService
      */
     private function calculateCPData(User $user, int $year, int $month): array
     {
-        $period = sprintf('%04d-%02d', $year, $month);
-
-        // Solde début de mois = solde actuel avant crédit mensuel
-        $balanceDetails = $this->cpCounterService->getBalanceDetails($user);
-        $soldeDebut = $balanceDetails['solde_actuel'];
-
         // Crédit mensuel
         $cpAcquis = CompteurCP::calculateMonthlyAcquisition($year, $month, $user->getHiringDate());
 
         // CP pris ce mois (absences CP approuvées)
         $cpPris = $this->calculateCPTakenInMonth($user, $year, $month);
+
+        // Solde début de mois = solde actuel + cpPris
+        // Car cpPris est déjà déduit du solde actuel (déduction à l'approbation de l'absence)
+        // On reverse cette déduction pour obtenir le solde au début du mois
+        $balanceDetails = $this->cpCounterService->getBalanceDetails($user);
+        $soldeDebut = $balanceDetails['solde_actuel'] + $cpPris;
 
         return [
             'solde_debut' => $soldeDebut,
@@ -635,10 +635,9 @@ class PayrollConsolidationService
             ->getQuery()
             ->getResult();
 
-        // Attacher chaque élément à la consolidation
+        // Attacher chaque élément à la consolidation (utiliser addElementVariable pour mettre à jour la collection en mémoire)
         foreach ($elements as $element) {
-            $element->setConsolidation($consolidation);
-            $this->entityManager->persist($element);
+            $consolidation->addElementVariable($element);
         }
 
         if (count($elements) > 0) {

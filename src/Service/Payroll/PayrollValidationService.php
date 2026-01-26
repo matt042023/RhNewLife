@@ -42,18 +42,17 @@ class PayrollValidationService
         $month = $consolidation->getMonth();
 
         if ($user && $year && $month) {
+            // Créditer les CP acquis mensuels (2.5j × prorata)
             $cpAcquis = $this->cpCounterService->creditMonthlyCP($user, $year, $month);
 
-            // Déduire les CP pris
-            $cpPris = (float) $consolidation->getCpPris();
-            if ($cpPris > 0) {
-                $this->cpCounterService->deductCP($user, $cpPris);
-            }
+            // Note: Les CP pris sont déjà déduits lors de la validation de l'absence
+            // (AbsenceService::validateAbsence -> counterService->deductDays)
+            // La consolidation enregistre uniquement cpPris pour information/historique
 
             $this->logger->info('CP traités lors de la validation', [
                 'user_id' => $user->getId(),
                 'cp_acquis' => $cpAcquis,
-                'cp_pris' => $cpPris,
+                'cp_pris' => $consolidation->getCpPris(),
             ]);
         }
 
